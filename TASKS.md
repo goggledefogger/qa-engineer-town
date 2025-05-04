@@ -22,7 +22,8 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 - [x] Create backend Firebase Function (`/api/scan`) structure
 - [x] Connect frontend form submission to /api/scan backend function
-- [ ] Implement URL validation in the backend function
+- [x] Implement URL validation in the backend function
+- [x] Add frontend logic to prepend https:// to URL if missing
 - [ ] Implement backend logic to create initial 'pending' report entry in RTDB
 - [ ] Integrate Playwright in backend function to navigate to URL
 - [ ] Implement Playwright logic to take a screenshot

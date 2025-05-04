@@ -14,47 +14,64 @@ import {onRequest} from "firebase-functions/v2/https";
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 
-// Example HTTP function
-export const helloWorld = onRequest((request, response) => {
-  logger.info("Hello logs!", {structuredData: true});
-  response.send("Hello from Firebase!");
-});
-
 /**
  * HTTP Function to trigger a website scan.
  * Expects a POST request with JSON body: { url: string }
  */
-export const apiScan = onRequest(async (request, response) => {
+export const apiScan = onRequest({ cors: true /* Allow requests from frontend origin */ }, async (request, response) => {
   // Ensure it's a POST request
   if (request.method !== 'POST') {
-    response.status(405).send('Method Not Allowed');
+    response.status(405).send({ error: 'Method Not Allowed' });
     return;
   }
 
   // Extract URL from request body
   const { url } = request.body;
-
-  // Log the request
   logger.info(`Received scan request for URL: ${url}`, { body: request.body });
 
-  // --- TODO: Add Core Logic ---
-  // 1. Validate URL more thoroughly
-  // 2. Get authenticated user ID (if needed later, requires frontend to send token)
-  // 3. Create initial 'pending' report entry in Realtime Database
-  //    const reportId = /* generate unique ID */;
-  //    await admin.database().ref(`reports/${reportId}`).set({ ... });
-  // 4. Trigger async tasks (Playwright screenshot, Lighthouse)
-  //    This might involve another function or Pub/Sub for long-running tasks
-  // --- End TODO ---
-
-  // Basic immediate response
-  if (!url) {
-    logger.error("Missing 'url' in request body");
-    response.status(400).json({ error: "Missing 'url' in request body" });
+  // --- Backend Validation ---
+  if (!url || typeof url !== 'string') {
+    logger.error("Missing or invalid 'url' in request body");
+    response.status(400).json({ error: "Missing or invalid 'url' in request body" });
     return;
   }
 
-  // Respond with a simple acknowledgement (actual report ID will come from DB creation)
-  response.status(202).json({ message: "Scan initiated", receivedUrl: url /*, reportId: reportId */ });
+  let validatedUrl: URL;
+  try {
+    validatedUrl = new URL(url);
+  } catch (error) {
+    logger.error("Invalid URL format", { url: url, error });
+    response.status(400).json({ error: "Invalid URL format" });
+    return;
+  }
+
+  // Check for valid protocols
+  if (validatedUrl.protocol !== 'http:' && validatedUrl.protocol !== 'https:') {
+    logger.error("Invalid protocol", { url: url, protocol: validatedUrl.protocol });
+    response.status(400).json({ error: "URL must use http or https protocol" });
+    return;
+  }
+
+  // Optional: Add checks to prevent scanning local/internal URLs if desired
+  // if (validatedUrl.hostname === 'localhost' || validatedUrl.hostname === '127.0.0.1') {
+  //   logger.error("Scanning localhost is not permitted", { url: url });
+  //   response.status(400).json({ error: "Scanning localhost is not permitted" });
+  //   return;
+  // }
+  // --- End Validation ---
+
+  // Use the validated URL string for further processing
+  const urlToScan = validatedUrl.toString();
+
+  // --- TODO: Add Core Logic ---
+  // 2. Get authenticated user ID (if needed later)
+  // 3. Create initial 'pending' report entry in Realtime Database
+  //    const reportId = /* generate unique ID */;
+  //    await admin.database().ref(`reports/${reportId}`).set({ url: urlToScan, status: 'pending', createdAt: admin.database.ServerValue.TIMESTAMP });
+  // 4. Trigger async tasks (Playwright screenshot, Lighthouse)
+  // --- End TODO ---
+
+  // Respond with a simple acknowledgement
+  response.status(202).json({ message: "Scan initiated", receivedUrl: urlToScan /*, reportId: reportId */ });
 
 });
