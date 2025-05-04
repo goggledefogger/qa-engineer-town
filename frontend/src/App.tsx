@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { auth } from './firebaseConfig'; // Import auth instance
 import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
 import UrlInputForm from './components/UrlInputForm'; // Import the new component
@@ -7,6 +8,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true); // Renamed for clarity
   const [isSubmitting, setIsSubmitting] = useState(false); // State for submission status
+  const navigate = useNavigate(); // Initialize navigate function
 
   useEffect(() => {
     // Listen for authentication state changes
@@ -59,10 +61,14 @@ function App() {
       const data = await response.json(); // Parse the JSON response from the function
       console.log('API Response:', data);
 
-      // TODO: Get the actual reportId returned from the function (once implemented)
-      const temporaryReportId = `temp_${Date.now()}`;
-      alert(`Scan initiated for ${url}. Response: ${data.message}. (Temporary ID: ${temporaryReportId})`);
-      // TODO: Replace alert with navigation: navigate(`/report/${data.reportId}`);
+      if (data.reportId) {
+        // Navigate to the report page using the received ID
+        navigate(`/report/${data.reportId}`);
+      } else {
+        // Handle case where reportId might be missing in response (should not happen)
+        console.error("API response successful but missing reportId");
+        alert("Failed to get report ID from server. Please try again.");
+      }
 
     } catch (error) {
       console.error("Error calling scan API:", error);

@@ -14,37 +14,40 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmitUrl, isSubmitting =
     event.preventDefault();
     setError(null);
 
-    let submittedUrl = url.trim(); // Trim whitespace
+    let submittedUrl = url.trim();
 
     if (!submittedUrl) {
       setError("URL cannot be empty.");
       return;
     }
 
-    // Prepend https:// if no protocol is present
-    if (!submittedUrl.startsWith('http://') && !submittedUrl.startsWith('https://')) {
-        // Simple check if it looks like a domain name (contains a dot, no spaces)
+    // Check if a protocol seems missing entirely (no ://)
+    if (!submittedUrl.includes('://')) {
+        // Check if it looks like a domain name that needs a protocol prepended
         if (submittedUrl.includes('.') && !submittedUrl.includes(' ')) {
             submittedUrl = `https://${submittedUrl}`;
-            // Optionally update the state visually, though maybe not necessary
-            // setUrl(submittedUrl);
+            console.log('Prepended https:// to URL:', submittedUrl); // Log for debugging
         } else {
-            // Doesn't look like a valid domain/URL without protocol
-            setError("Invalid URL format. Include http:// or https:// or provide a valid domain.");
+            // Doesn't look like a domain needing a protocol
+            setError("Invalid format. Please include a protocol (http:// or https://) or provide a valid domain name.");
             return;
         }
     }
 
-    // Validate the potentially modified URL
+    // Now, validate the potentially modified URL
     try {
-      new URL(submittedUrl);
-      // Protocol already checked implicitly by the prepend logic or explicitly required
+      const parsedUrl = new URL(submittedUrl);
+      // Also explicitly check the protocol after parsing
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        setError("URL must use http or https protocol.");
+        return;
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid URL format.");
+      setError("Invalid URL format provided."); // Catch errors from new URL() e.g., ftp:
       return;
     }
 
-    // Pass the processed URL to the parent
+    // If all checks pass, submit
     onSubmitUrl(submittedUrl);
   };
 

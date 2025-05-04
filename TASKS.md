@@ -24,7 +24,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Connect frontend form submission to /api/scan backend function
 - [x] Implement URL validation in the backend function
 - [x] Add frontend logic to prepend https:// to URL if missing
-- [ ] Implement backend logic to create initial 'pending' report entry in RTDB
+- [x] Implement backend logic to create initial 'pending' report entry in RTDB
 - [ ] Integrate Playwright in backend function to navigate to URL
 - [ ] Implement Playwright logic to take a screenshot
 - [ ] Integrate Firebase Storage in backend to upload screenshot
@@ -48,6 +48,9 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ## Future Tasks (Post-MVP)
 
+- [x] Refactor scan logic to use Cloud Tasks for asynchronous processing (avoid timeouts)
+- [ ] Set up Cloud Run service for Playwright/Lighthouse execution
+- [ ] Modify apiScan to trigger Cloud Run job instead of running Playwright directly
 - [ ] Implement AI analysis of screenshots (Visual/UX)
 - [ ] Implement AI analysis of text content (Advanced Accessibility)
 - [ ] Implement Email/Password Authentication
