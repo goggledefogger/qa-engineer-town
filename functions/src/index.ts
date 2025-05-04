@@ -20,4 +20,41 @@ export const helloWorld = onRequest((request, response) => {
   response.send("Hello from Firebase!");
 });
 
-// TODO: Add /api/scan function here
+/**
+ * HTTP Function to trigger a website scan.
+ * Expects a POST request with JSON body: { url: string }
+ */
+export const apiScan = onRequest(async (request, response) => {
+  // Ensure it's a POST request
+  if (request.method !== 'POST') {
+    response.status(405).send('Method Not Allowed');
+    return;
+  }
+
+  // Extract URL from request body
+  const { url } = request.body;
+
+  // Log the request
+  logger.info(`Received scan request for URL: ${url}`, { body: request.body });
+
+  // --- TODO: Add Core Logic ---
+  // 1. Validate URL more thoroughly
+  // 2. Get authenticated user ID (if needed later, requires frontend to send token)
+  // 3. Create initial 'pending' report entry in Realtime Database
+  //    const reportId = /* generate unique ID */;
+  //    await admin.database().ref(`reports/${reportId}`).set({ ... });
+  // 4. Trigger async tasks (Playwright screenshot, Lighthouse)
+  //    This might involve another function or Pub/Sub for long-running tasks
+  // --- End TODO ---
+
+  // Basic immediate response
+  if (!url) {
+    logger.error("Missing 'url' in request body");
+    response.status(400).json({ error: "Missing 'url' in request body" });
+    return;
+  }
+
+  // Respond with a simple acknowledgement (actual report ID will come from DB creation)
+  response.status(202).json({ message: "Scan initiated", receivedUrl: url /*, reportId: reportId */ });
+
+});

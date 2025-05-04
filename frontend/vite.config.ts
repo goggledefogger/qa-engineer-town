@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 
+const functionsBaseUrl = "https://us-central1-qa-engineer-town.cloudfunctions.net"; // Your deployed function base URL
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -14,16 +16,27 @@ export default defineConfig({
   },
   server: {
     host: true, // Allow connections from any host
-    port: 3020, // Use port 3020
+    port: 3022,
     // Optional: Configure allowedHosts if running behind a specific proxy/domain in dev
     // allowedHosts: ['qa.roytown.net'],
-    // Optional: Proxy API requests to Firebase Emulator or deployed functions
-    // proxy: {
-    //   '/api': {
-    //     target: 'http://127.0.0.1:5001/your-firebase-project-id/us-central1',
-    //     changeOrigin: true,
-    //     rewrite: (path) => path.replace(/^\/api/, ''),
-    //   },
-    // },
+    proxy: {
+      '/api/scan': { // Make the proxy key more specific
+        target: functionsBaseUrl,
+        changeOrigin: true,
+        secure: false,
+        // Rewrite specific path to the correct function endpoint
+        rewrite: (path) => path.replace(/^\/api\/scan/, '/apiScan'),
+        configure: (proxy, _options) => {
+          // Add logging to see if the proxy is being hit
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log(`[vite proxy] Sending request ${req.method} ${req.url} to target ${functionsBaseUrl}${proxyReq.path}`);
+          });
+          proxy.on('error', (err, _req, _res) => {
+            console.error('[vite proxy] Proxy error:', err);
+          });
+        },
+      },
+      // Add other /api routes here if needed later
+    }
   }
 })

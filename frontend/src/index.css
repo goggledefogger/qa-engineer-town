@@ -3,6 +3,6 @@
 @tailwind utilities;
 
 body {
-  /* Add any base body styles here if needed */
-  font-family: sans-serif; /* Example base font */
+  /* Keep only essential body resets if needed, or leave empty */
+  min-height: 100vh;
 }

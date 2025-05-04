@@ -12,16 +12,16 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Set up project structure (Monorepo with `frontend` and `functions` workspaces)
 - [x] Configure Tailwind CSS V4 and PostCSS for frontend
 - [x] Initialize Firebase SDK in both frontend and functions
+- [x] Implement Firebase Anonymous Authentication on the frontend
+- [x] Create basic React frontend layout (Landing Page `/` with URL input)
+- [x] Refine frontend layout and styling (Responsiveness, Spacing, Alignment)
 
 ## In Progress Tasks
 
-- [ ] Configure Firebase project (Auth, RTDB, Storage, Functions, Hosting)
-- [x] Implement Firebase Anonymous Authentication on the frontend
-- [ ] Create basic React frontend layout (Landing Page `/` with URL input)
-
 ## Future Tasks (Initial Prototype - MVP)
 
-- [ ] Create backend Firebase Function (`/api/scan`) structure
+- [x] Create backend Firebase Function (`/api/scan`) structure
+- [x] Connect frontend form submission to /api/scan backend function
 - [ ] Implement URL validation in the backend function
 - [ ] Implement backend logic to create initial 'pending' report entry in RTDB
 - [ ] Integrate Playwright in backend function to navigate to URL
