@@ -1,0 +1,21 @@
+{
+  "name": "ai-qa-engineer-town",
+  "version": "1.0.0",
+  "description": "AI QA Engineer Assistant",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "functions"
+  ],
+  "scripts": {
+    "frontend": "npm run dev --workspace=frontend",
+    "functions": "npm run build --workspace=functions",
+    "functions:watch": "npm run build -- --watch --preserveWatchOutput --workspace=functions",
+    "dev": "npm run frontend",
+    "functions:emulate": "firebase emulators:start --only functions",
+    "install:all": "npm install && npm install --workspace=frontend && npm install --workspace=functions"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

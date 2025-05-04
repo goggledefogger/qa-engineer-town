@@ -1,0 +1,73 @@
+# AI QA Engineer Assistant - Software Requirements Specification
+
+- **System Design**
+    - A web application composed of a React frontend, a serverless backend using Firebase Functions (TypeScript), and Firebase services for database, storage, and hosting.
+    - The system interacts with external websites using Playwright for browser automation/screenshots and Lighthouse for audits.
+    - Report data and artifacts (like screenshots) are stored in Firebase.
+
+- **Architecture pattern**
+    - Client-Server architecture.
+    - Frontend: Single Page Application (SPA) built with React.
+    - Backend: Serverless functions (Firebase Functions) triggered via HTTPS requests, responsible for orchestrating the QA tasks.
+
+- **State management**
+    - Frontend: Utilize React's built-in Context API or a lightweight state management library (like Zustand or Jotai) for managing UI state and fetched report data. Avoid complex libraries like Redux initially.
+
+- **Data flow**
+    1.  User accesses the web application hosted on Firebase Hosting.
+    2.  User authenticates anonymously using Firebase Auth.
+    3.  User enters a target URL into the React frontend.
+    4.  Frontend sends an HTTPS request to a Firebase Function (`/api/scan`) containing the URL.
+    5.  The Firebase Function is triggered:
+        a.  Validates the input URL.
+        b.  Creates a new report entry in Firebase Realtime Database with a 'pending' status and associates it with the anonymous user ID.
+        c.  Initiates Playwright to navigate to the URL and take a screenshot.
+        d.  Uploads the screenshot to Firebase Storage and saves the URL in the report entry.
+        e.  Runs a Lighthouse audit on the URL.
+        f.  Parses key metrics (performance, accessibility) from the Lighthouse results.
+        g.  Updates the report entry in Firebase Realtime Database with the extracted data, screenshot URL, and sets the status to 'complete' (or 'error' if issues occurred).
+    6.  Frontend listens for real-time updates on the specific report entry in Firebase Realtime Database using the Firebase SDK.
+    7.  Once the report status changes to 'complete', the frontend fetches the full report data from the database.
+    8.  The React components render the interactive report based on the fetched data.
+
+- **Technical Stack**
+    - **Frontend:** React, TypeScript, Tailwind CSS
+    - **Backend:** Node.js runtime, TypeScript (for Firebase Functions)
+    - **Infrastructure:**
+        - Firebase Authentication (Anonymous initially, Email later)
+        - Firebase Functions (v1 or v2, TypeScript)
+        - Firebase Hosting
+        - Firebase Realtime Database (for report metadata and results)
+        - Firebase Storage (for screenshots)
+    - **QA Tools:** Playwright, Lighthouse CLI/Node module
+    - **Package Manager:** npm or yarn
+
+- **Authentication Process**
+    - Initial Phase: Firebase Anonymous Authentication. When a user first visits, they are assigned a temporary anonymous user ID. This ID is associated with any reports they generate during that session.
+    - Future Phase: Implement Firebase Email/Password Authentication to allow users to register, log in, and view their history across sessions.
+
+- **Route Design (Frontend - React Router)**
+    - `/`: Main page displaying the URL input form.
+    - `/report/:reportId`: Page displaying the details of a specific QA report.
+
+- **API Design (Firebase Functions)**
+    - `POST /api/scan`:
+        - **Request Body:** `{ "url": "string" }`
+        - **Response Body (Success):** `{ "reportId": "string" }` (ID for the report being generated)
+        - **Response Body (Error):** `{ "error": "string" }`
+        - **Action:** Triggers the QA scan and analysis process asynchronously. Creates the initial report record in the database.
+
+- **Database Design (Firebase Realtime Database)**
+    - **Path:** `reports`
+    - **Node ID:** `<reportId>` (unique identifier)
+    - **Fields:**
+        - `userId`: string (Firebase Auth user ID - anonymous or permanent)
+        - `url`: string (The target URL scanned)
+        - `status`: string (`'pending'`, `'processing'`, `'complete'`, `'error'`)
+        - `createdAt`: Timestamp
+        - `completedAt`: Timestamp (optional)
+        - `screenshotUrl`: string (URL to the image in Firebase Storage, optional)
+        - `lighthouseScores`: object (e.g., `{ performance: number, accessibility: number, bestPractices: number, seo: number }`, optional)
+        - `performanceMetrics`: object (e.g., `{ ttfb: number, lcp: number, cls: number }`, optional)
+        - `accessibilityIssues`: array (List of key issues, e.g., `[{ id: string, description: string, helpUrl: string }]`, optional)
+        - `errorMessage`: string (If status is 'error', optional)

@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Add any base body styles here if needed */
+  font-family: sans-serif; /* Example base font */
+}
