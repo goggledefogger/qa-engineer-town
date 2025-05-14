@@ -129,26 +129,24 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   ```
 - This helps confirm the payload structure and quickly diagnose issues with task invocation or data parsing.
 
-## Debugging: Querying Cloud Function Logs for Errors
+### Real-Time Function Log Query (Recommended)
 
-When debugging Google Cloud Functions (including Firebase Functions v2), it is important to use a broad log query to catch all errors, regardless of how they are logged (structured or unstructured, any severity, any function). The Cloud Console UI often shows more errors than narrow CLI queries because it searches all log fields.
-
-**Recommended gcloud command:**
+For the most up-to-date logs (including recent invocations that may not appear in the Firebase CLI), use the following `gcloud` command:
 
 ```sh
 gcloud logging read \
-  'resource.type=("cloud_run_revision" OR "cloud_function") AND (textPayload:"Error" OR jsonPayload.message:"Error" OR textPayload:"Queue does not exist" OR jsonPayload.message:"Queue does not exist")' \
-  --limit=50 \
-  --format='table(timestamp, severity, resource.labels.function_name, textPayload, jsonPayload.message, jsonPayload.error)'
+  '(resource.type="cloud_function" resource.labels.function_name="processScanTask" resource.labels.region="us-central1") OR (resource.type="cloud_run_revision" resource.labels.service_name="processscantask" resource.labels.location="us-central1")' \
+  --limit=30 \
+  --format="table(timestamp, severity, textPayload, jsonPayload.message, jsonPayload.urlToScan)"
 ```
 
-- This command searches for error keywords in both structured (`jsonPayload`) and unstructured (`textPayload`) log fields.
-- It catches errors from all functions, all severities, and all log formats.
-- Use this command whenever you are not seeing expected errors in the CLI but do see them in the Cloud Console UI.
+- This command matches the Cloud Console's log query for both Cloud Functions and Cloud Run revisions.
+- It is the most reliable way to see the latest logs for background jobs and async tasks.
+- You can adjust the `--limit` or add more fields to the `--format` as needed.
 
-**Tip:**
-- You can adjust the `--limit` or add a `timestamp>=` filter to narrow the time window for recent logs.
-- For more details, see the [Google Cloud Logging documentation](https://cloud.google.com/logging/docs/reference/tools/gcloud-logging).
+**Note:**
+- The Firebase CLI (`firebase functions:log`) may lag several minutes behind the Cloud Console and `gcloud logging read`.
+- For real-time debugging, always prefer the Cloud Console or the `gcloud logging read` command above.
 
 Before deploying or running the backend, ensure the Cloud Tasks queue exists:
 
