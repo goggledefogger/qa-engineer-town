@@ -4,6 +4,7 @@
     - A web application composed of a React frontend, a serverless backend using Firebase Functions (TypeScript), and Firebase services for database, storage, and hosting.
     - The system interacts with external websites using Playwright for browser automation/screenshots and Lighthouse for audits.
     - Report data and artifacts (like screenshots) are stored in Firebase.
+    - **AI-Powered Analysis & Expertise:** The core AI QA assistant is designed with deep knowledge of common website development platforms (e.g., Squarespace, Shopify, WordPress, Wix). This includes understanding their typical structures, limitations, common misconfigurations, and best practices, allowing for more nuanced and platform-aware QA insights (though the initial implementation will focus on general checks).
 
 - **Architecture pattern**
     - Client-Server architecture.

@@ -2,7 +2,7 @@
 
 ## Elevator Pitch
 
-An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), and generates a concise, interactive web report highlighting critical performance metrics and accessibility issues, streamlining the initial QA assessment for clients.
+An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding their nuances, common issues, and limitations. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), and generates a concise, interactive web report highlighting critical performance metrics and accessibility issues, streamlining the initial QA assessment for clients.
 
 ## Core Features (Initial Prototype)
 
@@ -43,7 +43,6 @@ An AI-powered assistant for freelance QA engineers that automates the process of
     *   You may need to install the Firebase CLI (`npm install -g firebase-tools`) and log in (`firebase login`).
 4.  **Run the project:**
     *   Running the frontend dev server (e.g., `npm run dev` or `npm start` in the frontend directory).
-    *   Running the Firebase Functions emulator locally (e.g., `firebase emulators:start` in the functions or root directory).
     *   Refer to specific instructions within `frontend` or `functions` directories once created.
 
 ## Project Structure (Example)

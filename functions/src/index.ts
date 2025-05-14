@@ -10,6 +10,8 @@
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {onRequest} from "firebase-functions/v2/https";
+import {onTaskDispatched} from "firebase-functions/v2/tasks";
+import {CloudTasksClient, protos} from "@google-cloud/tasks";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -17,101 +19,283 @@ admin.initializeApp();
 // Get a reference to the Realtime Database service
 const rtdb = admin.database();
 
+// Configuration for Cloud Tasks
+const LOCATION_ID = "us-central1"; // Ensure this is your function's region
+const QUEUE_ID = "scan-processing-queue";
+
+const tasksClient = new CloudTasksClient();
+let currentProjectId: string | undefined;
+
+async function getProjectId(): Promise<string> {
+  if (currentProjectId) {
+    return currentProjectId;
+  }
+  // Try to get project ID from initialized admin app
+  if (admin.instanceId && admin.instanceId()) {
+     // This is a made up api that does not exist
+     // currentProjectId = await admin.instanceId().get();
+     // return currentProjectId;
+  }
+
+
+  // Fallback to environment variable or default if not available from admin SDK
+  // (this part might need adjustment based on actual Firebase Admin SDK capabilities for project ID)
+  const projectIdFromEnv = process.env.GCLOUD_PROJECT || admin.app().options.projectId;
+  if (!projectIdFromEnv) {
+    throw new Error("Project ID could not be determined. Ensure GCLOUD_PROJECT env var is set or Firebase Admin is initialized correctly.");
+  }
+  currentProjectId = projectIdFromEnv;
+  return currentProjectId;
+}
+
 /**
- * HTTP Function to trigger a website scan.
- * Expects a POST request with JSON body: { url: string }
+ * Represents the data structure for a report stored in the Realtime Database.
  */
-export const apiScan = onRequest({
-    cors: true,
-    timeoutSeconds: 300, // Increase timeout slightly, max 540 for v2
-    memory: "1GiB" // Allocate more memory for browser instance
-  }, async (request, response) => {
-  // Ensure it's a POST request
+interface ReportData {
+  id: string;
+  url: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  playwrightReport?: unknown; // Define a more specific type if playwright report structure is known
+  lighthouseReport?: unknown; // Define a more specific type for lighthouse report
+  createdAt: number;
+  updatedAt: number;
+  error?: string;
+}
+
+/**
+ * Generates a unique ID for reports.
+ * @returns A unique string ID.
+ */
+function generateReportId(): string {
+  return `report-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
+
+/**
+ * Validates if the provided string is a valid HTTP/HTTPS URL.
+ * @param urlString The string to validate.
+ * @returns True if the URL is valid, false otherwise.
+ */
+function isValidUrl(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * HTTP Function to trigger a website scan and store reports.
+ */
+export const apiScan = onRequest({cors: true}, async (request, response) => {
+  logger.info("apiScan function triggered.", {structuredData: true});
+
+  // const urlToScan = request.query.url as string; // Old way: from query param
+  const urlToScan = request.body.url as string; // New way: from request body
+
   if (request.method !== 'POST') {
-    response.status(405).send({ error: 'Method Not Allowed' });
+    response.status(405).send('Method Not Allowed');
     return;
   }
 
-  // Extract URL from request body
-  const { url } = request.body;
-  logger.info(`Received scan request for URL: ${url}`, { body: request.body });
-
-  // --- Backend Validation ---
-  if (!url || typeof url !== 'string') {
-    logger.error("Missing or invalid 'url' in request body");
-    response.status(400).json({ error: "Missing or invalid 'url' in request body" });
+  if (!urlToScan) {
+    logger.warn("URL is missing from the request body.");
+    // response.status(400).send("URL query parameter is required."); // Old message
+    response.status(400).send("URL is required in the request body."); // New message
     return;
   }
 
-  let validatedUrl: URL;
+  if (!isValidUrl(urlToScan)) {
+    logger.warn("Invalid URL format provided.", {url: urlToScan});
+    response.status(400).send("Invalid URL format. Please provide a valid HTTP/HTTPS URL.");
+    return;
+  }
+
+  const reportId = generateReportId();
+  const initialReportData: ReportData = {
+    id: reportId,
+    url: urlToScan,
+    status: "pending",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
   try {
-    validatedUrl = new URL(url);
-  } catch (error) {
-    logger.error("Invalid URL format", { url: url, error });
-    response.status(400).json({ error: "Invalid URL format" });
-    return;
-  }
+    // Store initial report data in Realtime Database
+    await rtdb.ref(`reports/${reportId}`).set(initialReportData);
+    logger.info("Initial report data stored in RTDB.", {reportId});
 
-  // Check for valid protocols
-  if (validatedUrl.protocol !== 'http:' && validatedUrl.protocol !== 'https:') {
-    logger.error("Invalid protocol", { url: url, protocol: validatedUrl.protocol });
-    response.status(400).json({ error: "URL must use http or https protocol" });
-    return;
-  }
+    const projectId = await getProjectId();
+    const queuePath = tasksClient.queuePath(projectId, LOCATION_ID, QUEUE_ID);
 
-  // Optional: Add checks to prevent scanning local/internal URLs if desired
-  // if (validatedUrl.hostname === 'localhost' || validatedUrl.hostname === '127.0.0.1') {
-  //   logger.error("Scanning localhost is not permitted", { url: url });
-  //   response.status(400).json({ error: "Scanning localhost is not permitted" });
-  //   return;
-  // }
-  // --- End Validation ---
+    // Construct the full URL to the processScanTask function
+    // For 2nd gen functions (like onTaskDispatched), this is a Cloud Run URL.
+    // It's best to set this via an environment variable after deploying processScanTask.
+    const processScanTaskUrl = process.env.PROCESS_SCAN_TASK_URL;
 
-  // Use the validated URL string for further processing
-  const urlToScan = validatedUrl.toString();
-
-  // --- Create initial report entry in RTDB ---
-  let reportId: string | null = null;
-  try {
-    const reportsRef = rtdb.ref("reports");
-    const newReportRef = reportsRef.push(); // Generate unique ID
-    reportId = newReportRef.key; // Get the unique key
-
-    if (!reportId) {
-      throw new Error("Failed to generate report ID");
+    if (!processScanTaskUrl) {
+      logger.error("PROCESS_SCAN_TASK_URL environment variable is not set. This is required for enqueuing tasks. Please deploy processScanTask and set its trigger URL as this environment variable.");
+      response.status(500).send("Server configuration error: PROCESS_SCAN_TASK_URL not set.");
+      // Update RTDB to failed
+      await rtdb.ref(`reports/${reportId}/status`).set("failed");
+      await rtdb.ref(`reports/${reportId}/error`).set("Configuration error: Target function URL not set.");
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      return;
     }
+    logger.info(`Using processScanTask URL: ${processScanTaskUrl}`);
 
-    const initialReportData = {
-      url: urlToScan,
-      status: 'pending', // Initial status
-      createdAt: admin.database.ServerValue.TIMESTAMP, // Firebase server timestamp
-      // TODO: Add userId: associatedUser.uid (need to handle auth)
+
+    const taskPayload: ScanTaskPayload = {reportId, urlToScan};
+    const task: protos.google.cloud.tasks.v2.ITask = {
+      httpRequest: {
+        httpMethod: protos.google.cloud.tasks.v2.HttpMethod.POST,
+        url: processScanTaskUrl, // Use the configurable URL
+        headers: {"Content-Type": "application/json"},
+        body: Buffer.from(JSON.stringify(taskPayload)).toString("base64"),
+        oidcToken: {
+          serviceAccountEmail: `${projectId}@appspot.gserviceaccount.com`, // Default App Engine service account
+          audience: processScanTaskUrl, // Audience MUST be the URL of the called function
+        },
+      },
+      // Optionally, set scheduleTime or other task parameters here
+      // scheduleTime: { seconds: Date.now() / 1000 + 60 } // e.g., 60 seconds from now
     };
 
-    await newReportRef.set(initialReportData); // Set the initial data
-    logger.info(`Created initial report entry with ID: ${reportId}`, { data: initialReportData });
+    logger.info("Attempting to enqueue task...", {queuePath, taskPayload});
+    const [taskResponse] = await tasksClient.createTask({parent: queuePath, task});
+    logger.info("Task enqueued successfully.", {taskId: taskResponse.name});
 
-  } catch (dbError) {
-    logger.error("Database error creating report entry", { error: dbError });
-    response.status(500).json({ error: "Failed to create report entry in database" });
-    return;
+    // Respond with the generated reportId
+    response.status(202).json({
+      message: "Scan initiation request received, task enqueued.",
+      receivedUrl: urlToScan,
+      reportId: reportId,
+    });
+  } catch (error) {
+    logger.error("Error in apiScan function:", error);
+    // Update status to failed in RTDB if possible
+    await rtdb.ref(`reports/${reportId}/status`).set("failed");
+    await rtdb.ref(`reports/${reportId}/error`).set((error as Error).message);
+    await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+    response.status(500).send("Internal Server Error during scan initiation.");
   }
-  // --- End Database entry ---
-
-  // --- Trigger Background Scan (Placeholder) ---
-  if (reportId) {
-    logger.info(`Placeholder: Would trigger background scan task for report ${reportId}`);
-    // TODO: Implement Cloud Tasks or Pub/Sub trigger here later.
-  } else {
-    // Should not happen if DB write succeeded, but log just in case
-    logger.error("Cannot trigger background task: reportId is missing");
-  }
-  // --- End Trigger ---
-
-  // Respond with the generated reportId
-  response.status(202).json({
-    message: "Scan initiation request received", // Adjusted message
-    receivedUrl: urlToScan,
-    reportId: reportId
-  });
 });
+
+interface ScanTaskPayload {
+  reportId: string;
+  urlToScan: string;
+}
+
+// New Task Queue Function to process the scan
+// Using onTaskDispatched as per firebase-functions/v2/tasks
+export const processScanTask = onTaskDispatched<ScanTaskPayload>(
+  {
+    retryConfig: {
+      maxAttempts: 5,
+      minBackoffSeconds: 60,
+    },
+    rateLimits: {
+      maxConcurrentDispatches: 10, // Adjust as needed
+    },
+    timeoutSeconds: 540, // Max timeout for Firebase Functions (gen 2 can be higher if configured)
+    memory: "1GiB", // Adjust as needed
+    // Ensure this function is deployed to the same region as the queue (LOCATION_ID)
+    // region: LOCATION_ID, // This might be set globally or per function
+  },
+  async (request) => {
+    const {reportId, urlToScan} = request.data; // Correctly access the payload from request.data
+
+    logger.info(`processScanTask started for reportId: ${reportId}, url: ${urlToScan}`, {reportId, urlToScan});
+
+    try {
+      // 1. Update report status to "processing" in RTDB
+      await rtdb.ref(`reports/${reportId}/status`).set("processing");
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      logger.info("Report status updated to processing.", {reportId});
+
+      // 2. TODO: Implement Playwright execution
+      //    - Launch browser
+      //    - Navigate to urlToScan
+      //    - Perform actions/assertions
+      //    - Gather results/screenshots
+      //    - Store Playwright results in playwrightReport field in RTDB
+      logger.info("Placeholder for Playwright execution.", {reportId});
+      // Simulate Playwright task
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // Simulate work
+      const playwrightResults = {
+        pageTitle: "Mocked Page Title",
+        screenshotPath: `/mock/path/to/screenshot-${reportId}.png`,
+      };
+      await rtdb.ref(`reports/${reportId}/playwrightReport`).set(playwrightResults);
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      logger.info("Mock Playwright report saved.", {reportId});
+
+
+      // 3. TODO: Implement Lighthouse execution
+      //    - Run Lighthouse audit on urlToScan
+      //    - Gather Lighthouse report
+      //    - Store Lighthouse results in lighthouseReport field in RTDB
+      logger.info("Placeholder for Lighthouse execution.", {reportId});
+      // Simulate Lighthouse task
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // Simulate work
+      const lighthouseResults = {
+        performanceScore: 95,
+        accessibilityScore: 88,
+      };
+      await rtdb.ref(`reports/${reportId}/lighthouseReport`).set(lighthouseResults);
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      logger.info("Mock Lighthouse report saved.", {reportId});
+
+
+      // 4. Update report status to "completed"
+      await rtdb.ref(`reports/${reportId}/status`).set("completed");
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      logger.info("processScanTask completed successfully.", {reportId});
+    } catch (error) {
+      logger.error(`Error in processScanTask for reportId ${reportId}:`, error);
+      // Update report status to "failed" and store error message
+      await rtdb.ref(`reports/${reportId}/status`).set("failed");
+      await rtdb.ref(`reports/${reportId}/error`).set((error as Error).message);
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      // Re-throw the error to ensure Cloud Tasks handles retries based on retryConfig
+      throw error;
+    }
+  }
+);
+
+// TODO:
+// 1. Ensure the Cloud Tasks queue "scan-processing-queue" is created in your GCP project in the LOCATION_ID region.
+//    This can be done via gcloud CLI:
+//    gcloud tasks queues create scan-processing-queue --location=us-central1
+//
+// 2. Ensure the service account used by apiScan (typically <PROJECT_ID>@appspot.gserviceaccount.com for App Engine default, or the function's specific service account)
+//    has the "Cloud Tasks Enqueuer" (roles/cloudtasks.enqueuer) IAM role.
+//    gcloud projects add-iam-policy-binding YOUR_PROJECT_ID --member="serviceAccount:YOUR_PROJECT_ID@appspot.gserviceaccount.com" --role="roles/cloudtasks.enqueuer"
+//
+// 3. Ensure the service account used by Cloud Tasks to invoke processScanTask (also typically <PROJECT_ID>@appspot.gserviceaccount.com if you use it for OIDC token)
+//    has the "Cloud Functions Invoker" (roles/cloudfunctions.invoker) IAM role for the processScanTask function.
+//    gcloud functions add-iam-policy-binding processScanTask --region=us-central1 --member="serviceAccount:YOUR_PROJECT_ID@appspot.gserviceaccount.com" --role="roles/cloudfunctions.invoker"
+//
+// 4. If using a different service account for the OIDC token in the task, ensure IT has invoke permission and the enqueuing service account has permission to impersonate IT ("Service Account Token Creator" role - roles/iam.serviceAccountTokenCreator).
+
+// Note on Project ID retrieval:
+// The `getProjectId` function attempts to retrieve the project ID.
+// For Firebase Functions, `admin.app().options.projectId` should typically work if the Admin SDK is initialized.
+// `process.env.GCLOUD_PROJECT` is also a common way it's available in the environment.
+// The `admin.instanceId().get()` method was a made-up example and has been removed.
+// For OIDC token generation, the serviceAccountEmail needs to be correct.
+// Usually, for a function, it's `<PROJECT_ID>@appspot.gserviceaccount.com` (if using default App Engine SA)
+// or a custom service account if your function is configured to run as one.
+// The `audience` for the OIDC token MUST be the full URL of the target HTTP function (`processScanTask` in this case).
+
+// The URL for 2nd gen functions triggered by Cloud Tasks via HTTP is critical.
+// It's usually of the form: https://<function-name>-<hash>-<region>.a.run.app if it's a public HTTP endpoint.
+// If `processScanTask` is deployed as an HTTP-triggered function (which it must be for Cloud Tasks to call its URL),
+// then its URL needs to be correctly determined. The example `https://${LOCATION_ID}-${projectId}.cloudfunctions.net/processScanTask`
+// is more typical for 1st gen functions. For 2nd gen, it will be a Cloud Run URL.
+// You should obtain this URL from the Google Cloud Console after deploying `processScanTask` or via gcloud command:
+// `gcloud functions describe processScanTask --region <region> --format 'value(serviceConfig.uri)'`
+// And ensure that is the URL used in `task.httpRequest.url` and `task.httpRequest.oidcToken.audience`.
+
+// The current `admin.instanceId` usage in the template was incorrect for getting project ID and has been commented out.
+// `admin.app().options.projectId` or `process.env.GCLOUD_PROJECT` are the correct ways.

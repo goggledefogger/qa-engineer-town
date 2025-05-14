@@ -50,3 +50,7 @@
 *   Ensure keyboard navigability for all interactive elements.
 *   Use semantic HTML elements correctly.
 *   Manage focus appropriately, especially during transitions and when content loads dynamically.
+
+## Assumed QA Engineer Knowledge
+
+*   **Website Platform Expertise:** The AI QA Engineer is expected to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix). This includes understanding their typical structures, limitations, and common issues, which might inform how results are presented or prioritized (though not explicitly a UI feature itself, it's a core understanding of the persona using the tool).

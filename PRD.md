@@ -2,7 +2,7 @@
 
 ## 1. Elevator Pitch
 
-An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), and generates a concise, interactive web report highlighting critical performance metrics and accessibility issues, streamlining the initial QA assessment for clients.
+An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding their nuances, common issues, and limitations. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), and generates a concise, interactive web report highlighting critical performance metrics and accessibility issues, streamlining the initial QA assessment for clients.
 
 ## 2. Who is this app for?
 
@@ -18,7 +18,7 @@ This application is designed for freelance QA engineers who work with clients ow
 *   **Analysis (Initial):**
     *   Extract key performance metrics from the Lighthouse report (e.g., TTFB, LCP, overall scores).
     *   Extract key accessibility findings from the Lighthouse report.
-    *   (Future: Utilize AI models like Gemini/GPT-4o-mini with vision capabilities to analyze screenshots for visual/UX issues and text content for accessibility).
+    *   (Future: Utilize AI models like Gemini/GPT-4o-mini with vision capabilities to analyze screenshots for visual/UX issues and text content for accessibility. The AI should also leverage its understanding of common website platforms like WordPress, Shopify, Wix, Squarespace, etc., to provide platform-specific insights or identify common pitfalls where applicable).
 *   **Reporting:**
     *   Generate a simple, interactive web-based report.
     *   Display the extracted Lighthouse scores and key performance metrics clearly.
