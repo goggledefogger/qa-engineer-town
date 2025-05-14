@@ -57,7 +57,13 @@ interface ReportData {
   id: string;
   url: string;
   status: "pending" | "processing" | "completed" | "failed";
-  playwrightReport?: unknown; // Define a more specific type if playwright report structure is known
+  playwrightReport?: {
+    success: boolean;
+    pageTitle?: string;
+    screenshotUrl?: string;
+    error?: string;
+    // Add other relevant data from Playwright if needed
+  };
   lighthouseReport?: unknown; // Define a more specific type for lighthouse report
   createdAt: number;
   updatedAt: number;
@@ -240,65 +246,103 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("Report status updated to processing.", {reportId});
 
-      // 2. Playwright execution (browser launch, navigation, etc.)
-      logger.info("Using playwright-aws-lambda. Launching Chromium with launchChromium()...");
-      let browser, context, page;
+      // 2. Playwright execution
+      let playwrightScanSucceeded = false;
+      // Initialize with a default structure in case of early errors before playwrightReport is fully populated
+      let playwrightReportData: ReportData["playwrightReport"] = { success: false, error: "Playwright scan did not run or complete." };
+      let browser;
+
       try {
+        logger.info("Using playwright-aws-lambda. Launching Chromium with launchChromium()...");
         browser = await playwright.launchChromium();
-        context = await browser.newContext();
-        page = await context.newPage();
+        const context = await browser.newContext();
+        const page = await context.newPage();
         logger.info("Navigating to target URL...", { urlToScan });
-        const response = await page.goto(urlToScan, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        logger.info("Navigation complete.", { status: response?.status() });
+        const navigationResponse = await page.goto(urlToScan, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        logger.info("Navigation complete.", { status: navigationResponse?.status() });
         const pageTitle = await page.title();
         logger.info("Fetched page title via Playwright.", { pageTitle });
+
         // Take screenshot and upload to Firebase Storage
         const screenshotBuffer = await page.screenshot({ type: "png" });
-        const bucket = admin.storage().bucket();
+        const bucket = admin.storage().bucket(); // Ensure bucket is configured if not default
         const screenshotPath = `screenshots/${reportId}.png`;
         const file = bucket.file(screenshotPath);
         await file.save(screenshotBuffer, { contentType: "image/png" });
-        // Generate a signed URL (valid for 7 days)
-        const [url] = await file.getSignedUrl({
+        const [screenshotUrl] = await file.getSignedUrl({
           action: "read",
           expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
         });
-        logger.info("Screenshot uploaded to Firebase Storage.", { screenshotPath, url });
-        // Save screenshot URL to RTDB
-        await rtdb.ref(`reports/${reportId}/screenshotUrl`).set(url);
-      } catch (err) {
-        logger.error("Error during playwright-aws-lambda browser launch or navigation.", { error: err instanceof Error ? err.message : err });
-        throw err;
+        logger.info("Screenshot uploaded to Firebase Storage.", { screenshotPath, screenshotUrl });
+
+        playwrightReportData = {
+          success: true,
+          pageTitle: pageTitle,
+          screenshotUrl: screenshotUrl,
+        };
+        playwrightScanSucceeded = true;
+
+      } catch (playwrightError) {
+        const errorMsg = (playwrightError as Error).message || String(playwrightError);
+        logger.error("Error during Playwright execution for report:", { reportId, error: errorMsg });
+        playwrightReportData = {
+          success: false,
+          error: errorMsg,
+        };
+        // Do NOT re-throw here. This error is part of the scan result.
       } finally {
         if (browser) {
           await browser.close();
-          logger.info("Closed Chromium browser.");
+          logger.info("Closed Chromium browser.", {reportId});
         }
       }
 
-      // 3. TODO: Implement Lighthouse execution
+      // Save Playwright results (success or failure details) to RTDB
+      await rtdb.ref(`reports/${reportId}/playwrightReport`).set(playwrightReportData);
+      // No longer need to save screenshotUrl separately here as it's in playwrightReport
+      // await rtdb.ref(`reports/${reportId}/screenshotUrl`).set(screenshotUrl);
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      logger.info("Playwright report data saved to RTDB.", {reportId});
+
+      // 3. TODO: Implement Lighthouse execution (following a similar try/catch pattern)
       logger.info("Placeholder for Lighthouse execution.", {reportId});
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Simulate work
+      // For now, assume Lighthouse is not critical for overall "completed" status if Playwright worked
+      // Or, introduce a lighthouseScanSucceeded flag as well.
+      // Simulating some work for Lighthouse:
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate work
       const lighthouseResults = {
-        performanceScore: 95,
-        accessibilityScore: 88,
+        // Placeholder
+        performanceScore: playwrightScanSucceeded ? 95 : undefined,
+        accessibilityScore: playwrightScanSucceeded ? 88 : undefined,
       };
       await rtdb.ref(`reports/${reportId}/lighthouseReport`).set(lighthouseResults);
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("Mock Lighthouse report saved.", {reportId});
 
-      // 4. Update report status to "completed" ONLY if all above steps succeed
-      await rtdb.ref(`reports/${reportId}/status`).set("completed");
+      // 4. Update final report status
+      if (playwrightScanSucceeded) { // Modify this if Lighthouse success is also mandatory
+        await rtdb.ref(`reports/${reportId}/status`).set("completed");
+      } else {
+        await rtdb.ref(`reports/${reportId}/status`).set("failed");
+        // The specific error (e.g. from Playwright) is already in playwrightReport.error
+        // Or, if a general error message is preferred for the main error field:
+        await rtdb.ref(`reports/${reportId}/error`).set("Scan completed with errors in Playwright. See playwrightReport for details.");
+      }
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
-      logger.info("processScanTask completed successfully.", {reportId});
-    } catch (error) {
-      logger.error(`Error in processScanTask for reportId ${reportId}:`, error);
-      // Update report status to "failed" and store error message
+      logger.info("processScanTask final status updated.", {reportId, status: playwrightScanSucceeded ? "completed" : "failed" });
+
+    } catch (outerError) {
+      const errorMessage = (outerError as Error).message || String(outerError);
+      logger.error(`CRITICAL Error in processScanTask orchestration for reportId ${reportId}:`, { error: outerError });
+
+      // Update report status to "failed"
       await rtdb.ref(`reports/${reportId}/status`).set("failed");
-      await rtdb.ref(`reports/${reportId}/error`).set((error as Error).message);
+      await rtdb.ref(`reports/${reportId}/error`).set(`Critical function error: ${errorMessage}`);
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
-      // Re-throw the error to ensure Cloud Tasks handles retries based on retryConfig
-      throw error;
+
+      // For ANY error caught at this outer level, we assume it's critical enough to stop retries.
+      logger.error("Outer critical error detected. Scan will not be retried by Cloud Tasks.", {reportId});
+      // Do NOT re-throw, ensuring Cloud Tasks does not retry.
     }
   }
 );

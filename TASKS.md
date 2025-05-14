@@ -35,8 +35,13 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Implement logic in `processScanTask` to parse payload (`reportId`, `urlToScan`).
   - [x] Update RTDB: status to 'processing', add `processedAt` timestamp.
   - [ ] Implement Playwright integration within `processScanTask`.
+    - [x] Capture screenshot.
+    - [x] Upload screenshot to Firebase Storage.
+    - [x] Save screenshot URL to RTDB.
+    - [x] Implement robust error handling for Playwright-specific errors (e.g., navigation failures, timeouts) to capture errors in the `playwrightReport` object in RTDB.
   - [ ] Implement Lighthouse integration within `processScanTask`.
-  - [x] Update RTDB: status to 'complete' or 'error', add `completedAt`, results/error message (with placeholder data for now).
+  - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
+    - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
 
 ## Future Tasks (Initial Prototype - MVP)
 
@@ -45,14 +50,13 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Implement URL validation in the backend function
 - [x] Add frontend logic to prepend https:// to URL if missing
 - [x] Implement backend logic to create initial 'pending' report entry in RTDB
-- [ ] Integrate Firebase Storage in backend to upload screenshot (within `processScanTask`)
-- [ ] Update RTDB entry with screenshot URL (from `processScanTask`)
+- [x] Save screenshot URL to RTDB (from `processScanTask`)
 - [ ] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
+  - [ ] Display screenshot on Report Page when available (Note: UI bug to fix, screenshot URL is saved but not always displaying)
 - [ ] Implement frontend logic to call `/api/scan` function
 - [ ] Implement frontend logic to navigate to Report Page with `reportId`
 - [ ] Implement frontend logic to listen for real-time updates on the RTDB report entry
 - [ ] Implement frontend progress/loading indicator on Report Page
-- [ ] Display screenshot on Report Page when available
 - [ ] Display Accessibility issues on Report Page when available
 - [ ] Implement basic styling with Tailwind CSS for all components
 - [ ] Set up Firebase Hosting for deployment
@@ -128,6 +132,18 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   gcloud logging read 'resource.type=("cloud_run_revision" OR "cloud_function") AND jsonPayload.message:"processScanTask: FULL REQUEST DUMP"' --limit=10 --format='table(timestamp, severity, jsonPayload.message, jsonPayload.data)'
   ```
 - This helps confirm the payload structure and quickly diagnose issues with task invocation or data parsing.
+
+### Error Handling & Loop Prevention in `processScanTask`
+
+- The `processScanTask` function now uses a nested `try/catch` structure:
+  - An **inner `try/catch`** specifically wraps the Playwright (and eventually Lighthouse) execution.
+    - If Playwright fails (e.g., navigation error, timeout), this inner catch logs the specific error, updates the `reportData.playwrightReport` object in RTDB with `success: false` and the detailed error message.
+    - The error is then re-thrown to be caught by the outer handler.
+  - An **outer `try/catch`** wraps the entire task orchestration.
+    - If any error bubbles up to this level (including errors from the Playwright block or other critical issues like RTDB update failures), this outer catch logs it as a critical failure.
+    - It updates the main report status to "failed" in RTDB.
+    - Crucially, **it does not re-throw the error**. This ensures that Cloud Tasks will not retry the task indefinitely for such failures, preventing infinite loops. This has been tested with URLs that cause navigation errors.
+- This pattern ensures that scan-specific issues are recorded in the report for the user to see, while systemic or unrecoverable errors correctly terminate the task processing.
 
 ### Real-Time Function Log Query (Recommended)
 

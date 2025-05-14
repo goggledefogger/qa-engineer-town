@@ -8,8 +8,13 @@ interface ReportData {
   url: string;
   status: 'pending' | 'processing' | 'complete' | 'error';
   createdAt: number; // Timestamp
+  playwrightReport?: {
+    success?: boolean;
+    pageTitle?: string;
+    screenshotUrl?: string;
+    error?: string;
+  };
   // Optional fields that will be added later
-  screenshotUrl?: string;
   lighthouseScores?: Record<string, number>;
   performanceMetrics?: Record<string, number>;
   accessibilityIssues?: Array<Record<string, string>>;
@@ -133,15 +138,15 @@ const ReportPage: React.FC = () => {
         {/* Screenshot Section */}
         <div>
           <h2 className="text-lg font-semibold text-slate-700 mb-3">Screenshot</h2>
-          {reportData.screenshotUrl ? (
+          {reportData.playwrightReport?.screenshotUrl ? (
             <div className="flex flex-col items-center">
               <img
-                src={reportData.screenshotUrl}
+                src={reportData.playwrightReport.screenshotUrl}
                 alt="Website Screenshot"
                 className="max-w-full max-h-96 rounded shadow border border-slate-200"
                 style={{ background: '#f8fafc' }}
               />
-              <a href={reportData.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-blue-600 hover:underline text-sm">Open full size</a>
+              <a href={reportData.playwrightReport.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-blue-600 hover:underline text-sm">Open full size</a>
             </div>
           ) : (
             <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-500">
