@@ -14,6 +14,7 @@ import {onTaskDispatched} from "firebase-functions/v2/tasks";
 import {CloudTasksClient, protos} from "@google-cloud/tasks";
 // @ts-ignore: No types for playwright-aws-lambda
 import * as playwright from "playwright-aws-lambda";
+import lighthouse, { Flags as LighthouseFlags } from "lighthouse"; // Import Lighthouse and its Flags type
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -50,6 +51,19 @@ async function getProjectId(): Promise<string> {
   return currentProjectId;
 }
 
+interface LighthouseReportData {
+  success: boolean;
+  error?: string;
+  scores?: {
+    performance?: number;
+    accessibility?: number;
+    bestPractices?: number;
+    seo?: number;
+    pwa?: number;
+  };
+  // We can add more specific audit details or the full LHR JSON later if needed.
+}
+
 /**
  * Represents the data structure for a report stored in the Realtime Database.
  */
@@ -64,7 +78,7 @@ interface ReportData {
     error?: string;
     // Add other relevant data from Playwright if needed
   };
-  lighthouseReport?: unknown; // Define a more specific type for lighthouse report
+  lighthouseReport?: LighthouseReportData;
   createdAt: number;
   updatedAt: number;
   error?: string;
@@ -304,32 +318,88 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("Playwright report data saved to RTDB.", {reportId});
 
-      // 3. TODO: Implement Lighthouse execution (following a similar try/catch pattern)
-      logger.info("Placeholder for Lighthouse execution.", {reportId});
-      // For now, assume Lighthouse is not critical for overall "completed" status if Playwright worked
-      // Or, introduce a lighthouseScanSucceeded flag as well.
-      // Simulating some work for Lighthouse:
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate work
-      const lighthouseResults = {
-        // Placeholder
-        performanceScore: playwrightScanSucceeded ? 95 : undefined,
-        accessibilityScore: playwrightScanSucceeded ? 88 : undefined,
-      };
-      await rtdb.ref(`reports/${reportId}/lighthouseReport`).set(lighthouseResults);
+      // 3. Lighthouse execution
+      let lighthouseScanSucceeded = false;
+      let lighthouseReportData: LighthouseReportData = { success: false, error: "Lighthouse scan did not run or complete." };
+
+      try {
+        logger.info("Starting Lighthouse scan...", { reportId, urlToScan });
+
+        // Define options for Lighthouse
+        // Tell Lighthouse to use the same port Playwright is using for Chrome.
+        // playwright-aws-lambda defaults to port 9222.
+        const lighthouseOptions: LighthouseFlags = {
+          port: 9222,
+          output: 'json',
+          logLevel: 'info',
+          onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'],
+          // Consider adding formFactor: 'mobile' or 'desktop' if needed, and other flags.
+        };
+
+        // Run Lighthouse
+        const runnerResult = await lighthouse(urlToScan, lighthouseOptions);
+
+        if (!runnerResult || !runnerResult.lhr) {
+          throw new Error("Lighthouse did not return a valid report (LHR).");
+        }
+
+        const lhr = runnerResult.lhr; // lhr is the Lighthouse Result object
+        logger.info("Lighthouse scan completed. Processing results...", { reportId });
+
+        // Extract scores
+        const scores: LighthouseReportData['scores'] = {};
+        if (lhr.categories.performance?.score) {
+          scores.performance = Math.round(lhr.categories.performance.score * 100);
+        }
+        if (lhr.categories.accessibility?.score) {
+          scores.accessibility = Math.round(lhr.categories.accessibility.score * 100);
+        }
+        if (lhr.categories['best-practices']?.score) {
+          scores.bestPractices = Math.round(lhr.categories['best-practices'].score * 100);
+        }
+        if (lhr.categories.seo?.score) {
+          scores.seo = Math.round(lhr.categories.seo.score * 100);
+        }
+        // PWA score might be null if not applicable, handle that
+        if (lhr.categories.pwa?.score !== null && lhr.categories.pwa?.score !== undefined) {
+            scores.pwa = Math.round(lhr.categories.pwa.score * 100);
+        } else {
+            // Optional: explicitly set to undefined or a special value if PWA is not applicable/scored
+            scores.pwa = undefined;
+        }
+
+        lighthouseReportData = {
+          success: true,
+          scores: scores,
+        };
+        lighthouseScanSucceeded = true;
+
+      } catch (lighthouseError) {
+        const errorMsg = (lighthouseError as Error).message || String(lighthouseError);
+        logger.error("Error during Lighthouse execution for report:", { reportId, error: errorMsg });
+        lighthouseReportData = {
+          success: false,
+          error: errorMsg,
+        };
+        // Do NOT re-throw here. This error is part of the scan result.
+      }
+
+      // Save Lighthouse results to RTDB
+      await rtdb.ref(`reports/${reportId}/lighthouseReport`).set(lighthouseReportData);
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
-      logger.info("Mock Lighthouse report saved.", {reportId});
+      logger.info("Lighthouse report data saved to RTDB.", {reportId, lighthouseReportData});
 
       // 4. Update final report status
-      if (playwrightScanSucceeded) { // Modify this if Lighthouse success is also mandatory
+      if (playwrightScanSucceeded && lighthouseScanSucceeded) { // Both must succeed
         await rtdb.ref(`reports/${reportId}/status`).set("completed");
       } else {
         await rtdb.ref(`reports/${reportId}/status`).set("failed");
         // The specific error (e.g. from Playwright) is already in playwrightReport.error
         // Or, if a general error message is preferred for the main error field:
-        await rtdb.ref(`reports/${reportId}/error`).set("Scan completed with errors in Playwright. See playwrightReport for details.");
+        await rtdb.ref(`reports/${reportId}/error`).set("Scan completed with errors. See playwrightReport and/or lighthouseReport for details.");
       }
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
-      logger.info("processScanTask final status updated.", {reportId, status: playwrightScanSucceeded ? "completed" : "failed" });
+      logger.info("processScanTask final status updated.", {reportId, status: (playwrightScanSucceeded && lighthouseScanSucceeded) ? "completed" : "failed" });
 
     } catch (outerError) {
       const errorMessage = (outerError as Error).message || String(outerError);

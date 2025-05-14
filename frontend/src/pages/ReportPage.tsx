@@ -3,6 +3,19 @@ import { useParams } from 'react-router-dom';
 import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
 
+// Define an interface for Lighthouse report data
+interface LighthouseReportData {
+  success: boolean;
+  error?: string;
+  scores?: {
+    performance?: number;
+    accessibility?: number;
+    bestPractices?: number;
+    seo?: number;
+    pwa?: number;
+  };
+}
+
 // Define an interface for the report data structure
 interface ReportData {
   url: string;
@@ -14,9 +27,10 @@ interface ReportData {
     screenshotUrl?: string;
     error?: string;
   };
-  // Optional fields that will be added later
-  lighthouseScores?: Record<string, number>;
-  performanceMetrics?: Record<string, number>;
+  lighthouseReport?: LighthouseReportData;
+  // Optional fields that were previously more generic
+  // lighthouseScores?: Record<string, number>; // Replaced by lighthouseReport.scores
+  performanceMetrics?: Record<string, number>; // Consider moving into lighthouseReport if applicable
   accessibilityIssues?: Array<Record<string, string>>;
   errorMessage?: string;
   completedAt?: number;
