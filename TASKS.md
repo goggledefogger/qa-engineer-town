@@ -15,18 +15,22 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Implement Firebase Anonymous Authentication on the frontend
 - [x] Create basic React frontend layout (Landing Page `/` with URL input)
 - [x] Refine frontend layout and styling (Responsiveness, Spacing, Alignment)
+- [x] Remove Firebase Emulator usage from project configuration, scripts, and documentation.
 
 ## In Progress Tasks
 
 - [ ] **Setup Cloud Tasks for Asynchronous Scanning**
-  - [ ] Create Google Cloud Tasks Queue (e.g., `scan-processing-queue`)
-  - [ ] Grant necessary IAM permissions for `apiScan` to enqueue tasks and for Cloud Tasks to invoke `processScanTask`.
+  - [x] Create Google Cloud Tasks Queue (`scan-processing-queue` in `us-central1`).
+  - [ ] Grant necessary IAM permissions:
+    - Service account for `apiScan` needs `roles/cloudtasks.enqueuer`.
+    - Service account invoking `processScanTask` (via OIDC token) needs `roles/cloudfunctions.invoker` for `processScanTask`.
+  - [x] Configure `PROCESS_SCAN_TASK_URL` environment variable for `apiScan` (e.g., via `functions/.env` file, with `functions/.env.example` as a template).
 - [ ] **Implement Task Enqueueing in `apiScan` Function**
   - [x] Add `@google-cloud/tasks` dependency to `functions/package.json`.
-  - [x] Modify `apiScan` in `functions/src/index.ts` to create and enqueue a task to `processScanTask` containing `reportId` and `urlToScan`.
+  - [x] Modify `apiScan` in `functions/src/index.ts` to create and enqueue a task to `processScanTask` containing `reportId` and `urlToScan` (payload sent as raw JSON, not base64 encoded).
   - [x] Include OIDC token in task creation for secure invocation of `processScanTask`.
 - [ ] **Implement Task Handler Function `processScanTask`**
-  - [x] Define `processScanTask` in `functions/src/index.ts` using `taskQueue().onDispatch()`.
+  - [x] Define `processScanTask` in `functions/src/index.ts` using `onTaskDispatched()`.
   - [x] Configure retry, rate limits, memory, and timeout for `processScanTask`.
   - [x] Implement logic in `processScanTask` to parse payload (`reportId`, `urlToScan`).
   - [x] Update RTDB: status to 'processing', add `processedAt` timestamp.
@@ -90,9 +94,39 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - `PRD.md` - Product Requirements Document
 - `SRS.md` - Software Requirements Specification
 - `UIDD.md` - User Interface Description Document
-- `README.md` - Project Overview & Setup
+- `README.md` - Project Overview & Setup (mentions Firebase CLI, not emulators)
 - `TASKS.md` - This task list
 - `firebase.json` - Firebase project config
-- `functions/package.json` - Backend dependencies ✅
+- `functions/package.json` - Backend dependencies ✅ (emulator scripts removed)
 - `functions/src/index.ts` - Backend Cloud Functions (apiScan, processScanTask) ✅
-- `frontend/.env.example` - Example environment variables for frontend Firebase config
+- `functions/.env.example` - Example environment variables for backend (e.g., `PROCESS_SCAN_TASK_URL`)
+- `package.json` - Root package config (emulator scripts removed)
+
+## Cloud Tasks Payload & Logging Pattern
+
+### Payload Structure
+
+- When enqueuing a Cloud Task to invoke a Firebase Function v2 `onTaskDispatched` handler, **always wrap the payload as**:
+  ```json
+  { "data": { ... } }
+  ```
+  Example:
+  ```json
+  { "data": { "reportId": "...", "urlToScan": "..." } }
+  ```
+- In the handler function, **access the payload as** `request.data` (not `request.body`, `request.rawBody`, etc).
+- If the payload is not wrapped in a `data` property, the function will not receive the expected data and may log an error or fail to process the task.
+
+### Logging & Debugging
+
+- Use diagnostic logging in the handler to dump the incoming request structure for debugging:
+  ```ts
+  logger.info("processScanTask: FULL REQUEST DUMP", { data: request.data });
+  ```
+- To query logs for debugging payload issues, use:
+  ```sh
+  gcloud logging read 'resource.type=("cloud_run_revision" OR "cloud_function") AND jsonPayload.message:"processScanTask: FULL REQUEST DUMP"' --limit=10 --format='table(timestamp, severity, jsonPayload.message, jsonPayload.data)'
+  ```
+- This helps confirm the payload structure and quickly diagnose issues with task invocation or data parsing.
+
+---

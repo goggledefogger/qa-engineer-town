@@ -39,7 +39,7 @@ An AI-powered assistant for freelance QA engineers that automates the process of
     *   Create a Firebase project at [https://console.firebase.google.com/](https://console.firebase.google.com/).
     *   Enable the following services: Authentication (Anonymous sign-in), Realtime Database, Storage, Functions, Hosting.
     *   Obtain your Firebase project configuration credentials.
-    *   Create a `.env` file in the appropriate location (likely the frontend and/or functions directory) and add your Firebase config keys (e.g., `REACT_APP_FIREBASE_API_KEY`, `REACT_APP_FIREBASE_AUTH_DOMAIN`, etc.). **Do not commit `.env` files.** Refer to Firebase documentation for setting up the SDK.
+    *   Create a `.env` file in the appropriate location (likely the frontend and/or functions directory) and add your Firebase config keys (e.g., `REACT_APP_FIREBASE_API_KEY`, `REACT_APP_FIREBASE_AUTH_DOMAIN`, etc.). Note that backend functions (in the `functions` directory) may also require their own `.env` file for specific operational variables (e.g., service URLs). **Do not commit `.env` files.** Refer to Firebase documentation for setting up the SDK.
     *   You may need to install the Firebase CLI (`npm install -g firebase-tools`) and log in (`firebase login`).
 4.  **Run the project:**
     *   Running the frontend dev server (e.g., `npm run dev` or `npm start` in the frontend directory).

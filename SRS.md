@@ -19,17 +19,22 @@
     2.  User authenticates anonymously using Firebase Auth.
     3.  User enters a target URL into the React frontend.
     4.  Frontend sends an HTTPS request to a Firebase Function (`/api/scan`) containing the URL.
-    5.  The Firebase Function is triggered:
+    5.  The Firebase Function (`apiScan`) is triggered:
         a.  Validates the input URL.
         b.  Creates a new report entry in Firebase Realtime Database with a 'pending' status and associates it with the anonymous user ID.
-        c.  Initiates Playwright to navigate to the URL and take a screenshot.
-        d.  Uploads the screenshot to Firebase Storage and saves the URL in the report entry.
-        e.  Runs a Lighthouse audit on the URL.
-        f.  Parses key metrics (performance, accessibility) from the Lighthouse results.
-        g.  Updates the report entry in Firebase Realtime Database with the extracted data, screenshot URL, and sets the status to 'complete' (or 'error' if issues occurred).
-    6.  Frontend listens for real-time updates on the specific report entry in Firebase Realtime Database using the Firebase SDK.
-    7.  Once the report status changes to 'complete', the frontend fetches the full report data from the database.
-    8.  The React components render the interactive report based on the fetched data.
+        c.  Creates a task payload containing the `reportId` and `urlToScan`.
+        d.  Enqueues this task to a Google Cloud Tasks queue, targeting the `processScanTask` function.
+        e.  `apiScan` responds to the frontend with the `reportId` (e.g., HTTP 202 Accepted).
+    6.  The Google Cloud Task service invokes the `processScanTask` function with the payload:
+        a.  `processScanTask` updates the report status in RTDB to 'processing'.
+        b.  Initiates Playwright to navigate to the URL and take a screenshot.
+        c.  Uploads the screenshot to Firebase Storage and saves the URL in the report entry.
+        d.  Runs a Lighthouse audit on the URL.
+        e.  Parses key metrics (performance, accessibility) from the Lighthouse results.
+        f.  Updates the report entry in Firebase Realtime Database with the extracted data, screenshot URL, and sets the status to 'complete' (or 'error' if issues occurred).
+    7.  Frontend listens for real-time updates on the specific report entry in Firebase Realtime Database using the Firebase SDK.
+    8.  Once the report status changes (e.g., to 'processing', then 'complete'), the frontend fetches/updates the report data from the database.
+    9.  The React components render the interactive report based on the fetched data.
 
 - **Technical Stack**
     - **Frontend:** React, TypeScript, Tailwind CSS
@@ -40,6 +45,7 @@
         - Firebase Hosting
         - Firebase Realtime Database (for report metadata and results)
         - Firebase Storage (for screenshots)
+        - Google Cloud Tasks (for asynchronous task queueing)
     - **QA Tools:** Playwright, Lighthouse CLI/Node module
     - **Package Manager:** npm or yarn
 

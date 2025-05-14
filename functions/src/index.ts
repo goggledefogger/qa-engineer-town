@@ -145,13 +145,17 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
     logger.info(`Using processScanTask URL: ${processScanTaskUrl}`);
 
 
-    const taskPayload: ScanTaskPayload = {reportId, urlToScan};
+    const actualPayload: ScanTaskPayload = {reportId, urlToScan};
+    // Wrap the actual payload inside a 'data' property, to mimic how onTaskDispatched might expect it
+    // when the request doesn't originate from firebase-admin/functions TaskQueue.enqueue().
+    const wrappedPayload = { data: actualPayload };
+
     const task: protos.google.cloud.tasks.v2.ITask = {
       httpRequest: {
         httpMethod: protos.google.cloud.tasks.v2.HttpMethod.POST,
         url: processScanTaskUrl, // Use the configurable URL
-        headers: {"Content-Type": "application/json"},
-        body: Buffer.from(JSON.stringify(taskPayload)).toString("base64"),
+        headers: {"Content-Type": "application/json; charset=utf-8"}, // Explicit Content-Type with charset
+        body: Buffer.from(JSON.stringify(wrappedPayload), 'utf8'), // Send the wrapped payload as a UTF-8 Buffer
         oidcToken: {
           serviceAccountEmail: `${projectId}@appspot.gserviceaccount.com`, // Default App Engine service account
           audience: processScanTaskUrl, // Audience MUST be the URL of the called function
@@ -161,14 +165,14 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
       // scheduleTime: { seconds: Date.now() / 1000 + 60 } // e.g., 60 seconds from now
     };
 
-    logger.info("Attempting to enqueue task...", {queuePath, taskPayload});
+    logger.info("Attempting to enqueue task...", {queuePath, wrappedPayload});
     const [taskResponse] = await tasksClient.createTask({parent: queuePath, task});
     logger.info("Task enqueued successfully.", {taskId: taskResponse.name});
 
-    // Respond with the generated reportId
-    response.status(202).json({
+  // Respond with the generated reportId
+  response.status(202).json({
       message: "Scan initiation request received, task enqueued.",
-      receivedUrl: urlToScan,
+    receivedUrl: urlToScan,
       reportId: reportId,
     });
   } catch (error) {
@@ -203,9 +207,30 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
     // region: LOCATION_ID, // This might be set globally or per function
   },
   async (request) => {
+    // EXTENSIVE DIAGNOSTIC LOGGING
+    logger.info("processScanTask: FULL REQUEST DUMP", {
+      headers: request.headers,
+      data: request.data,
+      body: (request as any).body,
+      rawBody: (request as any).rawBody,
+      allKeys: Object.keys(request),
+    });
+
+    // Log the raw request object details for debugging
+    logger.info("processScanTask received request. Headers:", request.headers);
+    logger.info("processScanTask received request. Parsed data object:", request.data);
+
+    // Defensive check if data is truly missing or not an object
+    if (!request.data || typeof request.data !== 'object') {
+      logger.error("request.data is missing, undefined, or not an object.", {receivedData: request.data});
+      // If request.data is not what we expect, we should probably not proceed further with destructuring.
+      // Throw an error to indicate failure, which Cloud Tasks can then retry.
+      throw new Error("Parsed request.data is invalid or missing.");
+    }
+
     const {reportId, urlToScan} = request.data; // Correctly access the payload from request.data
 
-    logger.info(`processScanTask started for reportId: ${reportId}, url: ${urlToScan}`, {reportId, urlToScan});
+    logger.info(`processScanTask starting with: reportId: ${reportId}, url: ${urlToScan}`, {reportId, urlToScan});
 
     try {
       // 1. Update report status to "processing" in RTDB
