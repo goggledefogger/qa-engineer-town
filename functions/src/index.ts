@@ -252,6 +252,20 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         logger.info("Navigation complete.", { status: response?.status() });
         const pageTitle = await page.title();
         logger.info("Fetched page title via Playwright.", { pageTitle });
+        // Take screenshot and upload to Firebase Storage
+        const screenshotBuffer = await page.screenshot({ type: "png" });
+        const bucket = admin.storage().bucket();
+        const screenshotPath = `screenshots/${reportId}.png`;
+        const file = bucket.file(screenshotPath);
+        await file.save(screenshotBuffer, { contentType: "image/png" });
+        // Generate a signed URL (valid for 7 days)
+        const [url] = await file.getSignedUrl({
+          action: "read",
+          expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
+        });
+        logger.info("Screenshot uploaded to Firebase Storage.", { screenshotPath, url });
+        // Save screenshot URL to RTDB
+        await rtdb.ref(`reports/${reportId}/screenshotUrl`).set(url);
       } catch (err) {
         logger.error("Error during playwright-aws-lambda browser launch or navigation.", { error: err instanceof Error ? err.message : err });
         throw err;

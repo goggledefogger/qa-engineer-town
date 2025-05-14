@@ -130,13 +130,24 @@ const ReportPage: React.FC = () => {
         {/* Divider */}
         <hr className="border-slate-200" />
 
-        {/* Placeholder: Screenshot Section */}
+        {/* Screenshot Section */}
         <div>
           <h2 className="text-lg font-semibold text-slate-700 mb-3">Screenshot</h2>
-          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-500">
-            {/* Conditionally show image later based on reportData.screenshotUrl */}
-            Screenshot will appear here when scan is complete.
-          </div>
+          {reportData.screenshotUrl ? (
+            <div className="flex flex-col items-center">
+              <img
+                src={reportData.screenshotUrl}
+                alt="Website Screenshot"
+                className="max-w-full max-h-96 rounded shadow border border-slate-200"
+                style={{ background: '#f8fafc' }}
+              />
+              <a href={reportData.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-blue-600 hover:underline text-sm">Open full size</a>
+            </div>
+          ) : (
+            <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-500">
+              Screenshot will appear here when scan is complete.
+            </div>
+          )}
         </div>
 
         {/* Divider */}
