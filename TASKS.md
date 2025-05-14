@@ -129,4 +129,33 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   ```
 - This helps confirm the payload structure and quickly diagnose issues with task invocation or data parsing.
 
+## Debugging: Querying Cloud Function Logs for Errors
+
+When debugging Google Cloud Functions (including Firebase Functions v2), it is important to use a broad log query to catch all errors, regardless of how they are logged (structured or unstructured, any severity, any function). The Cloud Console UI often shows more errors than narrow CLI queries because it searches all log fields.
+
+**Recommended gcloud command:**
+
+```sh
+gcloud logging read \
+  'resource.type=("cloud_run_revision" OR "cloud_function") AND (textPayload:"Error" OR jsonPayload.message:"Error" OR textPayload:"Queue does not exist" OR jsonPayload.message:"Queue does not exist")' \
+  --limit=50 \
+  --format='table(timestamp, severity, resource.labels.function_name, textPayload, jsonPayload.message, jsonPayload.error)'
+```
+
+- This command searches for error keywords in both structured (`jsonPayload`) and unstructured (`textPayload`) log fields.
+- It catches errors from all functions, all severities, and all log formats.
+- Use this command whenever you are not seeing expected errors in the CLI but do see them in the Cloud Console UI.
+
+**Tip:**
+- You can adjust the `--limit` or add a `timestamp>=` filter to narrow the time window for recent logs.
+- For more details, see the [Google Cloud Logging documentation](https://cloud.google.com/logging/docs/reference/tools/gcloud-logging).
+
+Before deploying or running the backend, ensure the Cloud Tasks queue exists:
+
+```sh
+gcloud tasks queues create scanProcessingQueue --location=us-central1
+```
+
+If the queue was recently deleted, wait a few minutes before recreating it. If you need to proceed immediately, use a new queue name (e.g., 'scanProcessingQueue').
+
 ---

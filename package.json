@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "description": "AI QA Engineer Assistant",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "functions",
-    "scanner-service"
-  ],
   "scripts": {
     "frontend": "npm run dev --workspace=frontend",
     "functions": "npm run build --workspace=functions",

@@ -12,6 +12,8 @@ import * as logger from "firebase-functions/logger";
 import {onRequest} from "firebase-functions/v2/https";
 import {onTaskDispatched} from "firebase-functions/v2/tasks";
 import {CloudTasksClient, protos} from "@google-cloud/tasks";
+// @ts-ignore: No types for playwright-aws-lambda
+import * as playwright from "playwright-aws-lambda";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -21,7 +23,7 @@ const rtdb = admin.database();
 
 // Configuration for Cloud Tasks
 const LOCATION_ID = "us-central1"; // Ensure this is your function's region
-const QUEUE_ID = "scan-processing-queue";
+const QUEUE_ID = "scanProcessingQueue";
 
 const tasksClient = new CloudTasksClient();
 let currentProjectId: string | undefined;
@@ -238,30 +240,30 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("Report status updated to processing.", {reportId});
 
-      // 2. TODO: Implement Playwright execution
-      //    - Launch browser
-      //    - Navigate to urlToScan
-      //    - Perform actions/assertions
-      //    - Gather results/screenshots
-      //    - Store Playwright results in playwrightReport field in RTDB
-      logger.info("Placeholder for Playwright execution.", {reportId});
-      // Simulate Playwright task
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Simulate work
-      const playwrightResults = {
-        pageTitle: "Mocked Page Title",
-        screenshotPath: `/mock/path/to/screenshot-${reportId}.png`,
-      };
-      await rtdb.ref(`reports/${reportId}/playwrightReport`).set(playwrightResults);
-      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
-      logger.info("Mock Playwright report saved.", {reportId});
-
+      // 2. Playwright execution (browser launch, navigation, etc.)
+      logger.info("Using playwright-aws-lambda. Launching Chromium with launchChromium()...");
+      let browser, context, page;
+      try {
+        browser = await playwright.launchChromium();
+        context = await browser.newContext();
+        page = await context.newPage();
+        logger.info("Navigating to target URL...", { urlToScan });
+        const response = await page.goto(urlToScan, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        logger.info("Navigation complete.", { status: response?.status() });
+        const pageTitle = await page.title();
+        logger.info("Fetched page title via Playwright.", { pageTitle });
+      } catch (err) {
+        logger.error("Error during playwright-aws-lambda browser launch or navigation.", { error: err instanceof Error ? err.message : err });
+        throw err;
+      } finally {
+        if (browser) {
+          await browser.close();
+          logger.info("Closed Chromium browser.");
+        }
+      }
 
       // 3. TODO: Implement Lighthouse execution
-      //    - Run Lighthouse audit on urlToScan
-      //    - Gather Lighthouse report
-      //    - Store Lighthouse results in lighthouseReport field in RTDB
       logger.info("Placeholder for Lighthouse execution.", {reportId});
-      // Simulate Lighthouse task
       await new Promise((resolve) => setTimeout(resolve, 5000)); // Simulate work
       const lighthouseResults = {
         performanceScore: 95,
@@ -271,8 +273,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("Mock Lighthouse report saved.", {reportId});
 
-
-      // 4. Update report status to "completed"
+      // 4. Update report status to "completed" ONLY if all above steps succeed
       await rtdb.ref(`reports/${reportId}/status`).set("completed");
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("processScanTask completed successfully.", {reportId});
