@@ -10,6 +10,7 @@ An AI-powered assistant for freelance QA engineers that automates the process of
 *   Runs Lighthouse audit to gather performance and accessibility metrics.
 *   Uses Playwright to navigate and take a screenshot.
 *   Displays results (Lighthouse scores, key metrics, accessibility issues, screenshot) in an interactive web report.
+*   Displays Lighthouse (PageSpeed) scores in the frontend report as soon as they are available, for a responsive user experience.
 *   Uses Firebase for backend, database, and hosting.
 
 ## Tech Stack

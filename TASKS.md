@@ -43,11 +43,12 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Add `lighthouse` dependency to `functions` workspace (managed from project root).
     - [x] Resolve ERR_REQUIRE_ESM by using dynamic `await import('lighthouse')` in `processScanTask`.
     - [x] Implement Lighthouse audit logic (connect to Playwright's browser instance, run audit, parse scores).
-    - [ ] Debug runtime issues (e.g., Lighthouse connecting to browser, ensuring browser stays open).
-      - [ ] Added `--disable-dev-shm-usage` and `--headless` to Playwright's Chrome launch arguments.
-      - [ ] Simplified Lighthouse run to only the 'performance' category for diagnostics.
-      - [ ] Implemented a 3-minute timeout for the Lighthouse audit using `Promise.race` to prevent indefinite hanging.
-    - [ ] Save Lighthouse scores and any errors to RTDB within `lighthouseReport` object.
+    - [x] Debug runtime issues (e.g., Lighthouse connecting to browser, ensuring browser stays open).
+      - [x] Switched to Google PageSpeed Insights API for Lighthouse results (no local Chrome needed).
+      - [x] Parse and store scores from PageSpeed API response.
+      - [x] Added `node-fetch` and `@types/node-fetch` for API requests in Node.js.
+      - [x] Added support for `PAGESPEED_API_KEY` in `.env` and `.env.example` (user must provide key).
+    - [x] Save Lighthouse scores and any errors to RTDB within `lighthouseReport` object.
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
 
@@ -60,7 +61,8 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Implement backend logic to create initial 'pending' report entry in RTDB
 - [x] Save screenshot URL to RTDB (from `processScanTask`)
 - [ ] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
-  - [ ] Display screenshot on Report Page when available (Note: UI bug to fix, screenshot URL is saved but not always displaying)
+  - [x] Display screenshot on Report Page when available (Note: UI bug to fix, screenshot URL is saved but not always displaying)
+  - [x] Display Lighthouse (PageSpeed) scores on Report Page as soon as they are available from the backend
 - [ ] Implement frontend logic to call `/api/scan` function
 - [ ] Implement frontend logic to navigate to Report Page with `reportId`
 - [ ] Implement frontend logic to listen for real-time updates on the RTDB report entry

@@ -224,7 +224,8 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       maxConcurrentDispatches: 10, // Adjust as needed
     },
     timeoutSeconds: 540, // Max timeout for Firebase Functions (gen 2 can be higher if configured)
-    memory: "1GiB", // Adjust as needed
+    memory: "4GiB", // Increased memory to 4GiB for diagnostics
+    cpu: 2, // Explicitly set CPU to 2 for diagnostics
     // Ensure this function is deployed to the same region as the queue (LOCATION_ID)
     // region: LOCATION_ID, // This might be set globally or per function
   },
@@ -314,12 +315,12 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         };
         // Do NOT re-throw here. This error is part of the scan result.
       } finally {
-        // if (browser) { // Original position of browser.close()
-        //   await browser.close();
-        //   logger.info("Closed Chromium browser.", {reportId});
-        // }
-        // Browser is NOT closed here anymore. It will be closed in the main finally block.
-        logger.info("Playwright actions completed (browser still open for Lighthouse).", {reportId});
+        if (browser) {
+          await browser.close();
+          logger.info("Closed Playwright's Chromium browser before PageSpeed Insights run.", {reportId});
+          browser = null; // Set browser to null after closing
+        }
+        logger.info("Playwright actions completed and browser closed.", {reportId});
       }
 
       // Save Playwright results (success or failure details) to RTDB
@@ -329,71 +330,48 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
       logger.info("Playwright report data saved to RTDB.", {reportId});
 
-      // 3. Lighthouse execution
+      // 3. Lighthouse execution (now using PageSpeed Insights API)
       let lighthouseScanSucceeded = false;
       let lighthouseReportData: LighthouseReportData = { success: false, error: "Lighthouse scan did not run or complete." };
 
       try {
-        logger.info("Starting Lighthouse scan...", { reportId, urlToScan });
+        logger.info("Starting Lighthouse scan via PageSpeed Insights API...", { reportId, urlToScan });
 
-        const lighthouseModule = await import("lighthouse");
-        const lighthouse = lighthouseModule.default;
-        type LighthouseOptionsType = Parameters<typeof lighthouse>[1];
-
-        const lighthouseOptions: LighthouseOptionsType = {
-          port: 9222,
-          output: 'json',
-          logLevel: 'info',
-          onlyCategories: ['performance'], // Simplified to only run performance category
-          // chromeFlags property removed as it caused a linting error and flags should be set on launch
-        };
-
-        logger.info("Lighthouse: About to call lighthouse function.", { reportId, lighthouseOptions }); // Log options
-        const startTime = Date.now();
-
-        // Wrap Lighthouse call in a promise with a timeout
-        const lighthousePromise = lighthouse(urlToScan, lighthouseOptions);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Lighthouse audit timed out after 3 minutes")), 3 * 60 * 1000)
-        );
-
-        // Run Lighthouse with timeout
-        // const runnerResult = await lighthouse(urlToScan, lighthouseOptions); // Old direct call
-        const runnerResult = await Promise.race([
-          lighthousePromise,
-          timeoutPromise
-        ]) as any; // Cast to any to handle mixed promise types, refine if LHR type is easily available
-
-        const duration = Date.now() - startTime;
-        logger.info("Lighthouse: Call to lighthouse function completed.", { reportId, durationMs: duration });
-
-        if (!runnerResult || !runnerResult.lhr) {
-          throw new Error("Lighthouse did not return a valid report (LHR).");
+        const apiKey = process.env.PAGESPEED_API_KEY;
+        if (!apiKey) {
+          throw new Error("PAGESPEED_API_KEY environment variable is not set.");
         }
+        const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(urlToScan)}&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO&strategy=desktop&key=${apiKey}`;
 
-        const lhr = runnerResult.lhr; // lhr is the Lighthouse Result object
-        logger.info("Lighthouse scan completed. Processing results...", { reportId });
-
-        // Extract scores
+        // Use fetch (Node 18+) or fallback to node-fetch if needed
+        const fetchFn = (globalThis as any).fetch || (await import('node-fetch')).default;
+        const resp = await fetchFn(apiUrl);
+        if (!resp.ok) {
+          throw new Error(`PageSpeed API request failed: ${resp.status} ${resp.statusText}`);
+        }
+        const data = await resp.json();
+        if (!data.lighthouseResult || !data.lighthouseResult.categories) {
+          throw new Error("PageSpeed API did not return expected Lighthouse results.");
+        }
+        const lhr = data.lighthouseResult;
+        const categories = lhr.categories;
+        // Extract scores (0-1, multiply by 100)
         const scores: LighthouseReportData['scores'] = {};
-        if (lhr.categories.performance?.score) {
-          scores.performance = Math.round(lhr.categories.performance.score * 100);
+        if (categories.performance?.score !== undefined) {
+          scores.performance = Math.round(categories.performance.score * 100);
         }
-        if (lhr.categories.accessibility?.score) {
-          scores.accessibility = Math.round(lhr.categories.accessibility.score * 100);
+        if (categories.accessibility?.score !== undefined) {
+          scores.accessibility = Math.round(categories.accessibility.score * 100);
         }
-        if (lhr.categories['best-practices']?.score) {
-          scores.bestPractices = Math.round(lhr.categories['best-practices'].score * 100);
+        if (categories['best-practices']?.score !== undefined) {
+          scores.bestPractices = Math.round(categories['best-practices'].score * 100);
         }
-        if (lhr.categories.seo?.score) {
-          scores.seo = Math.round(lhr.categories.seo.score * 100);
+        if (categories.seo?.score !== undefined) {
+          scores.seo = Math.round(categories.seo.score * 100);
         }
-        // PWA score might be null if not applicable, handle that
-        if (lhr.categories.pwa?.score !== null && lhr.categories.pwa?.score !== undefined) {
-            scores.pwa = Math.round(lhr.categories.pwa.score * 100);
-        } else {
-            // Optional: explicitly set to undefined or a special value if PWA is not applicable/scored
-            scores.pwa = undefined;
+        // PWA is not always present
+        if (categories.pwa?.score !== undefined) {
+          scores.pwa = Math.round(categories.pwa.score * 100);
         }
 
         lighthouseReportData = {
@@ -401,15 +379,14 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
           scores: scores,
         };
         lighthouseScanSucceeded = true;
-
+        logger.info("Lighthouse (PageSpeed) scan completed and parsed.", { reportId, scores });
       } catch (lighthouseError) {
         const errorMsg = (lighthouseError as Error).message || String(lighthouseError);
-        logger.error("Error during Lighthouse execution for report:", { reportId, error: errorMsg });
+        logger.error("Error during Lighthouse (PageSpeed) execution:", { reportId, error: errorMsg });
         lighthouseReportData = {
           success: false,
           error: errorMsg,
         };
-        // Do NOT re-throw here. This error is part of the scan result.
       }
 
       // Save Lighthouse results to RTDB
@@ -422,8 +399,6 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         await rtdb.ref(`reports/${reportId}/status`).set("completed");
       } else {
         await rtdb.ref(`reports/${reportId}/status`).set("failed");
-        // The specific error (e.g. from Playwright) is already in playwrightReport.error
-        // Or, if a general error message is preferred for the main error field:
         await rtdb.ref(`reports/${reportId}/error`).set("Scan completed with errors. See playwrightReport and/or lighthouseReport for details.");
       }
       await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
@@ -442,10 +417,14 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       logger.error("Outer critical error detected. Scan will not be retried by Cloud Tasks.", {reportId});
       // Do NOT re-throw, ensuring Cloud Tasks does not retry.
     } finally {
-      if (browser) {
-        await browser.close();
-        logger.info("Closed Chromium browser in main finally block.", {reportId});
-      }
+      // if (browser) { // This browser variable would now be from a Playwright error scenario if not nulled
+      //   logger.warn("Playwright browser instance was still open in main finally block, closing it.", {reportId});
+      //   await browser.close();
+      //   logger.info("Closed Playwright's Chromium browser in main finally block.", {reportId});
+      // }
+      // Browser cleanup is handled in the specific Playwright finally block,
+      // (No local Lighthouse browser management needed; PageSpeed Insights API is used.)
+      logger.info("processScanTask finished execution in main finally block.", {reportId});
     }
   }
 );

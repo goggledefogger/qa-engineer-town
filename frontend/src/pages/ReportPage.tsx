@@ -172,24 +172,40 @@ const ReportPage: React.FC = () => {
         {/* Divider */}
         <hr className="border-slate-200" />
 
-        {/* Placeholder: Performance Section */}
+        {/* Performance Section */}
         <div>
           <h2 className="text-lg font-semibold text-slate-700 mb-3">Performance</h2>
-          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-500">
-            {/* Display Lighthouse scores later */}
-            Performance scores (Lighthouse) will appear here when scan is complete.
+          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-700">
+            {reportData.lighthouseReport?.scores ? (
+              <div className="flex flex-col items-center space-y-2">
+                <div>Performance: <span className="font-bold">{reportData.lighthouseReport.scores.performance ?? 'N/A'}</span></div>
+                <div>Accessibility: <span className="font-bold">{reportData.lighthouseReport.scores.accessibility ?? 'N/A'}</span></div>
+                <div>Best Practices: <span className="font-bold">{reportData.lighthouseReport.scores.bestPractices ?? 'N/A'}</span></div>
+                <div>SEO: <span className="font-bold">{reportData.lighthouseReport.scores.seo ?? 'N/A'}</span></div>
+                {reportData.lighthouseReport.scores.pwa !== undefined && (
+                  <div>PWA: <span className="font-bold">{reportData.lighthouseReport.scores.pwa}</span></div>
+                )}
+              </div>
+            ) : (
+              <>Performance scores (Lighthouse) will appear here when scan is complete.</>
+            )}
           </div>
         </div>
 
         {/* Divider */}
         <hr className="border-slate-200" />
 
-        {/* Placeholder: Accessibility Section */}
+        {/* Accessibility Section */}
         <div>
           <h2 className="text-lg font-semibold text-slate-700 mb-3">Accessibility</h2>
-          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-500">
-            {/* Display accessibility issues later */}
-            Accessibility issues (Lighthouse) will appear here when scan is complete.
+          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-700">
+            {reportData.lighthouseReport?.scores?.accessibility !== undefined ? (
+              <div>
+                Accessibility Score: <span className="font-bold">{reportData.lighthouseReport.scores.accessibility}</span>
+              </div>
+            ) : (
+              <>Accessibility issues (Lighthouse) will appear here when scan is complete.</>
+            )}
           </div>
         </div>
 
