@@ -14,7 +14,7 @@ import {onTaskDispatched} from "firebase-functions/v2/tasks";
 import {CloudTasksClient, protos} from "@google-cloud/tasks";
 // @ts-ignore: No types for playwright-aws-lambda
 import * as playwright from "playwright-aws-lambda";
-import lighthouse, { Flags as LighthouseFlags } from "lighthouse"; // Import Lighthouse and its Flags type
+// import lighthouse, { Flags as LighthouseFlags } from "lighthouse"; // REMOVED: Static import causes ERR_REQUIRE_ESM
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -254,6 +254,8 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
 
     logger.info(`processScanTask starting with: reportId: ${reportId}, url: ${urlToScan}`, {reportId, urlToScan});
 
+    let browser; // Declare browser here to be accessible in the new main finally block
+
     try {
       // 1. Update report status to "processing" in RTDB
       await rtdb.ref(`reports/${reportId}/status`).set("processing");
@@ -262,13 +264,20 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
 
       // 2. Playwright execution
       let playwrightScanSucceeded = false;
-      // Initialize with a default structure in case of early errors before playwrightReport is fully populated
       let playwrightReportData: ReportData["playwrightReport"] = { success: false, error: "Playwright scan did not run or complete." };
-      let browser;
 
       try {
         logger.info("Using playwright-aws-lambda. Launching Chromium with launchChromium()...");
-        browser = await playwright.launchChromium();
+        browser = await playwright.launchChromium({
+          args: [
+            '--remote-debugging-port=9222',
+            '--disable-dev-shm-usage',
+            '--headless',
+            // Other potentially useful args for serverless environments:
+            // '--disable-gpu',
+            // '--single-process'
+          ]
+        });
         const context = await browser.newContext();
         const page = await context.newPage();
         logger.info("Navigating to target URL...", { urlToScan });
@@ -305,10 +314,12 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         };
         // Do NOT re-throw here. This error is part of the scan result.
       } finally {
-        if (browser) {
-          await browser.close();
-          logger.info("Closed Chromium browser.", {reportId});
-        }
+        // if (browser) { // Original position of browser.close()
+        //   await browser.close();
+        //   logger.info("Closed Chromium browser.", {reportId});
+        // }
+        // Browser is NOT closed here anymore. It will be closed in the main finally block.
+        logger.info("Playwright actions completed (browser still open for Lighthouse).", {reportId});
       }
 
       // Save Playwright results (success or failure details) to RTDB
@@ -325,19 +336,36 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       try {
         logger.info("Starting Lighthouse scan...", { reportId, urlToScan });
 
-        // Define options for Lighthouse
-        // Tell Lighthouse to use the same port Playwright is using for Chrome.
-        // playwright-aws-lambda defaults to port 9222.
-        const lighthouseOptions: LighthouseFlags = {
+        const lighthouseModule = await import("lighthouse");
+        const lighthouse = lighthouseModule.default;
+        type LighthouseOptionsType = Parameters<typeof lighthouse>[1];
+
+        const lighthouseOptions: LighthouseOptionsType = {
           port: 9222,
           output: 'json',
           logLevel: 'info',
-          onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'],
-          // Consider adding formFactor: 'mobile' or 'desktop' if needed, and other flags.
+          onlyCategories: ['performance'], // Simplified to only run performance category
+          // chromeFlags property removed as it caused a linting error and flags should be set on launch
         };
 
-        // Run Lighthouse
-        const runnerResult = await lighthouse(urlToScan, lighthouseOptions);
+        logger.info("Lighthouse: About to call lighthouse function.", { reportId, lighthouseOptions }); // Log options
+        const startTime = Date.now();
+
+        // Wrap Lighthouse call in a promise with a timeout
+        const lighthousePromise = lighthouse(urlToScan, lighthouseOptions);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Lighthouse audit timed out after 3 minutes")), 3 * 60 * 1000)
+        );
+
+        // Run Lighthouse with timeout
+        // const runnerResult = await lighthouse(urlToScan, lighthouseOptions); // Old direct call
+        const runnerResult = await Promise.race([
+          lighthousePromise,
+          timeoutPromise
+        ]) as any; // Cast to any to handle mixed promise types, refine if LHR type is easily available
+
+        const duration = Date.now() - startTime;
+        logger.info("Lighthouse: Call to lighthouse function completed.", { reportId, durationMs: duration });
 
         if (!runnerResult || !runnerResult.lhr) {
           throw new Error("Lighthouse did not return a valid report (LHR).");
@@ -413,6 +441,11 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       // For ANY error caught at this outer level, we assume it's critical enough to stop retries.
       logger.error("Outer critical error detected. Scan will not be retried by Cloud Tasks.", {reportId});
       // Do NOT re-throw, ensuring Cloud Tasks does not retry.
+    } finally {
+      if (browser) {
+        await browser.close();
+        logger.info("Closed Chromium browser in main finally block.", {reportId});
+      }
     }
   }
 );

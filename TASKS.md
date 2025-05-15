@@ -40,6 +40,14 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Save screenshot URL to RTDB.
     - [x] Implement robust error handling for Playwright-specific errors (e.g., navigation failures, timeouts) to capture errors in the `playwrightReport` object in RTDB.
   - [ ] Implement Lighthouse integration within `processScanTask`.
+    - [x] Add `lighthouse` dependency to `functions` workspace (managed from project root).
+    - [x] Resolve ERR_REQUIRE_ESM by using dynamic `await import('lighthouse')` in `processScanTask`.
+    - [x] Implement Lighthouse audit logic (connect to Playwright's browser instance, run audit, parse scores).
+    - [ ] Debug runtime issues (e.g., Lighthouse connecting to browser, ensuring browser stays open).
+      - [ ] Added `--disable-dev-shm-usage` and `--headless` to Playwright's Chrome launch arguments.
+      - [ ] Simplified Lighthouse run to only the 'performance' category for diagnostics.
+      - [ ] Implemented a 3-minute timeout for the Lighthouse audit using `Promise.race` to prevent indefinite hanging.
+    - [ ] Save Lighthouse scores and any errors to RTDB within `lighthouseReport` object.
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
 
@@ -163,6 +171,17 @@ gcloud logging read \
 **Note:**
 - The Firebase CLI (`firebase functions:log`) may lag several minutes behind the Cloud Console and `gcloud logging read`.
 - For real-time debugging, always prefer the Cloud Console or the `gcloud logging read` command above.
+
+### NPM Workspace Dependency Management
+
+- This project uses npm workspaces (defined in the root `package.json`).
+- To add a dependency to a specific workspace (e.g., `functions` or `frontend`), run the command from the **project root**:
+  ```bash
+  npm install <package-name> --workspace=<workspace-name>
+  # Example: npm install lighthouse --workspace=functions
+  ```
+- After adding/changing dependencies, run `npm install` from the **project root** to ensure all workspaces are synchronized.
+- The primary `package-lock.json` is the one in the project root. Individual workspaces (like `functions/`) should generally not have their own `package-lock.json` when managed by root workspaces; if one exists, it's often removed/ignored in favor of the root lockfile.
 
 Before deploying or running the backend, ensure the Cloud Tasks queue exists:
 
