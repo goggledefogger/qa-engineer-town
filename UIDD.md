@@ -4,7 +4,7 @@
 
 *   **Landing Page (`/`)**: Single-column, centered layout. Minimalist design focused solely on the URL input task. Contains a header (optional logo/title) and the main input area.
 *   **Report Page (`/report/:reportId`)**: Transitions to a two-column layout on wider screens after scan initiation.
-    *   **Left Sidebar:** Vertical navigation for different report categories (initially Performance, Accessibility, Screenshot; planned: Errors, Network, Design, etc.). Remains fixed/sticky.
+    *   **Left Sidebar:** Vertical navigation for different report categories (initially Performance, Accessibility, Screenshot; planned: Errors, Network, AI UX & Design Insights, etc.). Remains fixed/sticky.
     *   **Main Content Area:** Displays the content for the selected category from the sidebar. This area will initially show a progress indicator/status updates and then populate with report data as it becomes available.
 
 ## Core Components
@@ -12,15 +12,15 @@
 *   **URL Input:** Large, clear text input field with a prominent "Analyze Website" button.
 *   **Progress Indicator:** On the report page, displays during the scan. Could be a loading spinner, a progress bar (if feasible to estimate progress), and text updates (e.g., "Running Lighthouse...", "Analyzing screenshot...", "Fetching results...").
 *   **Navigation Sidebar:** List of links/buttons representing report categories. The currently active category is highlighted.
-*   **Report Sections:** Cards, tables, or dedicated content blocks within the main area to display data for each category (e.g., score gauges, lists of issues, embedded screenshot).
+*   **Report Sections:** Cards, tables, or dedicated content blocks within the main area to display data for each category (e.g., score gauges, lists of issues, embedded screenshot). The "AI UX & Design Insights" section will display textual advice, potentially with visual callouts or references to the main screenshot, detailing AI-identified areas for improvement in user experience, layout, and styling.
 *   **Header:** Simple header, potentially with a logo and maybe user status (initially just indicating anonymous session).
 
 ## Interaction Patterns
 
 *   **Initiation:** User pastes URL on the landing page and clicks "Analyze".
 *   **Transition:** The application navigates to the `/report/:reportId` page.
-*   **Loading State:** The report page immediately shows the progress indicator and status updates in the main content area. The sidebar is present.
-*   **Incremental Loading:** As backend processes complete (Lighthouse finishes, screenshot saved), the corresponding sections in the main content area populate with data *without* a full page reload. The progress indicator might update or disappear section by section. Users can click sidebar navigation items to view completed sections even if others are still loading.
+*   **Loading State:** The report page immediately shows the progress indicator and status updates in the main content area. The sidebar is present. Text updates might include "Analyzing UX with AI..."
+*   **Incremental Loading:** As backend processes complete (Lighthouse finishes, screenshot saved, AI UX analysis complete), the corresponding sections in the main content area populate with data *without* a full page reload. The progress indicator might update or disappear section by section. Users can click sidebar navigation items to view completed sections even if others are still loading.
 *   **Navigation:** Clicking items in the left sidebar instantly updates the main content area to show the relevant report section.
 
 ## Visual Design Elements & Color Scheme

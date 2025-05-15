@@ -52,6 +52,15 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
 
+- [ ] **NEW: Implement AI-Powered UX & Design Analysis in `processScanTask`**
+  - [ ] Add dependencies for AI Vision Model SDKs (e.g., OpenAI, Google AI) to `functions/package.json`.
+  - [ ] Implement logic to call the chosen AI vision model API(s) with the captured screenshot (or its URL) and relevant context (e.g., URL, device type if emulated).
+  - [ ] Define a clear data structure for storing AI-generated UX/design suggestions in RTDB (under `reportData.aiUxDesignSuggestions`).
+  - [ ] Parse the API response from the vision model(s) and transform it into the defined data structure.
+  - [ ] Update RTDB with the AI-generated suggestions.
+  - [ ] Add environment variables for AI API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.) in `.env` and `.env.example`.
+  - [ ] Implement robust error handling for AI API calls (e.g., API errors, rate limits, content moderation issues) and store relevant error information in RTDB.
+
 ## Future Tasks (Initial Prototype - MVP)
 
 - [x] Create backend Firebase Function (`/api/scan`) structure
@@ -63,6 +72,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [ ] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
   - [x] Display screenshot on Report Page when available (Note: UI bug to fix, screenshot URL is saved but not always displaying)
   - [x] Display Lighthouse (PageSpeed) scores on Report Page as soon as they are available from the backend
+  - [ ] **NEW:** Display AI-generated UX & Design suggestions on Report Page in a dedicated section/tab.
 - [ ] Implement frontend logic to call `/api/scan` function
 - [ ] Implement frontend logic to navigate to Report Page with `reportId`
 - [ ] Implement frontend logic to listen for real-time updates on the RTDB report entry
@@ -105,9 +115,10 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 *(To be populated as development progresses)*
 
-- `PRD.md` - Product Requirements Document
-- `SRS.md` - Software Requirements Specification
-- `UIDD.md` - User Interface Description Document
+- `PRD.md` - Product Requirements Document ✅ (Updated for AI UX/Design)
+- `SRS.md` - Software Requirements Specification ✅ (Updated for AI UX/Design)
+- `UIDD.md` - User Interface Description Document ✅ (Updated for AI UX/Design)
+- `DESIGN.md` - UI Design Options & Final Choice ✅ (Created, reflects AI UX/Design)
 - `README.md` - Project Overview & Setup (mentions Firebase CLI, not emulators)
 - `TASKS.md` - This task list
 - `firebase.json` - Firebase project config

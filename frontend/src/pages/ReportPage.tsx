@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
+import { ReportPageLayout } from '../components/layout';
+import { SidebarNav } from '../components/navigation';
+import { Card } from '../components/ui'; // Assuming Card component is in ui
 
 // Define an interface for Lighthouse report data
 interface LighthouseReportData {
@@ -28,10 +31,7 @@ interface ReportData {
     error?: string;
   };
   lighthouseReport?: LighthouseReportData;
-  // Optional fields that were previously more generic
-  // lighthouseScores?: Record<string, number>; // Replaced by lighthouseReport.scores
-  performanceMetrics?: Record<string, number>; // Consider moving into lighthouseReport if applicable
-  accessibilityIssues?: Array<Record<string, string>>;
+  aiUxDesignSuggestions?: Array<{ type: string; suggestion: string; area?: any }>; // TODO: Refine this type
   errorMessage?: string;
   completedAt?: number;
 }
@@ -41,6 +41,7 @@ const ReportPage: React.FC = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<string>('summary'); // Default to summary
 
   useEffect(() => {
     if (!reportId) {
@@ -81,136 +82,134 @@ const ReportPage: React.FC = () => {
 
   }, [reportId]); // Re-run effect if reportId changes
 
+  const renderSectionContent = () => {
+    if (!reportData) return <Card title="No Data"><p className="text-slate-600">Report details are unavailable.</p></Card>;
+
+    // Helper for consistent label-value pairs
+    const DetailItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+      <p className="text-sm text-slate-700">
+        <span className="font-semibold text-slate-800">{label}:</span> {children}
+      </p>
+    );
+
+    switch (activeSection) {
+      case 'summary':
+        return (
+          <Card title="Scan Summary" className="font-sans">
+            <div className="space-y-2">
+              <DetailItem label="Status">
+                <span className={`capitalize font-medium
+                  ${reportData.status === 'pending' ? 'text-amber-600' :
+                    reportData.status === 'processing' ? 'text-blue-600' :
+                    reportData.status === 'complete' ? 'text-green-600' :
+                    reportData.status === 'error' ? 'text-red-600' : 'text-slate-600'}
+                `}>{reportData.status}</span>
+              </DetailItem>
+              <DetailItem label="URL">
+                <a href={reportData.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{reportData.url}</a>
+              </DetailItem>
+              <DetailItem label="Created">{new Date(reportData.createdAt).toLocaleString()}</DetailItem>
+              {reportData.completedAt && <DetailItem label="Completed">{new Date(reportData.completedAt).toLocaleString()}</DetailItem>}
+              {reportData.errorMessage && <DetailItem label="Error"><span className="text-red-600">{reportData.errorMessage}</span></DetailItem>}
+            </div>
+          </Card>
+        );
+      case 'screenshot':
+        return (
+          <Card title="Screenshot" className="font-sans">
+            {reportData.playwrightReport?.screenshotUrl ? (
+              <div className="flex flex-col items-center">
+                <img
+                  src={reportData.playwrightReport.screenshotUrl}
+                  alt="Website Screenshot"
+                  className="max-w-full max-h-[70vh] rounded shadow-md border border-slate-300 object-contain bg-slate-50"
+                />
+                <a href={reportData.playwrightReport.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-3 text-sm text-blue-600 hover:underline">Open full size</a>
+              </div>
+            ) : (
+              <p className="text-slate-600">Screenshot will appear here when scan is complete.</p>
+            )}
+          </Card>
+        );
+      case 'performance':
+        return (
+          <Card title="Performance (Lighthouse)" className="font-sans">
+            {reportData.lighthouseReport?.scores ? (
+              <div className="space-y-1.5">
+                <DetailItem label="Performance">{reportData.lighthouseReport.scores.performance ?? 'N/A'}</DetailItem>
+                <DetailItem label="Accessibility">{reportData.lighthouseReport.scores.accessibility ?? 'N/A'}</DetailItem>
+                <DetailItem label="Best Practices">{reportData.lighthouseReport.scores.bestPractices ?? 'N/A'}</DetailItem>
+                <DetailItem label="SEO">{reportData.lighthouseReport.scores.seo ?? 'N/A'}</DetailItem>
+                {reportData.lighthouseReport.scores.pwa !== undefined && (
+                  <DetailItem label="PWA">{reportData.lighthouseReport.scores.pwa}</DetailItem>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-600">Performance scores will appear here when scan is complete.</p>
+            )}
+            {reportData.lighthouseReport?.error && <p className="text-red-600 mt-2 text-sm">Error: {reportData.lighthouseReport.error}</p>}
+          </Card>
+        );
+        // TODO: Add cases for 'accessibility', 'seo', 'best-practices', 'ai-ux-design'
+      default:
+        return <Card title="Section Not Found" className="font-sans"><p className="text-slate-600">Content for {activeSection} is not available yet.</p></Card>;
+    }
+  };
+
   // --- Render Logic ---
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 font-sans antialiased">
-        <p className="text-xl text-slate-500">Loading Report...</p>
+      <div className="flex items-center justify-center p-4 h-full">
+        <p className="text-xl text-slate-500 font-sans">Loading Report...</p>
       </div>
     );
   }
 
   if (error) {
-      return (
-        <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 pt-12 sm:pt-16 lg:pt-20 bg-slate-50 font-sans antialiased">
-          <h1 className="text-2xl sm:text-3xl font-bold text-red-600 mb-4 text-center">Error</h1>
-          <p className="text-red-700">{error}</p>
-          {reportId && <p className="mt-2 text-sm text-slate-500">Report ID: <span className="font-mono bg-slate-200 px-1 rounded">{reportId}</span></p>}
-        </div>
-      );
+    return (
+      <div className="flex flex-col items-center justify-center p-4 h-full text-center">
+        <h1 className="text-2xl font-bold text-red-600 mb-3 font-sans">Error</h1>
+        <p className="text-red-700 mb-3 font-sans">{error}</p>
+        {reportId && <p className="text-sm text-slate-500 font-sans">Report ID: <span className="font-mono bg-slate-200 px-1 rounded">{reportId}</span></p>}
+      </div>
+    );
   }
 
-  if (!reportData) {
-    // This case might be covered by the error state if not found, but good to have
+  if (!reportData && !loading) { // Ensure we only show this if not loading and no data
      return (
-        <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 pt-12 sm:pt-16 lg:pt-20 bg-slate-50 font-sans antialiased">
-          <p className="text-xl text-slate-500">Report data unavailable.</p>
-          {reportId && <p className="mt-2 text-sm text-slate-500">Report ID: <span className="font-mono bg-slate-200 px-1 rounded">{reportId}</span></p>}
+        <div className="flex flex-col items-center justify-center p-4 h-full text-center">
+          <p className="text-xl text-slate-500 mb-3 font-sans">Report data unavailable.</p>
+          {reportId && <p className="text-sm text-slate-500 font-sans">Report ID: <span className="font-mono bg-slate-200 px-1 rounded">{reportId}</span></p>}
         </div>
       );
   }
 
   // --- Display Report Data ---
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 pt-12 sm:pt-16 lg:pt-20 bg-slate-50 font-sans antialiased">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-4 text-center">
-        QA Report
-      </h1>
-      <p className="text-slate-600 mb-2">Report ID: <span className="font-mono bg-slate-200 px-1 rounded">{reportId}</span></p>
-      <p className="text-slate-500 mb-6">Scanning: <a href={reportData.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{reportData.url}</a></p>
-
-      {/* Main Report Card */}
-      <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-md space-y-6">
-
-        {/* Scan Status Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-700 mb-2">Scan Status</h2>
-          <p className="capitalize font-medium
-            ${reportData.status === 'pending' ? 'text-amber-600' :
-              reportData.status === 'processing' ? 'text-blue-600' :
-              reportData.status === 'complete' ? 'text-green-600' :
-              reportData.status === 'error' ? 'text-red-600' : 'text-slate-500'}"
-          >
-            {reportData.status}
-            {(reportData.status === 'pending' || reportData.status === 'processing') &&
-             <svg className="animate-spin inline-block ml-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            }
-          </p>
-          {reportData.status === 'error' && reportData.errorMessage && (
-              <p className="mt-2 text-sm text-red-700">Error Details: {reportData.errorMessage}</p>
-          )}
-          <p className="text-xs text-slate-400 mt-2">Created: {new Date(reportData.createdAt).toLocaleString()}</p>
-        </div>
-
-        {/* Divider */}
-        <hr className="border-slate-200" />
-
-        {/* Screenshot Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-700 mb-3">Screenshot</h2>
-          {reportData.playwrightReport?.screenshotUrl ? (
-            <div className="flex flex-col items-center">
-              <img
-                src={reportData.playwrightReport.screenshotUrl}
-                alt="Website Screenshot"
-                className="max-w-full max-h-96 rounded shadow border border-slate-200"
-                style={{ background: '#f8fafc' }}
-              />
-              <a href={reportData.playwrightReport.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-blue-600 hover:underline text-sm">Open full size</a>
-            </div>
-          ) : (
-            <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-500">
-              Screenshot will appear here when scan is complete.
-            </div>
-          )}
-        </div>
-
-        {/* Divider */}
-        <hr className="border-slate-200" />
-
-        {/* Performance Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-700 mb-3">Performance</h2>
-          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-700">
-            {reportData.lighthouseReport?.scores ? (
-              <div className="flex flex-col items-center space-y-2">
-                <div>Performance: <span className="font-bold">{reportData.lighthouseReport.scores.performance ?? 'N/A'}</span></div>
-                <div>Accessibility: <span className="font-bold">{reportData.lighthouseReport.scores.accessibility ?? 'N/A'}</span></div>
-                <div>Best Practices: <span className="font-bold">{reportData.lighthouseReport.scores.bestPractices ?? 'N/A'}</span></div>
-                <div>SEO: <span className="font-bold">{reportData.lighthouseReport.scores.seo ?? 'N/A'}</span></div>
-                {reportData.lighthouseReport.scores.pwa !== undefined && (
-                  <div>PWA: <span className="font-bold">{reportData.lighthouseReport.scores.pwa}</span></div>
-                )}
-              </div>
-            ) : (
-              <>Performance scores (Lighthouse) will appear here when scan is complete.</>
-            )}
+    <ReportPageLayout
+      sidebarContent={<SidebarNav activeSection={activeSection} onSelectSection={setActiveSection} />}
+      mainContent={
+        <div className="space-y-6 font-sans"> {/* Apply font-sans to the main content wrapper */}
+          <div className="bg-white shadow rounded-lg p-4 md:p-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
+              QA Report:
+              {reportData?.url ?
+                <a href={reportData.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-800 hover:underline break-all">
+                  {reportData.url}
+                </a> :
+                'Loading URL...'
+              }
+            </h1>
+            <p className="text-xs text-slate-500">Report ID: <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">{reportId}</span></p>
           </div>
+          {renderSectionContent()}
+          {/* Example of how other sections might be structured as Cards */}
+          {/* <Card title="Accessibility Details">...</Card> */}
+          {/* <Card title="SEO Insights">...</Card> */}
         </div>
-
-        {/* Divider */}
-        <hr className="border-slate-200" />
-
-        {/* Accessibility Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-700 mb-3">Accessibility</h2>
-          <div className="p-4 border border-dashed border-slate-300 rounded-md bg-slate-50 text-center text-slate-700">
-            {reportData.lighthouseReport?.scores?.accessibility !== undefined ? (
-              <div>
-                Accessibility Score: <span className="font-bold">{reportData.lighthouseReport.scores.accessibility}</span>
-              </div>
-            ) : (
-              <>Accessibility issues (Lighthouse) will appear here when scan is complete.</>
-            )}
-          </div>
-        </div>
-
-      </div>
-    </div>
+      }
+    />
   );
 };
 

@@ -2,14 +2,15 @@
 
 ## Elevator Pitch
 
-An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding their nuances, common issues, and limitations. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), and generates a concise, interactive web report highlighting critical performance metrics and accessibility issues, streamlining the initial QA assessment for clients.
+An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding their nuances, common issues, and limitations. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), leverages AI vision models for UX, design, and layout analysis, and generates a concise, interactive web report highlighting critical performance metrics, accessibility issues, and actionable design feedback, streamlining the initial QA assessment for clients.
 
 ## Core Features (Initial Prototype)
 
 *   Accepts a single website URL.
 *   Runs Lighthouse audit to gather performance and accessibility metrics.
 *   Uses Playwright to navigate and take a screenshot.
-*   Displays results (Lighthouse scores, key metrics, accessibility issues, screenshot) in an interactive web report.
+*   Utilizes AI Vision Models (e.g., OpenAI, Gemini) to analyze the screenshot for UX, design, layout, and styling suggestions.
+*   Displays results (Lighthouse scores, key metrics, accessibility issues, screenshot, AI UX/Design suggestions) in an interactive web report.
 *   Displays Lighthouse (PageSpeed) scores in the frontend report as soon as they are available, for a responsive user experience.
 *   Uses Firebase for backend, database, and hosting.
 
@@ -21,7 +22,8 @@ An AI-powered assistant for freelance QA engineers that automates the process of
 *   **Storage:** Firebase Storage
 *   **Hosting:** Firebase Hosting
 *   **Authentication:** Firebase Authentication (Anonymous)
-*   **QA Tools:** Playwright, Lighthouse
+*   **QA Tools:** Playwright, PageSpeed Insights API (for Lighthouse)
+*   **NEW:** AI Vision Model APIs (e.g., OpenAI, Gemini)
 *   **Package Manager:** npm (or yarn)
 
 ## Getting Started

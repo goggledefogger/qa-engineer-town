@@ -2,8 +2,9 @@
 
 - **System Design**
     - A web application composed of a React frontend, a serverless backend using Firebase Functions (TypeScript), and Firebase services for database, storage, and hosting.
-    - The system interacts with external websites using Playwright for browser automation/screenshots and Lighthouse for audits.
-    - Report data and artifacts (like screenshots) are stored in Firebase.
+    - The system interacts with external websites using Playwright for browser automation/screenshots and Lighthouse (via PageSpeed Insights API) for audits.
+    - **NEW:** The system integrates with AI vision models (e.g., OpenAI, Gemini) to analyze screenshots for UX, design, layout, and styling suggestions.
+    - Report data and artifacts (like screenshots, AI suggestions) are stored in Firebase.
     - **AI-Powered Analysis & Expertise:** The core AI QA assistant is designed with deep knowledge of common website development platforms (e.g., Squarespace, Shopify, WordPress, Wix). This includes understanding their typical structures, limitations, common misconfigurations, and best practices, allowing for more nuanced and platform-aware QA insights (though the initial implementation will focus on general checks).
 
 - **Architecture pattern**
@@ -29,9 +30,11 @@
         a.  `processScanTask` updates the report status in RTDB to 'processing'.
         b.  Initiates Playwright to navigate to the URL and take a screenshot.
         c.  Uploads the screenshot to Firebase Storage and saves the URL in the report entry.
-        d.  Runs a Lighthouse audit on the URL.
+        d.  Runs a Lighthouse audit on the URL (via PageSpeed Insights API).
         e.  Parses key metrics (performance, accessibility) from the Lighthouse results.
-        f.  Updates the report entry in Firebase Realtime Database with the extracted data, screenshot URL, and sets the status to 'complete' (or 'error' if issues occurred).
+        f.  **NEW:** Sends the screenshot (or its URL) and relevant context to AI vision model APIs (e.g., OpenAI, Gemini).
+        g.  **NEW:** Receives and processes UX/design/layout/styling suggestions from the AI models.
+        h.  Updates the report entry in Firebase Realtime Database with the extracted Lighthouse data, screenshot URL, **NEW:** AI-generated UX/design suggestions, and sets the status to 'complete' (or 'error' if issues occurred).
     7.  Frontend listens for real-time updates on the specific report entry in Firebase Realtime Database using the Firebase SDK.
     8.  Once the report status changes (e.g., to 'processing', then 'complete'), the frontend fetches/updates the report data from the database.
     9.  The React components render the interactive report based on the fetched data.
@@ -46,7 +49,8 @@
         - Firebase Realtime Database (for report metadata and results)
         - Firebase Storage (for screenshots)
         - Google Cloud Tasks (for asynchronous task queueing)
-    - **QA Tools:** Playwright, Lighthouse CLI/Node module
+    - **QA Tools:** Playwright, PageSpeed Insights API (for Lighthouse audits)
+    - **NEW:** AI Vision Model APIs (e.g., OpenAI API, Google Gemini API - specific SDKs or direct HTTPS calls)
     - **Package Manager:** npm or yarn
 
 - **Authentication Process**
@@ -78,3 +82,4 @@
         - `performanceMetrics`: object (e.g., `{ ttfb: number, lcp: number, cls: number }`, optional)
         - `accessibilityIssues`: array (List of key issues, e.g., `[{ id: string, description: string, helpUrl: string }]`, optional)
         - `errorMessage`: string (If status is 'error', optional)
+        - **NEW:** `aiUxDesignSuggestions`: object or array (Structured data containing AI-generated feedback on UX, design, layout, and styling, e.g., `[{ type: 'layout', suggestion: 'string', area: {x,y,w,h} (optional) }]`, optional)
