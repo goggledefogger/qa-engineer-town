@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { auth } from './firebaseConfig'; // Import auth instance
 import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
@@ -89,15 +89,21 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 pt-12 sm:pt-16 lg:pt-20 bg-slate-50 font-sans antialiased">
+      <div className="bg-red-500 text-white p-8">Tailwind Test</div>
       <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-center text-slate-800">
         AI QA Engineer Assistant
       </h1>
       {user && (
-        <p className="text-sm text-slate-500 mb-10 sm:mb-12">User ID: {user.uid} (Anonymous)</p>
+        <p className="text-sm text-slate-500 mb-10 sm:mb-12">
+          User ID: {user.uid} (Anonymous)
+        </p>
       )}
 
-      <UrlInputForm onSubmitUrl={handleUrlSubmit} isSubmitting={isSubmitting} loadingAuth={loadingAuth} />
-
+      <UrlInputForm
+        onSubmitUrl={handleUrlSubmit}
+        isSubmitting={isSubmitting}
+        loadingAuth={loadingAuth}
+      />
     </div>
   );
 }
