@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -8,11 +9,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col">
       {/* Header could go here if we had one application-wide */}
-      {/* <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-slate-900">AI QA Engineer</h1>
+          <Link to="/" className="text-2xl font-bold text-slate-900 hover:text-slate-700">
+            AI QA Engineer
+          </Link>
         </div>
-      </header> */}
+      </header>
       <main className="flex-grow w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {children}
       </main>

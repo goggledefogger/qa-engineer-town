@@ -1,18 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom"; // Routes and Route are no longer needed here
 import App from './App.tsx'
-import ReportPage from './pages/ReportPage.tsx'; // Import the new page
+// ReportPage import is no longer needed here as App.tsx will handle it
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/report/:reportId" element={<ReportPage />} />
-        {/* TODO: Add a 404 Not Found route */}
-      </Routes>
+      <App /> {/* App component now handles all routing */}
     </BrowserRouter>
   </React.StrictMode>,
 )

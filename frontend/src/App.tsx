@@ -15,8 +15,6 @@ const LandingPage: React.FC<{
 }> = ({ user, onUrlSubmit, isSubmitting, loadingAuth }) => {
   return (
     <div className="flex flex-col items-center justify-start pt-8 sm:pt-12 lg:pt-16">
-      {/* Tailwind test element */}
-      <div className="text-3xl text-red-500 mb-4">Tailwind Test</div>
       <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-center text-slate-800">
         AI QA Engineer Assistant
       </h1>
