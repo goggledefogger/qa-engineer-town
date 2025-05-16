@@ -56,6 +56,13 @@ export interface AiUxDesignSuggestions {
   modelUsed?: string;
 }
 
+export interface LLMReportSummary {
+  status: "pending" | "processing" | "completed" | "error" | "skipped";
+  summaryText?: string;
+  error?: string;
+  modelUsed?: string;
+}
+
 export interface ReportData {
   id: string;
   url: string;
@@ -63,6 +70,7 @@ export interface ReportData {
   playwrightReport?: PlaywrightReport;
   lighthouseReport?: LighthouseReportData;
   aiUxDesignSuggestions?: AiUxDesignSuggestions;
+  llmReportSummary?: LLMReportSummary;
   createdAt: number;
   updatedAt: number;
   error?: string;

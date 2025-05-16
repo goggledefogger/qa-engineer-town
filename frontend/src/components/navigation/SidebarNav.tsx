@@ -10,6 +10,7 @@ interface NavItem {
 
 const reportSections: NavItem[] = [
   { id: 'summary', label: 'Summary' },
+  { id: 'llm-summary', label: 'AI-Generated Overview' },
   { id: 'screenshot', label: 'Screenshot' },
   { id: 'performance', label: 'Performance' },
   { id: 'accessibility', label: 'Accessibility' },

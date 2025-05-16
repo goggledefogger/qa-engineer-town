@@ -9,7 +9,8 @@ import {
   LighthouseReportData,
   PlaywrightReport,
   ScanTaskPayload,
-  AiUxDesignSuggestions, // Assuming this type exists or we define it based on usage
+  AiUxDesignSuggestions,
+  LLMReportSummary,
 } from "../types";
 
 // Helper function for Playwright scan
@@ -280,6 +281,133 @@ async function performGeminiAnalysis(
   }
 }
 
+// Helper function for LLM Report Summary Generation
+async function performLLMReportSummary(
+  reportId: string,
+  urlToScan: string,
+  playwrightReport: PlaywrightReport | undefined,
+  lighthouseReport: LighthouseReportData | undefined,
+  aiUxDesignSuggestions: AiUxDesignSuggestions | undefined,
+  geminiApiKey: string | undefined,
+  geminiModelName: string | undefined
+): Promise<LLMReportSummary> {
+  if (!geminiApiKey || !geminiModelName) {
+    logger.info("Skipping LLM Report Summary: GEMINI_API_KEY or GEMINI_MODEL not configured.", { reportId });
+    return {
+      status: "skipped",
+      error: "Gemini API Key or Model not configured.",
+    };
+  }
+
+  logger.info(`Starting LLM Report Summary generation with Gemini model: ${geminiModelName}...`, { reportId });
+
+  // 1. Collate data for the prompt
+  const condensedReportData: any = {
+    url: urlToScan,
+    playwright: {
+      pageTitle: playwrightReport?.pageTitle,
+      hasScreenshot: !!playwrightReport?.screenshotUrl,
+      error: playwrightReport?.error,
+    },
+    lighthouse: {
+      overallScores: lighthouseReport?.scores,
+      // Select a few key issues/opportunities to keep the prompt concise
+      // For example, top 2-3 accessibility issues
+      accessibilityIssues: lighthouseReport?.accessibilityIssues?.slice(0, 3).map(issue => ({ title: issue.title, description: issue.description, score: issue.score })),
+      // Top 2-3 performance opportunities
+      performanceOpportunities: lighthouseReport?.performanceOpportunities?.slice(0, 2).map(opp => ({ title: opp.title, potentialSavingsMs: opp.overallSavingsMs, description: opp.description })),
+      seoIssues: lighthouseReport?.seoAudits?.filter(a => a.score !== null && a.score < 1).slice(0,2).map(a => ({title: a.title, description: a.description, score: a.score})),
+      bestPracticesIssues: lighthouseReport?.bestPracticesAudits?.filter(a => a.score !== null && a.score < 1).slice(0,2).map(a => ({title: a.title, description: a.description, score: a.score})),
+      error: lighthouseReport?.error,
+    },
+    aiUxSuggestions: {
+      status: aiUxDesignSuggestions?.status,
+      suggestions: aiUxDesignSuggestions?.suggestions?.slice(0, 5).map(s => s.suggestion), // First 5 suggestions
+      error: aiUxDesignSuggestions?.error,
+    },
+  };
+
+  // 2. Design the prompt
+  const prompt = `
+You are an expert QA consultant. Your task is to generate a high-level summary of a website quality scan.
+This summary is for a QA Engineer who needs a quick, digestible overview of the site's status.
+While the QA Engineer is technical, this summary should be clear, concise, and use straightforward language, avoiding jargon or specific tool names (e.g., don't mention 'Playwright' or 'Lighthouse' directly).
+The goal is to highlight key findings that they can act upon or communicate to stakeholders (who might be less technical).
+
+The website scanned is: ${urlToScan}
+
+You will be provided with a JSON object containing data from different parts of the scan:
+- "url": The URL that was scanned.
+- "playwright": Basic page information (e.g., title) and status of visual snapshot capture.
+- "lighthouse": Automated scores and findings related to performance (speed), accessibility (ease of use for people with disabilities), SEO (search engine visibility), and best-practices (technical soundness). This section includes overall scores and lists of specific issues or opportunities.
+- "aiUxSuggestions": AI-generated feedback on user experience and visual design, based on a snapshot of the page.
+
+Based on ALL the provided JSON data, synthesize the information and generate a summary in MARKDOWN format (approximately 250-400 words).
+
+Your Markdown summary MUST include the following sections using H3 (###) headings:
+
+### Overall Health Assessment
+Provide a brief, holistic assessment of the page\'s current state. Consider all aspects: performance, accessibility, SEO, best practices, and initial visual/UX feedback.
+
+### Key Areas for Immediate Attention
+Identify the 2-3 most critical issues or areas needing urgent attention. For each:
+    *   Clearly describe the issue in simple terms.
+    *   Explain its potential impact (e.g., on users, business goals, or search ranking).
+    *   If obvious, suggest the general type of action needed (e.g., "address accessibility errors," "optimize images," "review layout concerns").
+
+### Noteworthy Strengths
+Briefly mention 1-2 positive findings or areas where the page is performing well, if any are apparent from the data. This helps provide a balanced view.
+
+### Summary & Next Steps
+Offer a concise concluding remark and suggest a general next step for the QA Engineer (e.g., "prioritize fixing critical issues," "perform deeper investigation into performance bottlenecks," "discuss design feedback with the team").
+
+Remember:
+- Use Markdown for all formatting (H3 headings, bullet points using an asterisk like so: \`* Item\`, bold like so: \`**Bold Text**\`).
+- Be objective and base your summary strictly on the provided JSON data.
+- The tone should be professional, helpful, and constructive.
+
+JSON Report Data:
+\\\`\\\`\\\`json
+${JSON.stringify(condensedReportData, null, 2)}
+\\\`\\\`\\\`
+`;
+
+  try {
+    const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
+
+    const generationConfigForSummary = {
+        temperature: 0.5,
+        maxOutputTokens: 1024,
+    };
+
+    const result = await genAI.models.generateContent({
+      model: geminiModelName,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      ...generationConfigForSummary,
+    });
+
+    const summaryText = result.text;
+    logger.info("LLM Report Summary generated successfully.", { reportId });
+
+    return {
+      status: "completed",
+      summaryText: summaryText,
+      modelUsed: geminiModelName,
+    };
+  } catch (e: any) {
+    logger.error("Error during LLM Report Summary generation: " + e.message, {
+      reportId,
+      errorStack: e.stack,
+      errorDetails: JSON.stringify(e),
+    });
+    return {
+      status: "error",
+      error: `LLM summary generation failed: ${e.message}`,
+      modelUsed: geminiModelName,
+    };
+  }
+}
+
 export const processScanTask = onTaskDispatched<ScanTaskPayload>(
   {
     retryConfig: {
@@ -350,6 +478,34 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         };
         await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
         logger.info("Report updated with skipped AI UX design suggestions.", { reportId });
+      }
+
+      // Perform LLM Report Summary
+      let llmReportSummary: LLMReportSummary | undefined = undefined;
+      // We can attempt summary generation even if AI UX suggestions were skipped or failed,
+      // as long as we have some core data (Playwright/Lighthouse) and the API key.
+      if (GEMINI_API_KEY && GEMINI_MODEL_NAME) {
+        logger.info("Proceeding with LLM Report Summary generation.", { reportId });
+        llmReportSummary = await performLLMReportSummary(
+          reportId,
+          urlToScan,
+          playwrightReport,
+          lighthouseReport,
+          aiUxDesignSuggestions, // Pass the (potentially skipped/failed) AI UX suggestions object
+          GEMINI_API_KEY,
+          GEMINI_MODEL_NAME
+        );
+        logger.info(`LLM Report Summary result status: ${llmReportSummary.status}`, { reportId });
+        await reportRef.child("llmReportSummary").update(llmReportSummary);
+        logger.info("Report updated with LLM Report Summary.", { reportId });
+      } else {
+        logger.info("Skipping LLM Report Summary due to missing Gemini API key or Model Name.", { reportId });
+        llmReportSummary = {
+          status: "skipped",
+          error: "LLM Report Summary skipped due to missing Gemini API key or Model Name.",
+        };
+        await reportRef.child("llmReportSummary").update(llmReportSummary);
+        logger.info("Report updated with skipped LLM Report Summary.", { reportId });
       }
 
       await reportRef.update({ status: "completed", updatedAt: Date.now() });

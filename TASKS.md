@@ -120,15 +120,17 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Offscreen content is hidden from assistive technology (DOM analysis, Playwright for CSS checks)
     - [ ] Custom controls have associated labels (DOM analysis, Playwright for interactions)
     - [ ] Custom controls have ARIA roles (DOM analysis)
-- [ ] **NEW: Implement LLM-Powered Report Summary Generation:**
-    - [ ] Design a prompt to send complete report data (Playwright, Lighthouse, existing AI UX suggestions) to an LLM (e.g., Gemini).
-    - [ ] Implement logic in `processScanTask` (or a subsequent task) to call the LLM with the full report context after all scans are complete.
-    - [ ] The LLM should generate a concise, user-friendly summary including:
+- [x] **NEW: Implement LLM-Powered Report Summary Generation:**
+    - [x] Design a prompt to send complete report data (Playwright, Lighthouse, existing AI UX suggestions) to an LLM (e.g., Gemini).
+    - [x] Implement logic in `processScanTask` (or a subsequent task) to call the LLM with the full report context after all scans are complete.
+    - [x] The LLM should generate a concise, user-friendly summary including:
         - An overall assessment of the scanned page.
         - A list of the highest-priority issues to address.
         - Clear explanations of key findings and their impact.
-    - [ ] Define a data structure in RTDB for storing this comprehensive summary (e.g., `reportData.llmReportSummary`).
-    - [ ] Update the frontend Report Page to display this summary prominently.
+    - [x] Define a data structure in RTDB for storing this comprehensive summary (e.g., `reportData.llmReportSummary`).
+    - [x] Update the frontend Report Page to display this summary prominently.
+    - [x] Refine LLM prompt for clarity, tone (non-technical), and desired output format (Markdown).
+    - [x] Enhance frontend to correctly render Markdown for the LLM summary.
 
 ## Implementation Plan
 
