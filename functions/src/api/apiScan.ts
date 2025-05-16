@@ -1,0 +1,106 @@
+import * as logger from "firebase-functions/logger";
+import { onRequest } from "firebase-functions/v2/https";
+import { getProjectId, generateReportId, isValidUrl } from "../utils";
+import { ReportData, ScanTaskPayload } from "../types";
+import * as admin from "firebase-admin";
+import { CloudTasksClient, protos } from "@google-cloud/tasks";
+
+// Assuming rtdb, tasksClient, LOCATION_ID, and QUEUE_ID are initialized
+// and exported from a central place (e.g., index.ts or a config.ts) or passed appropriately.
+// For this refactor, we'll assume they can be imported if exported from index.ts or a config file.
+// For now, to make it simpler, let's assume rtdb and tasksClient are initialized here or passed.
+// Let's import them from a hypothetical config or index for now.
+
+// Placeholder: these would ideally be initialized in and exported from index.ts or a config file
+// const rtdb = admin.database(); // <-- REMOVE THIS
+const tasksClient = new CloudTasksClient(); // This is fine, not Firebase Admin related
+const LOCATION_ID = "us-central1";
+const QUEUE_ID = "scanProcessingQueue";
+
+/**
+ * HTTP Function to trigger a website scan and store reports.
+ */
+export const apiScan = onRequest({cors: true}, async (request, response) => {
+  const rtdb = admin.database(); // <-- ADD HERE
+  logger.info("apiScan function triggered.", {structuredData: true});
+
+  const urlToScan = request.body.url as string;
+
+  if (request.method !== 'POST') {
+    response.status(405).send('Method Not Allowed');
+    return;
+  }
+
+  if (!urlToScan) {
+    logger.warn("URL is missing from the request body.");
+    response.status(400).send("URL is required in the request body.");
+    return;
+  }
+
+  if (!isValidUrl(urlToScan)) {
+    logger.warn("Invalid URL format provided.", {url: urlToScan});
+    response.status(400).send("Invalid URL format. Please provide a valid HTTP/HTTPS URL.");
+    return;
+  }
+
+  const reportId = generateReportId();
+  const initialReportData: ReportData = {
+    id: reportId,
+    url: urlToScan,
+    status: "pending",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  try {
+    await rtdb.ref(`reports/${reportId}`).set(initialReportData);
+    logger.info("Initial report data stored in RTDB.", {reportId});
+
+    const projectId = await getProjectId();
+    const queuePath = tasksClient.queuePath(projectId, LOCATION_ID, QUEUE_ID);
+
+    const processScanTaskUrl = process.env.PROCESS_SCAN_TASK_URL;
+
+    if (!processScanTaskUrl) {
+      logger.error("PROCESS_SCAN_TASK_URL environment variable is not set. This is required for enqueuing tasks. Please deploy processScanTask and set its trigger URL as this environment variable.");
+      response.status(500).send("Server configuration error: PROCESS_SCAN_TASK_URL not set.");
+      await rtdb.ref(`reports/${reportId}/status`).set("failed");
+      await rtdb.ref(`reports/${reportId}/error`).set("Configuration error: Target function URL not set.");
+      await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+      return;
+    }
+    logger.info(`Using processScanTask URL: ${processScanTaskUrl}`);
+
+    const actualPayload: ScanTaskPayload = {reportId, urlToScan};
+    const wrappedPayload = { data: actualPayload };
+
+    const task: protos.google.cloud.tasks.v2.ITask = {
+      httpRequest: {
+        httpMethod: protos.google.cloud.tasks.v2.HttpMethod.POST,
+        url: processScanTaskUrl,
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: Buffer.from(JSON.stringify(wrappedPayload), 'utf8'),
+        oidcToken: {
+          serviceAccountEmail: `${projectId}@appspot.gserviceaccount.com`,
+          audience: processScanTaskUrl,
+        },
+      },
+    };
+
+    logger.info("Attempting to enqueue task...", {queuePath, wrappedPayload});
+    const [taskResponse] = await tasksClient.createTask({parent: queuePath, task});
+    logger.info("Task enqueued successfully.", {taskId: taskResponse.name});
+
+  response.status(202).json({
+      message: "Scan initiation request received, task enqueued.",
+    receivedUrl: urlToScan,
+      reportId: reportId,
+    });
+  } catch (error) {
+    logger.error("Error in apiScan function:", error);
+    await rtdb.ref(`reports/${reportId}/status`).set("failed");
+    await rtdb.ref(`reports/${reportId}/error`).set((error as Error).message);
+    await rtdb.ref(`reports/${reportId}/updatedAt`).set(Date.now());
+    response.status(500).send("Internal Server Error during scan initiation.");
+  }
+});

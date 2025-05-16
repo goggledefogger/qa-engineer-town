@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "commonjs",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "lib",
@@ -9,10 +9,13 @@
     "target": "es2021",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "rootDir": "src"
   },
   "compileOnSave": true,
   "include": [
-    "src"
+    "src/**/*"
   ]
 }

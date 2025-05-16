@@ -48,18 +48,19 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
       - [x] Parse and store scores from PageSpeed API response.
       - [x] Added `node-fetch` and `@types/node-fetch` for API requests in Node.js.
       - [x] Added support for `PAGESPEED_API_KEY` in `.env` and `.env.example` (user must provide key).
-    - [x] Save Lighthouse scores and any errors to RTDB within `lighthouseReport` object.
+    - [x] Save Lighthouse scores and any errors to RTDB within `lighthouseReport` object. (Fixed issues with variable API response structures causing errors; now handles missing data gracefully).
+    - [x] Save detailed Lighthouse performance metrics, opportunities, and specific SEO/Best Practices audit details.
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
 
 - [ ] **NEW: Implement AI-Powered UX & Design Analysis in `processScanTask`**
-  - [ ] Add dependencies for AI Vision Model SDKs (e.g., OpenAI, Google AI) to `functions/package.json`.
-  - [ ] Implement logic to call the chosen AI vision model API(s) with the captured screenshot (or its URL) and relevant context (e.g., URL, device type if emulated).
-  - [ ] Define a clear data structure for storing AI-generated UX/design suggestions in RTDB (under `reportData.aiUxDesignSuggestions`).
-  - [ ] Parse the API response from the vision model(s) and transform it into the defined data structure.
-  - [ ] Update RTDB with the AI-generated suggestions.
-  - [ ] Add environment variables for AI API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.) in `.env` and `.env.example`.
-  - [ ] Implement robust error handling for AI API calls (e.g., API errors, rate limits, content moderation issues) and store relevant error information in RTDB.
+  - [x] Add dependencies for AI Vision Model SDKs (e.g., OpenAI, Google AI) to `functions/package.json`. (Using `@google/genai`)
+  - [x] Implement logic to call the chosen AI vision model API(s) with the captured screenshot (or its URL) and relevant context (e.g., URL, device type if emulated). (Successfully calling Gemini API).
+  - [x] Define a clear data structure for storing AI-generated UX/design suggestions in RTDB (under `reportData.aiUxDesignSuggestions`).
+  - [x] Parse the API response from the vision model(s) and transform it into the defined data structure.
+  - [x] Update RTDB with the AI-generated suggestions.
+  - [x] Add environment variables for AI API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.) in `.env` and `.env.example`.
+  - [x] Implement robust error handling for AI API calls (e.g., API errors, rate limits, content moderation issues) and store relevant error information in RTDB. (Fixed screenshot fetching issue by using direct file path).
 
 ## Future Tasks (Initial Prototype - MVP)
 
@@ -74,6 +75,10 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Display Lighthouse (PageSpeed) scores on Report Page as soon as they are available from the backend
   - [x] Display Lighthouse SEO score on Report Page
   - [x] Display Lighthouse Best Practices score on Report Page
+  - [x] Display detailed Lighthouse Performance metrics (FCP, LCP, TBT, CLS, Speed Index) on Report Page
+  - [x] Display top Lighthouse Performance Opportunities on Report Page
+  - [x] Display top failing/relevant Lighthouse SEO audits (not just score) on Report Page
+  - [x] Display top failing/relevant Lighthouse Best Practices audits (not just score) on Report Page
   - [x] **NEW:** Display AI-generated UX & Design suggestions on Report Page in a dedicated section/tab (UI structure in place, pending backend implementation).
 - [x] Implement frontend logic to call `/api/scan` function
 - [x] Implement frontend logic to navigate to Report Page with `reportId`
@@ -104,6 +109,17 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Develop frontend UI components to display AI-generated advice within relevant report sections (e.g., Accessibility, Performance).
     - [ ] Design data structures in RTDB for storing and retrieving AI-generated remediation advice.
     - [ ] (Long-Term) Explore and implement an interactive chat-like interface for users to ask follow-up questions about report findings and AI suggestions.
+- [ ] **NEW: Automate Manual Accessibility Checks (from PageSpeed Insights / Lighthouse):**
+    - [ ] Interactive controls are keyboard focusable (Playwright)
+    - [ ] Interactive elements indicate their purpose and state (Playwright + AI for complex cases)
+    - [ ] The page has a logical tab order (Playwright)
+    - [ ] Visual order on the page follows DOM order (Playwright + AI/DOM analysis)
+    - [ ] User focus is not accidentally trapped in a region (Playwright)
+    - [ ] The user's focus is directed to new content added to the page (Playwright for dynamic content)
+    - [ ] HTML5 landmark elements are used to improve navigation (DOM analysis, potentially Playwright for dynamic rendering)
+    - [ ] Offscreen content is hidden from assistive technology (DOM analysis, Playwright for CSS checks)
+    - [ ] Custom controls have associated labels (DOM analysis, Playwright for interactions)
+    - [ ] Custom controls have ARIA roles (DOM analysis)
 
 ## Implementation Plan
 
@@ -148,4 +164,68 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   { "data": { "reportId": "...", "urlToScan": "..." } }
   ```
 - In the handler function, **access the payload as** `request.data` (not `request.body`, `request.rawBody`, etc).
-- If the payload is not wrapped in a `data`
+- If the payload is not wrapped in a `data` property, the function will not receive the expected data and may log an error or fail to process the task.
+
+### Logging & Debugging
+
+- Use diagnostic logging in the handler to dump the incoming request structure for debugging:
+  ```ts
+  logger.info("processScanTask: FULL REQUEST DUMP", { data: request.data });
+  ```
+- To query logs for debugging payload issues, use:
+  ```sh
+  gcloud logging read 'resource.type=("cloud_run_revision" OR "cloud_function") AND jsonPayload.message:"processScanTask: FULL REQUEST DUMP"' --limit=10 --format='table(timestamp, severity, jsonPayload.message, jsonPayload.data)'
+  ```
+- This helps confirm the payload structure and quickly diagnose issues with task invocation or data parsing.
+
+### Error Handling & Loop Prevention in `processScanTask`
+
+- The `processScanTask` function now uses a nested `try/catch` structure:
+  - An **inner `try/catch`** specifically wraps the Playwright (and eventually Lighthouse) execution.
+    - If Playwright fails (e.g., navigation error, timeout), this inner catch logs the specific error, updates the `reportData.playwrightReport` object in RTDB with `success: false` and the detailed error message.
+    - The error is then re-thrown to be caught by the outer handler.
+  - An **outer `try/catch`** wraps the entire task orchestration.
+    - If any error bubbles up to this level (including errors from the Playwright block or other critical issues like RTDB update failures), this outer catch logs it as a critical failure.
+    - It updates the main report status to "failed" in RTDB.
+    - Crucially, **it does not re-throw the error**. This ensures that Cloud Tasks will not retry the task indefinitely for such failures, preventing infinite loops. This has been tested with URLs that cause navigation errors.
+- This pattern ensures that scan-specific issues are recorded in the report for the user to see, while systemic or unrecoverable errors correctly terminate the task processing.
+
+### Real-Time Function Log Query (Recommended)
+
+For the most up-to-date logs (including recent invocations that may not appear in the Firebase CLI), use the following `gcloud` command:
+
+```sh
+gcloud logging read \
+  '(resource.type="cloud_function" resource.labels.function_name="processScanTask" resource.labels.region="us-central1") OR (resource.type="cloud_run_revision" resource.labels.service_name="processscantask" resource.labels.location="us-central1")' \
+  --limit=30 \
+  --format="table(timestamp, severity, textPayload, jsonPayload.message, jsonPayload.urlToScan)"
+```
+
+- This command matches the Cloud Console's log query for both Cloud Functions and Cloud Run revisions.
+- It is the most reliable way to see the latest logs for background jobs and async tasks.
+- You can adjust the `--limit` or add more fields to the `--format` as needed.
+
+**Note:**
+- The Firebase CLI (`firebase functions:log`) may lag several minutes behind the Cloud Console and `gcloud logging read`.
+- For real-time debugging, always prefer the Cloud Console or the `gcloud logging read` command above.
+
+### NPM Workspace Dependency Management
+
+- This project uses npm workspaces (defined in the root `package.json`).
+- To add a dependency to a specific workspace (e.g., `functions` or `frontend`), run the command from the **project root**:
+  ```bash
+  npm install <package-name> --workspace=<workspace-name>
+  # Example: npm install lighthouse --workspace=functions
+  ```
+- After adding/changing dependencies, run `npm install` from the **project root** to ensure all workspaces are synchronized.
+- The primary `package-lock.json` is the one in the project root. Individual workspaces (like `functions/`) should generally not have their own `package-lock.json` when managed by root workspaces; if one exists, it's often removed/ignored in favor of the root lockfile.
+
+Before deploying or running the backend, ensure the Cloud Tasks queue exists:
+
+```sh
+gcloud tasks queues create scanProcessingQueue --location=us-central1
+```
+
+If the queue was recently deleted, wait a few minutes before recreating it. If you need to proceed immediately, use a new queue name (e.g., 'scanProcessingQueue').
+
+---
