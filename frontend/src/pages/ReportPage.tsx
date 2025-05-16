@@ -4,7 +4,7 @@ import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
 import { ReportPageLayout } from '../components/layout';
 import { SidebarNav } from '../components/navigation';
-import { Card } from '../components/ui'; // Assuming Card component is in ui
+import { Card, ScanProgressIndicator } from '../components/ui'; // Assuming Card component is in ui
 
 // Define an interface for Lighthouse report data
 interface LighthouseReportData {
@@ -17,6 +17,12 @@ interface LighthouseReportData {
     seo?: number;
     pwa?: number;
   };
+  accessibilityIssues?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    score: number | null;
+  }>;
 }
 
 // Define an interface for the report data structure
@@ -115,6 +121,7 @@ const ReportPage: React.FC = () => {
           </Card>
         );
       case 'screenshot':
+        console.log("Rendering screenshot section. Playwright report:", reportData.playwrightReport);
         return (
           <Card title="Screenshot" className="font-sans">
             {reportData.playwrightReport?.screenshotUrl ? (
@@ -128,6 +135,18 @@ const ReportPage: React.FC = () => {
               </div>
             ) : (
               <p className="text-slate-600">Screenshot will appear here when scan is complete.</p>
+            )}
+            {/* Log if playwrightReport exists but screenshotUrl is missing/falsy */}
+            {reportData.playwrightReport && !reportData.playwrightReport.screenshotUrl && (
+              <p className="text-xs text-red-400 mt-2">
+                Debug: Playwright report exists, but screenshotUrl is falsy (Value: {String(reportData.playwrightReport.screenshotUrl)})
+              </p>
+            )}
+            {/* Log if playwrightReport itself is missing */}
+            {!reportData.playwrightReport && (
+              <p className="text-xs text-orange-400 mt-2">
+                Debug: Playwright report object is missing.
+              </p>
             )}
           </Card>
         );
@@ -150,7 +169,92 @@ const ReportPage: React.FC = () => {
             {reportData.lighthouseReport?.error && <p className="text-red-600 mt-2 text-sm">Error: {reportData.lighthouseReport.error}</p>}
           </Card>
         );
-        // TODO: Add cases for 'accessibility', 'seo', 'best-practices', 'ai-ux-design'
+      case 'accessibility':
+        return (
+          <Card title="Accessibility Issues (Lighthouse)" className="font-sans">
+            {reportData.lighthouseReport?.accessibilityIssues && reportData.lighthouseReport.accessibilityIssues.length > 0 ? (
+              <ul className="space-y-3 list-none p-0">
+                {reportData.lighthouseReport.accessibilityIssues.map((issue) => (
+                  <li key={issue.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200">
+                    <h4 className="font-semibold text-md text-slate-800 mb-0.5">{issue.title}</h4>
+                    <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {issue.id} | Score: {issue.score === null ? 'N/A' : issue.score}</p>
+                    <div
+                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
+                        dangerouslySetInnerHTML={{ __html: issue.description }}
+                    />
+                    {/* We could add a link to more info if 'helpUrl' was available and populated */}
+                  </li>
+                ))}
+              </ul>
+            ) : reportData.lighthouseReport?.success === false && reportData.lighthouseReport?.error ? (
+              <p className="text-slate-600">Accessibility check could not be completed due to an error: {reportData.lighthouseReport.error}</p>
+            ) : reportData.status === 'processing' || reportData.status === 'pending' ? (
+              <p className="text-slate-600">Accessibility issues will appear here when the scan is complete.</p>
+            ) : (
+              <p className="text-slate-600">No specific accessibility issues flagged by Lighthouse, or the check did not run. Ensure the overall accessibility score is reviewed.</p>
+            )}
+            {/* Display overall accessibility score if available and not already part of the items */}
+            {reportData.lighthouseReport?.scores?.accessibility !== undefined && (
+                <p className="mt-4 text-sm text-slate-700">
+                    Overall Accessibility Score: <span className="font-bold">{reportData.lighthouseReport.scores.accessibility}</span>/100
+                </p>
+            )}
+          </Card>
+        );
+      case 'seo':
+        return (
+          <Card title="SEO Score (Lighthouse)" className="font-sans">
+            {reportData.lighthouseReport?.scores?.seo !== undefined ? (
+              <p className="text-lg text-slate-700">
+                Overall SEO Score: <span className="font-bold">{reportData.lighthouseReport.scores.seo}</span>/100
+              </p>
+            ) : (
+              <p className="text-slate-600">SEO score will appear here when scan is complete.</p>
+            )}
+            {reportData.lighthouseReport?.error && !reportData.lighthouseReport?.scores?.seo && (
+                <p className="text-red-600 mt-2 text-sm">Lighthouse SEO check error: {reportData.lighthouseReport.error}</p>
+            )}
+          </Card>
+        );
+      case 'best-practices':
+        return (
+          <Card title="Best Practices Score (Lighthouse)" className="font-sans">
+            {reportData.lighthouseReport?.scores?.bestPractices !== undefined ? (
+              <p className="text-lg text-slate-700">
+                Overall Best Practices Score: <span className="font-bold">{reportData.lighthouseReport.scores.bestPractices}</span>/100
+              </p>
+            ) : (
+              <p className="text-slate-600">Best Practices score will appear here when scan is complete.</p>
+            )}
+            {reportData.lighthouseReport?.error && !reportData.lighthouseReport?.scores?.bestPractices && (
+                <p className="text-red-600 mt-2 text-sm">Lighthouse Best Practices check error: {reportData.lighthouseReport.error}</p>
+            )}
+          </Card>
+        );
+      case 'ai-ux-design':
+        return (
+          <Card title="AI UX & Design Insights" className="font-sans">
+            {reportData.aiUxDesignSuggestions && reportData.aiUxDesignSuggestions.length > 0 ? (
+              <ul className="space-y-4 list-none p-0">
+                {reportData.aiUxDesignSuggestions.map((item, index) => (
+                  <li key={index} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200">
+                    {item.type && (
+                      <span className="inline-block bg-sky-200 text-sky-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full mb-1.5">
+                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                      </span>
+                    )}
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{item.suggestion}</p>
+                    {/* Later, if item.area is populated, we could add a button to highlight it on the screenshot */}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-slate-600">
+                AI-powered UX & Design suggestions will appear here once the analysis is complete and implemented in the backend.
+              </p>
+            )}
+          </Card>
+        );
       default:
         return <Card title="Section Not Found" className="font-sans"><p className="text-slate-600">Content for {activeSection} is not available yet.</p></Card>;
     }
@@ -203,6 +307,12 @@ const ReportPage: React.FC = () => {
             </h1>
             <p className="text-xs text-slate-500">Report ID: <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">{reportId}</span></p>
           </div>
+
+          {/* Global Scan Progress Indicator */}
+          {reportData && (reportData.status === 'pending' || reportData.status === 'processing') && (
+            <ScanProgressIndicator status={reportData.status} />
+          )}
+
           {renderSectionContent()}
           {/* Example of how other sections might be structured as Cards */}
           {/* <Card title="Accessibility Details">...</Card> */}

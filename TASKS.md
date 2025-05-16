@@ -21,9 +21,9 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 - [ ] **Setup Cloud Tasks for Asynchronous Scanning**
   - [x] Create Google Cloud Tasks Queue (`scan-processing-queue` in `us-central1`).
-  - [ ] Grant necessary IAM permissions:
-    - Service account for `apiScan` needs `roles/cloudtasks.enqueuer`.
-    - Service account invoking `processScanTask` (via OIDC token) needs `roles/cloudfunctions.invoker` for `processScanTask`.
+  - [x] Grant necessary IAM permissions:
+    - [x] Service account for `apiScan` needs `roles/cloudtasks.enqueuer`.
+    - [x] Service account invoking `processScanTask` (via OIDC token) needs `roles/cloudfunctions.invoker` for `processScanTask` (and `roles/run.invoker` for the underlying Cloud Run service).
   - [x] Configure `PROCESS_SCAN_TASK_URL` environment variable for `apiScan` (e.g., via `functions/.env` file, with `functions/.env.example` as a template).
 - [ ] **Implement Task Enqueueing in `apiScan` Function**
   - [x] Add `@google-cloud/tasks` dependency to `functions/package.json`.
@@ -70,17 +70,19 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Implement backend logic to create initial 'pending' report entry in RTDB
 - [x] Save screenshot URL to RTDB (from `processScanTask`)
 - [ ] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
-  - [x] Display screenshot on Report Page when available (Note: UI bug to fix, screenshot URL is saved but not always displaying)
+  - [x] Display screenshot on Report Page when available (Note: Added debug logging to investigate intermittent display issue where URL is saved but not shown)
   - [x] Display Lighthouse (PageSpeed) scores on Report Page as soon as they are available from the backend
-  - [ ] **NEW:** Display AI-generated UX & Design suggestions on Report Page in a dedicated section/tab.
-- [ ] Implement frontend logic to call `/api/scan` function
-- [ ] Implement frontend logic to navigate to Report Page with `reportId`
-- [ ] Implement frontend logic to listen for real-time updates on the RTDB report entry
-- [ ] Implement frontend progress/loading indicator on Report Page
-- [ ] Display Accessibility issues on Report Page when available
-- [ ] Implement basic styling with Tailwind CSS for all components
-- [ ] Set up Firebase Hosting for deployment
-- [ ] Basic responsive design for mobile/desktop
+  - [x] Display Lighthouse SEO score on Report Page
+  - [x] Display Lighthouse Best Practices score on Report Page
+  - [x] **NEW:** Display AI-generated UX & Design suggestions on Report Page in a dedicated section/tab (UI structure in place, pending backend implementation).
+- [x] Implement frontend logic to call `/api/scan` function
+- [x] Implement frontend logic to navigate to Report Page with `reportId`
+- [x] Implement frontend logic to listen for real-time updates on the RTDB report entry (foundational listener in place)
+- [x] Implement frontend progress/loading indicator on Report Page (basic global indicator for pending/processing status added)
+- [x] Display Accessibility issues on Report Page when available
+- [x] Implement basic styling with Tailwind CSS for all components (core components styled; ongoing polish as needed)
+- [x] Set up Firebase Hosting for deployment (firebase.json configured, frontend build script in place)
+- [x] Basic responsive design for mobile/desktop (foundational responsive classes sm:, md:, lg: used in layouts)
 
 ## Future Tasks (Post-MVP)
 
@@ -146,68 +148,4 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   { "data": { "reportId": "...", "urlToScan": "..." } }
   ```
 - In the handler function, **access the payload as** `request.data` (not `request.body`, `request.rawBody`, etc).
-- If the payload is not wrapped in a `data` property, the function will not receive the expected data and may log an error or fail to process the task.
-
-### Logging & Debugging
-
-- Use diagnostic logging in the handler to dump the incoming request structure for debugging:
-  ```ts
-  logger.info("processScanTask: FULL REQUEST DUMP", { data: request.data });
-  ```
-- To query logs for debugging payload issues, use:
-  ```sh
-  gcloud logging read 'resource.type=("cloud_run_revision" OR "cloud_function") AND jsonPayload.message:"processScanTask: FULL REQUEST DUMP"' --limit=10 --format='table(timestamp, severity, jsonPayload.message, jsonPayload.data)'
-  ```
-- This helps confirm the payload structure and quickly diagnose issues with task invocation or data parsing.
-
-### Error Handling & Loop Prevention in `processScanTask`
-
-- The `processScanTask` function now uses a nested `try/catch` structure:
-  - An **inner `try/catch`** specifically wraps the Playwright (and eventually Lighthouse) execution.
-    - If Playwright fails (e.g., navigation error, timeout), this inner catch logs the specific error, updates the `reportData.playwrightReport` object in RTDB with `success: false` and the detailed error message.
-    - The error is then re-thrown to be caught by the outer handler.
-  - An **outer `try/catch`** wraps the entire task orchestration.
-    - If any error bubbles up to this level (including errors from the Playwright block or other critical issues like RTDB update failures), this outer catch logs it as a critical failure.
-    - It updates the main report status to "failed" in RTDB.
-    - Crucially, **it does not re-throw the error**. This ensures that Cloud Tasks will not retry the task indefinitely for such failures, preventing infinite loops. This has been tested with URLs that cause navigation errors.
-- This pattern ensures that scan-specific issues are recorded in the report for the user to see, while systemic or unrecoverable errors correctly terminate the task processing.
-
-### Real-Time Function Log Query (Recommended)
-
-For the most up-to-date logs (including recent invocations that may not appear in the Firebase CLI), use the following `gcloud` command:
-
-```sh
-gcloud logging read \
-  '(resource.type="cloud_function" resource.labels.function_name="processScanTask" resource.labels.region="us-central1") OR (resource.type="cloud_run_revision" resource.labels.service_name="processscantask" resource.labels.location="us-central1")' \
-  --limit=30 \
-  --format="table(timestamp, severity, textPayload, jsonPayload.message, jsonPayload.urlToScan)"
-```
-
-- This command matches the Cloud Console's log query for both Cloud Functions and Cloud Run revisions.
-- It is the most reliable way to see the latest logs for background jobs and async tasks.
-- You can adjust the `--limit` or add more fields to the `--format` as needed.
-
-**Note:**
-- The Firebase CLI (`firebase functions:log`) may lag several minutes behind the Cloud Console and `gcloud logging read`.
-- For real-time debugging, always prefer the Cloud Console or the `gcloud logging read` command above.
-
-### NPM Workspace Dependency Management
-
-- This project uses npm workspaces (defined in the root `package.json`).
-- To add a dependency to a specific workspace (e.g., `functions` or `frontend`), run the command from the **project root**:
-  ```bash
-  npm install <package-name> --workspace=<workspace-name>
-  # Example: npm install lighthouse --workspace=functions
-  ```
-- After adding/changing dependencies, run `npm install` from the **project root** to ensure all workspaces are synchronized.
-- The primary `package-lock.json` is the one in the project root. Individual workspaces (like `functions/`) should generally not have their own `package-lock.json` when managed by root workspaces; if one exists, it's often removed/ignored in favor of the root lockfile.
-
-Before deploying or running the backend, ensure the Cloud Tasks queue exists:
-
-```sh
-gcloud tasks queues create scanProcessingQueue --location=us-central1
-```
-
-If the queue was recently deleted, wait a few minutes before recreating it. If you need to proceed immediately, use a new queue name (e.g., 'scanProcessingQueue').
-
----
+- If the payload is not wrapped in a `data`

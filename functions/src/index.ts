@@ -61,6 +61,13 @@ interface LighthouseReportData {
     seo?: number;
     pwa?: number;
   };
+  accessibilityIssues?: Array<{
+    id: string; // Audit ID
+    title: string; // Audit title
+    description: string; // Audit description
+    score: number | null; // Audit score (0 to 1, null if not applicable)
+    // helpUrl?: string; // Potentially from audit details if available
+  }>;
   // We can add more specific audit details or the full LHR JSON later if needed.
 }
 
@@ -82,6 +89,12 @@ interface ReportData {
   createdAt: number;
   updatedAt: number;
   error?: string;
+  aiUxDesignSuggestions?: Array<{
+    type: string; // e.g., 'layout', 'spacing', 'typography', 'color', 'component-design'
+    suggestion: string; // The textual advice
+    // area?: { x: number; y: number; width: number; height: number }; // Optional: for highlighting on screenshot
+    // severity?: 'critical' | 'major' | 'minor' | 'suggestion'; // Optional: to rank suggestions
+  }>;
 }
 
 /**
@@ -374,9 +387,33 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
           scores.pwa = Math.round(categories.pwa.score * 100);
         }
 
+        // Extract Accessibility Issues
+        const accessibilityIssues: LighthouseReportData['accessibilityIssues'] = [];
+        if (lhr.audits && categories.accessibility && categories.accessibility.auditRefs) {
+          for (const auditRef of categories.accessibility.auditRefs) {
+            if (auditRef.group === 'hidden' || auditRef.weight === 0) continue; // Skip hidden or purely informational audits if not desired
+            const audit = lhr.audits[auditRef.id];
+            if (audit && (audit.score === null || audit.score < 1)) { // score can be null for informative audits
+              // Only include audits that are not passing (score < 1) or are informative but relevant
+              // For binary audits, score 0 is fail, 1 is pass.
+              // For numeric, score < 1 indicates issues.
+              // For 'notApplicable' or 'informative' scoreDisplayMode, they might still be useful if score is null.
+              if (audit.score !== 1) { // Exclude perfectly passing audits
+                 accessibilityIssues.push({
+                    id: audit.id,
+                    title: audit.title,
+                    description: audit.description, // This often contains markdown
+                    score: audit.score,
+                 });
+              }
+            }
+          }
+        }
+
         lighthouseReportData = {
           success: true,
           scores: scores,
+          accessibilityIssues: accessibilityIssues.length > 0 ? accessibilityIssues : undefined,
         };
         lighthouseScanSucceeded = true;
         logger.info("Lighthouse (PageSpeed) scan completed and parsed.", { reportId, scores });
