@@ -19,22 +19,22 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ## In Progress Tasks
 
-- [ ] **Setup Cloud Tasks for Asynchronous Scanning**
+- [x] **Setup Cloud Tasks for Asynchronous Scanning**
   - [x] Create Google Cloud Tasks Queue (`scan-processing-queue` in `us-central1`).
   - [x] Grant necessary IAM permissions:
     - [x] Service account for `apiScan` needs `roles/cloudtasks.enqueuer`.
     - [x] Service account invoking `processScanTask` (via OIDC token) needs `roles/cloudfunctions.invoker` for `processScanTask` (and `roles/run.invoker` for the underlying Cloud Run service).
   - [x] Configure `PROCESS_SCAN_TASK_URL` environment variable for `apiScan` (e.g., via `functions/.env` file, with `functions/.env.example` as a template).
-- [ ] **Implement Task Enqueueing in `apiScan` Function**
+- [x] **Implement Task Enqueueing in `apiScan` Function**
   - [x] Add `@google-cloud/tasks` dependency to `functions/package.json`.
   - [x] Modify `apiScan` in `functions/src/index.ts` to create and enqueue a task to `processScanTask` containing `reportId` and `urlToScan` (payload sent as raw JSON, not base64 encoded).
   - [x] Include OIDC token in task creation for secure invocation of `processScanTask`.
-- [ ] **Implement Task Handler Function `processScanTask`**
+- [x] **Implement Task Handler Function `processScanTask`**
   - [x] Define `processScanTask` in `functions/src/index.ts` using `onTaskDispatched()`.
   - [x] Configure retry, rate limits, memory, and timeout for `processScanTask`.
   - [x] Implement logic in `processScanTask` to parse payload (`reportId`, `urlToScan`).
   - [x] Update RTDB: status to 'processing', add `processedAt` timestamp.
-  - [ ] Implement Playwright integration within `processScanTask`.
+  - [x] Implement Playwright integration within `processScanTask`.
     - [x] Capture screenshot.
     - [x] Upload screenshot to Firebase Storage.
     - [x] Save screenshot URL to RTDB.
@@ -53,7 +53,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
 
-- [ ] **NEW: Implement AI-Powered UX & Design Analysis in `processScanTask`**
+- [x] **NEW: Implement AI-Powered UX & Design Analysis in `processScanTask`**
   - [x] Add dependencies for AI Vision Model SDKs (e.g., OpenAI, Google AI) to `functions/package.json`. (Using `@google/genai`)
   - [x] Implement logic to call the chosen AI vision model API(s) with the captured screenshot (or its URL) and relevant context (e.g., URL, device type if emulated). (Successfully calling Gemini API).
   - [x] Define a clear data structure for storing AI-generated UX/design suggestions in RTDB (under `reportData.aiUxDesignSuggestions`).
@@ -70,7 +70,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Add frontend logic to prepend https:// to URL if missing
 - [x] Implement backend logic to create initial 'pending' report entry in RTDB
 - [x] Save screenshot URL to RTDB (from `processScanTask`)
-- [ ] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
+- [x] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
   - [x] Display screenshot on Report Page when available (Note: Added debug logging to investigate intermittent display issue where URL is saved but not shown)
   - [x] Display Lighthouse (PageSpeed) scores on Report Page as soon as they are available from the backend
   - [x] Display Lighthouse SEO score on Report Page
