@@ -96,6 +96,12 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [ ] Add features to help draft client communications
 - [ ] Optimize backend function performance and cost
 - [ ] Add unit and integration tests
+- [ ] **NEW: Implement AI-Powered Remediation Advice & Interactive Help:**
+    - [ ] Research and select appropriate AI Language Model API(s) for generating contextual help and remediation steps.
+    - [ ] Design and implement backend logic to query the LLM with issue details (e.g., from Lighthouse, or custom checks) and site context.
+    - [ ] Develop frontend UI components to display AI-generated advice within relevant report sections (e.g., Accessibility, Performance).
+    - [ ] Design data structures in RTDB for storing and retrieving AI-generated remediation advice.
+    - [ ] (Long-Term) Explore and implement an interactive chat-like interface for users to ask follow-up questions about report findings and AI suggestions.
 
 ## Implementation Plan
 

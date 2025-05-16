@@ -83,3 +83,11 @@
         - `accessibilityIssues`: array (List of key issues, e.g., `[{ id: string, description: string, helpUrl: string }]`, optional)
         - `errorMessage`: string (If status is 'error', optional)
         - **NEW:** `aiUxDesignSuggestions`: object or array (Structured data containing AI-generated feedback on UX, design, layout, and styling, e.g., `[{ type: 'layout', suggestion: 'string', area: {x,y,w,h} (optional) }]`, optional)
+
+## Future Functional Requirements
+
+*   **FR-USER-AUTH-001:** The system shall allow users to register with an email and password.
+*   **FR-USER-AUTH-002:** The system shall allow registered users to log in and view their past reports.
+*   **FR-AI-HELP-001:** The system shall integrate with an AI language model to provide contextual explanations and remediation advice for issues reported (e.g., accessibility violations, performance bottlenecks).
+*   **FR-AI-HELP-002:** The AI-generated advice should include potential code/design examples and links to authoritative documentation or best practice guides where applicable.
+*   **FR-AI-HELP-003 (Future):** The system may provide an interface for users to ask follow-up questions to the AI regarding the provided advice or specific issues on their website.

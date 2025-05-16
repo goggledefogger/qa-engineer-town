@@ -54,3 +54,9 @@
 ## Assumed QA Engineer Knowledge
 
 *   **Website Platform Expertise:** The AI QA Engineer is expected to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix). This includes understanding their typical structures, limitations, and common issues, which might inform how results are presented or prioritized (though not explicitly a UI feature itself, it's a core understanding of the persona using the tool).
+
+*   **Future: AI-Powered Remediation Advice in Report Sections:** To enhance actionability, report sections (e.g., Accessibility, Performance) will eventually integrate AI-generated advice:
+    *   **Detailed Explanations:** Clear, AI-generated explanations for each identified issue (e.g., what an accessibility error means, why a performance metric is low).
+    *   **Actionable Suggestions:** Specific, contextual recommendations on how to fix the issues, potentially including code snippets or design pattern examples.
+    *   **Resource Links:** AI-provided links to relevant documentation (e.g., WCAG guidelines, MDN Web Docs, platform-specific help articles).
+    *   **Interactive Elements (Long-Term):** Possibility of an "Ask AI Assistant" button or a mini-chat interface within a report item to allow users to ask follow-up questions or seek further clarification on the remediation advice.

@@ -68,6 +68,7 @@ This application is designed for freelance QA engineers who work with clients ow
 *   Deeper integration with project management tools.
 *   **NEW:** Interactive annotation tools for AI design suggestions on the screenshot.
 *   **NEW:** Comparative analysis (scan a site before/after changes and highlight differences in AI suggestions).
+*   **NEW:** **Interactive AI-Powered Remediation Guidance:** Beyond identifying issues, the assistant will offer detailed explanations, actionable recommendations (including potential code/design snippets), and links to resources to help users fix problems identified in reports (e.g., accessibility, performance). This includes leveraging advanced AI language models to provide contextual advice and potentially answer user follow-up questions regarding their specific site and the identified issues.
 
 ## 8. Competitors
 

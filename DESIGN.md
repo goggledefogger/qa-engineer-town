@@ -37,6 +37,11 @@ This document outlines the user interface design for the AI QA Engineer Assistan
         *   Display of the primary score for the category (e.g., Performance score: 85/100).
         *   Lists or cards detailing specific audit results, findings, and recommendations.
         *   Clear indication of severity or impact for issues.
+        *   **(Future Vision: AI-Powered Remediation)** Beyond just listing findings, these sections will eventually integrate AI-driven advice:
+            *   **Contextual Explanations:** AI-generated descriptions of why an issue matters.
+            *   **Actionable Fixes:** Tailored suggestions, potentially with code examples, on how to address the specific problem.
+            *   **Learning Resources:** Links to relevant documentation or articles for deeper understanding.
+            *   **Interactive Help (Long-Term):** An option to "Ask AI Assistant" for follow-up questions or clarifications on fixing the issue, making the report a more dynamic and supportive tool.
     *   **AI UX & Design Insights Section:**
         *   Display of AI-generated suggestions regarding user experience, layout, styling, and visual design.
         *   This may include textual advice, potentially annotated screenshots (if vision models provide coordinates or visual callouts), or identified areas for improvement.
