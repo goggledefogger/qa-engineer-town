@@ -139,6 +139,14 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Extend to backend languages, web servers, CDNs, and cloud platforms if feasible.
     - [ ] Design data structure in RTDB for storing detected technologies.
     - [ ] Create a new section/tab in the frontend Report Page to display the tech stack information.
+- [ ] **NEW: Implement Responsive Screenshot Capture and Analysis:**
+    - [ ] Modify `performPlaywrightScan` to capture screenshots at different viewport sizes (e.g., desktop, tablet, mobile).
+    - [ ] Store multiple screenshots in Firebase Storage (e.g., `screenshots/{reportId}/screenshot_desktop.jpg`, `screenshot_tablet.jpg`, `screenshot_mobile.jpg`).
+    - [ ] Update `playwrightReport` in RTDB to include URLs for all screenshot sizes.
+    - [ ] Adjust `performGeminiAnalysis` to potentially analyze multiple screenshots or a composite view if the AI model supports it, or select the most relevant one.
+    - [ ] Ensure AI UX/Design suggestions consider responsiveness based on the different viewport captures.
+    - [ ] Update `performLLMReportSummary` to incorporate findings from responsive analysis, highlighting any discrepancies or issues across device types.
+    - [ ] Update the frontend Report Page to display the different screenshots (e.g., in a carousel or tabs) and reflect responsive design feedback in the AI suggestions and summary.
 
 ## Implementation Plan
 
