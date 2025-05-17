@@ -27,7 +27,7 @@ async function performPlaywrightScan(urlToScan: string, reportId: string): Promi
     });
     const page = await context.newPage();
     logger.info(`Navigating to ${urlToScan} for screenshot...`, { reportId });
-    await page.goto(urlToScan, { waitUntil: "networkidle", timeout: 60000 });
+    await page.goto(urlToScan, { waitUntil: "load", timeout: 120000 });
 
     const pageTitle = await page.title();
     const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });

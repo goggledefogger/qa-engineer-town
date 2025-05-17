@@ -184,12 +184,6 @@ const ReportPage: React.FC = () => {
                 Debug: Playwright report exists, but screenshotUrl is falsy (Value: {String(reportData.playwrightReport.screenshotUrl)})
               </p>
             )}
-            {/* Log if playwrightReport itself is missing */}
-            {!reportData.playwrightReport && (
-              <p className="text-xs text-orange-400 mt-2">
-                Debug: Playwright report object is missing.
-              </p>
-            )}
           </Card>
         );
       case 'performance':
@@ -423,14 +417,11 @@ const ReportPage: React.FC = () => {
                 <div className="prose prose-sm max-w-none text-slate-700">
                   {(() => {
                     const rawText = llmSummary.summaryText;
-                    console.log("Raw LLM Summary Text:", JSON.stringify(rawText));
 
-                    let introText = "";
                     let markdownContent = "";
 
                     const parts = rawText.split(/\n\s*`{3}(?:markdown|\w+)?\n/);
                     if (parts.length > 1) {
-                      introText = parts[0].trim();
                       // Join the rest, in case the markdown itself contained ```markdown\n (unlikely but defensive)
                       let mainMarkdownSection = parts.slice(1).join('\n```markdown\n');
                       // Remove the final triple backticks
@@ -442,12 +433,7 @@ const ReportPage: React.FC = () => {
                       markdownContent = rawText.replace(/^(\s*`{3}(markdown|\w+)?\n)?([\s\S]+?)(\n\s*`{3}\s*)?$/, '$3').trim();
                     }
 
-                    console.log("Intro Text:", JSON.stringify(introText));
-                    console.log("Markdown Content for ReactMarkdown:", JSON.stringify(markdownContent));
-
                     return (
-                      <>
-                        {introText && <p className="mb-2 text-slate-700">{introText}</p>}
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
@@ -461,7 +447,6 @@ const ReportPage: React.FC = () => {
                         >
                           {markdownContent}
                         </ReactMarkdown>
-                      </>
                     );
                   })()}
                 </div>
