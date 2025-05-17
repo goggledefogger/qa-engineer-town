@@ -11,47 +11,65 @@ import {
   ScanTaskPayload,
   AiUxDesignSuggestions,
   LLMReportSummary,
+  ScreenshotUrls,
 } from "../types";
 import * as fs from "fs";
 import * as path from "path";
 
 // Helper function for Playwright scan
 async function performPlaywrightScan(urlToScan: string, reportId: string): Promise<PlaywrightReport> {
-  logger.info("Launching browser for Playwright screenshot...", { reportId });
+  logger.info("Launching browser for Playwright screenshots...", { reportId });
   let browser = null;
+  const screenshotUrls: ScreenshotUrls = {};
+  let pageTitle: string | undefined;
+
+  const viewports: Array<{ name: keyof ScreenshotUrls; width: number; height: number }> = [
+    { name: "desktop", width: 1280, height: 720 },
+    { name: "tablet", width: 768, height: 1024 },
+    { name: "mobile", width: 375, height: 667 },
+  ];
+
   try {
     browser = await playwright.launchChromium({ headless: true });
-    const context = await browser.newContext({
-      viewport: { width: 1280, height: 720 },
-      deviceScaleFactor: 1,
-    });
+    const context = await browser.newContext({ deviceScaleFactor: 1 }); // Viewport set per screenshot
     const page = await context.newPage();
-    logger.info(`Navigating to ${urlToScan} for screenshot...`, { reportId });
-    await page.goto(urlToScan, { waitUntil: "load", timeout: 120000 });
 
-    const pageTitle = await page.title();
-    const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });
-    logger.info("Screenshot captured.", { reportId });
+    logger.info(`Navigating to ${urlToScan} for screenshots...`, { reportId });
+    await page.goto(urlToScan, { waitUntil: "load", timeout: 120000 });
+    pageTitle = await page.title();
 
     const bucket = admin.storage().bucket(); // Default bucket
-    const screenshotFileName = `screenshots/${reportId}/screenshot.jpg`;
-    const file = bucket.file(screenshotFileName);
-    await file.save(screenshotBuffer, {
-      metadata: { contentType: "image/jpeg" },
-    });
-    await file.makePublic();
-    const screenshotUrl = file.publicUrl();
-    logger.info("Screenshot uploaded and made public.", { reportId, screenshotUrl });
+
+    for (const viewport of viewports) {
+      logger.info(`Setting viewport to ${viewport.name} (${viewport.width}x${viewport.height})`, { reportId });
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      // Add a small delay or wait for a specific element if necessary for content to reflow
+      await page.waitForTimeout(1000); // Wait 1 second for reflow
+
+      const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });
+      logger.info(`Screenshot captured for ${viewport.name}.`, { reportId });
+
+      const screenshotFileName = `screenshots/${reportId}/screenshot_${viewport.name}.jpg`;
+      const file = bucket.file(screenshotFileName);
+      await file.save(screenshotBuffer, {
+        metadata: { contentType: "image/jpeg" },
+      });
+      await file.makePublic();
+      screenshotUrls[viewport.name] = file.publicUrl();
+      logger.info(`Screenshot for ${viewport.name} uploaded and made public.`, { reportId, url: screenshotUrls[viewport.name] });
+    }
 
     return {
       success: true,
       pageTitle: pageTitle,
-      screenshotUrl: screenshotUrl,
+      screenshotUrls: screenshotUrls, // Use the new structure
     };
   } catch (playwrightError: any) {
     logger.error("Error during Playwright screenshot capture or upload:", { reportId, errorMessage: playwrightError.message, stack: playwrightError.stack, detail: playwrightError });
     return {
       success: false,
+      pageTitle: pageTitle, // Still return page title if available
+      screenshotUrls: screenshotUrls, // Return any screenshots captured before error
       error: `Playwright operation failed: ${playwrightError.message}`,
     };
   } finally {
@@ -208,11 +226,11 @@ async function performLighthouseScan(urlToScan: string, reportId: string, pagesp
 
 // Helper function for Gemini AI analysis
 async function performGeminiAnalysis(
-  screenshotUrl: string, // Keep for logging or future use if direct URL needed
+  screenshotUrl: string, // This is the specific public URL of the screenshot to analyze
   reportId: string,
   geminiApiKey: string | undefined,
   geminiModelName: string | undefined,
-  urlToScan: string // Added urlToScan to potentially pass to the prompt
+  urlToScan: string
 ): Promise<AiUxDesignSuggestions> {
   if (!geminiApiKey || !geminiModelName) {
     let skipReason = "";
@@ -227,41 +245,59 @@ async function performGeminiAnalysis(
     };
   }
 
+  // Read prompt from file (moved up to be available for processScreenshotBuffer if GS path is used)
+  const promptFilePath = path.join(__dirname, "..", "prompts", "ai_ux_design_prompt.md");
+  let promptTemplate = "";
   try {
-    logger.info(`Starting AI UX/Design analysis with Gemini model: ${geminiModelName}...`, { reportId, screenshotUrl });
+    promptTemplate = fs.readFileSync(promptFilePath, "utf-8");
+  } catch (e: any) {
+    logger.error("Failed to read AI UX Design prompt template file: " + e.message, { reportId, path: promptFilePath });
+    return { // Return early if prompt file cannot be read
+      status: "error",
+      error: `Failed to read AI UX Design prompt template: ${e.message}`,
+      suggestions: [],
+      modelUsed: geminiModelName,
+    };
+  }
+  const finalPrompt = promptTemplate;
 
-    // Construct the file path directly, consistent with how it was saved
-    const screenshotFileName = `screenshots/${reportId}/screenshot.jpg`;
-    const bucket = admin.storage().bucket(); // Get default bucket
+  try {
+    logger.info(`Starting AI UX/Design analysis with Gemini model: ${geminiModelName}...`, { reportId, screenshotUrlToAnalyze: screenshotUrl });
 
-    logger.info(`Attempting to download screenshot from gs://${bucket.name}/${screenshotFileName}`, { reportId });
-    const [screenshotBuffer] = await bucket.file(screenshotFileName).download();
+    const bucket = admin.storage().bucket();
+    const urlPrefix = `https://storage.googleapis.com/${bucket.name}/`;
+    let screenshotBuffer: Buffer;
+
+    if (screenshotUrl.startsWith(urlPrefix)) {
+      const filePathInBucket = screenshotUrl.substring(urlPrefix.length);
+      const decodedFilePathInBucket = decodeURIComponent(filePathInBucket);
+      logger.info(`Attempting to download screenshot from extracted GCS public URL path: gs://${bucket.name}/${decodedFilePathInBucket}`, { reportId, originalUrl: screenshotUrl });
+      [screenshotBuffer] = await bucket.file(decodedFilePathInBucket).download();
+    } else {
+      const gsUrlPrefix = `gs://${bucket.name}/`;
+      if (screenshotUrl.startsWith(gsUrlPrefix)) {
+        const filePathFromGsUrl = screenshotUrl.substring(gsUrlPrefix.length);
+        const decodedFilePathFromGsUrl = decodeURIComponent(filePathFromGsUrl);
+        logger.info(`Attempting to download screenshot using GS URI path: gs://${bucket.name}/${decodedFilePathFromGsUrl}`, { reportId });
+        [screenshotBuffer] = await bucket.file(decodedFilePathFromGsUrl).download();
+      } else {
+        logger.error("Screenshot URL does not have an expected GCS public URL or GS URI prefix.", {
+          reportId,
+          screenshotUrlProvided: screenshotUrl,
+          expectedGcsPrefix: urlPrefix,
+          expectedGsPrefix: gsUrlPrefix
+        });
+        throw new Error("Invalid screenshot URL format. Expected Google Cloud Storage public URL or GS URI.");
+      }
+    }
+
     logger.info(`Screenshot (${screenshotBuffer.length} bytes) fetched successfully for Gemini analysis.`, { reportId });
 
+    // Call the refactored processing logic directly here, as screenshotBuffer is now always initialized if no error thrown
     const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
-
-    // Read prompt from file
-    const promptFilePath = path.join(__dirname, "..", "prompts", "ai_ux_design_prompt.md");
-    let promptTemplate = "";
-    try {
-      promptTemplate = fs.readFileSync(promptFilePath, "utf-8");
-    } catch (e: any) {
-      logger.error("Failed to read AI UX Design prompt template file: " + e.message, { reportId, path: promptFilePath });
-      return {
-        status: "error",
-        error: `Failed to read AI UX Design prompt template: ${e.message}`,
-        suggestions: [],
-        modelUsed: geminiModelName,
-      };
-    }
-    // The new prompt doesn't have explicit placeholders for URL, but we pass it in case it's useful contextually for the model
-    // or if we want to add a placeholder like __URL_TO_SCAN__ to ai_ux_design_prompt.md later.
-    // For now, the prompt primarily relies on the screenshot.
-    const finalPrompt = promptTemplate; // If URL needs to be injected: promptTemplate.replace("__URL_TO_SCAN__", urlToScan);
-
     const imagePart: Part = { inlineData: { data: screenshotBuffer.toString("base64"), mimeType: "image/jpeg" } };
-    const textPart: Part = { text: finalPrompt }; // Use the prompt from file
-    const generationConfig = { temperature: 0.4, topK: 32, topP: 1, maxOutputTokens: 2048 }; // Slightly increased temperature for more varied suggestions
+    const textPart: Part = { text: finalPrompt };
+    const generationConfig = { temperature: 0.4, topK: 32, topP: 1, maxOutputTokens: 2048 };
     const safetySettings = [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -278,14 +314,7 @@ async function performGeminiAnalysis(
     const responseText = result.text;
     logger.info("Gemini analysis response received.", { reportId });
 
-    // Suggestions are expected to be newline-separated, without explicit numbering or separate reasoning.
-    // Each line is a complete suggestion with integrated reasoning.
     const suggestionsArray = responseText ? responseText.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0 && s !== "---") : [];
-
-    // The new prompt structure implies reasoning is part of the suggestion text.
-    // We will store the full text as the 'suggestion' and leave 'reasoning' empty or more appropriately,
-    // adjust the AiUxDesignSuggestions interface if we want to reflect this change.
-    // For now, let's keep the structure and assign the full text to 'suggestion'.
     const parsedSuggestions = suggestionsArray.map((s: string) => ({ suggestion: s, reasoning: "" }));
 
     return {
@@ -293,6 +322,7 @@ async function performGeminiAnalysis(
       suggestions: parsedSuggestions.slice(0, 10),
       modelUsed: geminiModelName,
     };
+
   } catch (aiError: any) {
     logger.error(
       "Error during AI UX/Design analysis: " + aiError.message,
@@ -300,6 +330,7 @@ async function performGeminiAnalysis(
         reportId,
         errorStack: aiError.stack,
         errorDetails: JSON.stringify(aiError),
+        screenshotUrlProvided: screenshotUrl,
       },
     );
     return {
@@ -336,7 +367,7 @@ async function performLLMReportSummary(
     url: urlToScan,
     playwright: {
       pageTitle: playwrightReport?.pageTitle,
-      hasScreenshot: !!playwrightReport?.screenshotUrl,
+      screenshotsAvailable: playwrightReport?.screenshotUrls ? Object.keys(playwrightReport.screenshotUrls).filter(k => playwrightReport?.screenshotUrls?.[k as keyof ScreenshotUrls]) : [],
       error: playwrightReport?.error,
     },
     lighthouse: {
@@ -458,25 +489,37 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await reportRef.update(updateData);
       logger.info("Report updated with Playwright and Lighthouse results.", { reportId });
 
-      // Perform Gemini analysis if Playwright was successful and screenshot is available
+      // Perform Gemini analysis if Playwright was successful and screenshots are available
       let aiUxDesignSuggestions: AiUxDesignSuggestions | undefined = undefined;
-      if (playwrightReport.success && playwrightReport.screenshotUrl) {
+      if (playwrightReport && playwrightReport.success && playwrightReport.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) {
         logger.info("Playwright successful, proceeding with Gemini analysis.", { reportId });
-        aiUxDesignSuggestions = await performGeminiAnalysis(
-          playwrightReport.screenshotUrl,
-          reportId,
-          GEMINI_API_KEY,
-          GEMINI_MODEL_NAME,
-          urlToScan // Pass urlToScan
-        );
-        logger.info(`Gemini analysis result status: ${aiUxDesignSuggestions.status}`, { reportId });
-        await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
-        logger.info("Report updated with AI UX design suggestions.", { reportId });
+        const screenshotUrlForAnalysis = playwrightReport.screenshotUrls.desktop || Object.values(playwrightReport.screenshotUrls)[0];
+        if (screenshotUrlForAnalysis) {
+          aiUxDesignSuggestions = await performGeminiAnalysis(
+            screenshotUrlForAnalysis,
+            reportId,
+            GEMINI_API_KEY,
+            GEMINI_MODEL_NAME,
+            urlToScan
+          );
+          logger.info(`Gemini analysis result status: ${aiUxDesignSuggestions.status}`, { reportId });
+          await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
+          logger.info("Report updated with AI UX design suggestions.", { reportId });
+        } else {
+          logger.warn("Skipping Gemini analysis as no valid screenshot URL found despite Playwright success.", { reportId });
+          aiUxDesignSuggestions = {
+            status: "skipped",
+            error: "AI analysis skipped as no screenshot URL was available after Playwright scan.",
+            suggestions: [],
+            modelUsed: GEMINI_MODEL_NAME || undefined,
+          };
+          await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
+        }
       } else {
-        logger.info("Skipping Gemini analysis due to Playwright failure or no screenshot URL.", { reportId, playwrightSuccess: playwrightReport.success, hasScreenshot: !!playwrightReport.screenshotUrl });
+        logger.info("Skipping Gemini analysis due to Playwright failure or no screenshot URLs.", { reportId, playwrightSuccess: playwrightReport?.success, hasScreenshots: !!(playwrightReport?.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) });
         aiUxDesignSuggestions = {
             status: "skipped",
-            error: "AI analysis skipped due to Playwright failure or missing screenshot.",
+            error: "AI analysis skipped due to Playwright failure or missing screenshots.",
             suggestions: [],
             modelUsed: GEMINI_MODEL_NAME || undefined,
         };
@@ -486,8 +529,6 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
 
       // Perform LLM Report Summary
       let llmReportSummary: LLMReportSummary | undefined = undefined;
-      // We can attempt summary generation even if AI UX suggestions were skipped or failed,
-      // as long as we have some core data (Playwright/Lighthouse) and the API key.
       if (GEMINI_API_KEY && GEMINI_MODEL_NAME) {
         logger.info("Proceeding with LLM Report Summary generation.", { reportId });
         llmReportSummary = await performLLMReportSummary(
@@ -495,7 +536,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
           urlToScan,
           playwrightReport,
           lighthouseReport,
-          aiUxDesignSuggestions, // Pass the (potentially skipped/failed) AI UX suggestions object
+          aiUxDesignSuggestions,
           GEMINI_API_KEY,
           GEMINI_MODEL_NAME
         );

@@ -1,7 +1,13 @@
+export interface ScreenshotUrls {
+  desktop?: string;
+  tablet?: string;
+  mobile?: string;
+}
+
 export interface PlaywrightReport {
   success: boolean;
   pageTitle?: string;
-  screenshotUrl?: string;
+  screenshotUrls?: ScreenshotUrls;
   error?: string;
 }
 

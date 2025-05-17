@@ -10,7 +10,7 @@ Before generating the summary, try to infer the primary purpose or type of the w
 
 You will be provided with a JSON object containing data from different parts of the scan:
 - "url": The URL that was scanned.
-- "playwright": Basic page information (e.g., pageTitle) and status of visual snapshot capture.
+- "playwright": Basic page information (e.g., pageTitle) and a list of available screenshot types (e.g., "desktop", "tablet", "mobile") from the visual capture process.
 - "lighthouse": Automated scores and findings related to performance (speed), accessibility (ease of use for people with disabilities), SEO (search engine visibility), and best-practices (technical soundness). This section includes overall scores and lists of specific issues or opportunities.
 - "aiUxSuggestions": AI-generated feedback on user experience and visual design, based on a snapshot of the page (this might also hint at page type).
 
@@ -20,6 +20,7 @@ Your Markdown summary MUST include the following sections using H3 (###) heading
 
 ### Overall Health Assessment
 First, provide a quick status overview for each main category of the scan. Use a bulleted list. For each category (Performance, Accessibility, SEO, Best Practices, AI UX & Design Feedback), indicate a status (e.g., ✅ Good, ⚠️ Needs Attention, ❌ Critical, or N/A if data is missing/incomplete). **Subtly let your inferred page type influence the perceived severity if appropriate (e.g., a lower SEO score might be less critical for an internal tool's login page).**
+Consider if the availability of different screenshot types (mentioned in the "playwright" section of the data under `screenshotsAvailable`) offers any initial insights into the page's responsive design. You can briefly mention this if relevant to the overall assessment.
 
 Example:
 *   Performance: ⚠️ Needs Attention
@@ -35,6 +36,7 @@ Identify the 2-3 most critical issues or areas needing urgent attention. For eac
     *   Clearly describe the issue in simple terms.
     *   Explain its potential impact (e.g., on users, business goals, or search ranking), **considering the inferred page type.**
     *   If obvious, suggest the general type of action needed (e.g., "address accessibility errors," "optimize images," "review layout concerns").
+If the data (e.g., AI UX suggestions or the `screenshotsAvailable` field in the playwright data) hints at specific responsiveness issues or successes, these could be highlighted here, especially if they impact usability across devices.
 
 ### Noteworthy Strengths
 Briefly mention 1-2 positive findings or areas where the page is performing well, if any are apparent from the data. This helps provide a balanced view.

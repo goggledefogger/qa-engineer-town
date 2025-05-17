@@ -147,6 +147,13 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Ensure AI UX/Design suggestions consider responsiveness based on the different viewport captures.
     - [ ] Update `performLLMReportSummary` to incorporate findings from responsive analysis, highlighting any discrepancies or issues across device types.
     - [ ] Update the frontend Report Page to display the different screenshots (e.g., in a carousel or tabs) and reflect responsive design feedback in the AI suggestions and summary.
+- [ ] **NEW: AI-Assisted Playwright for User Flow Testing & Interactive Suggestions:**
+    - [ ] Research AI-assisted browser control libraries/frameworks compatible with Playwright/Node.js (e.g., exploring options that can intelligently interact with web elements).
+    - [ ] Define a set of common key user flows to test automatically (e.g., login, registration, product search, add to cart, checkout process).
+    - [ ] Integrate the chosen AI-assisted library to drive Playwright through these defined user flows.
+    - [ ] Develop logic to capture interaction issues, gather data on task completion success/failure, and identify elements контекст for screen-specific interactivity suggestions.
+    - [ ] Explore how AI can provide feedback on the ease of use and intuitiveness of these flows, especially on different screen contexts (e.g., mobile navigation).
+    - [ ] Update RTDB and frontend reporting to include findings from these interactive user flow tests and any AI-generated interactivity suggestions.
 
 ## Implementation Plan
 

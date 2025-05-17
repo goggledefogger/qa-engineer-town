@@ -61,17 +61,27 @@ interface LLMReportSummary {
   modelUsed?: string;
 }
 
+// Define an interface for Screenshot URLs (matching backend)
+interface ScreenshotUrls {
+  desktop?: string;
+  tablet?: string;
+  mobile?: string;
+}
+
+// Define an interface for Playwright report data (matching backend)
+interface PlaywrightReport {
+  success?: boolean;
+  pageTitle?: string;
+  screenshotUrls?: ScreenshotUrls; // Updated from screenshotUrl
+  error?: string;
+}
+
 // Define an interface for the report data structure
 interface ReportData {
   url: string;
   status: 'pending' | 'processing' | 'complete' | 'error';
   createdAt: number; // Timestamp
-  playwrightReport?: {
-    success?: boolean;
-    pageTitle?: string;
-    screenshotUrl?: string;
-    error?: string;
-  };
+  playwrightReport?: PlaywrightReport; // Use the updated PlaywrightReport interface
   lighthouseReport?: LighthouseReportData;
   aiUxDesignSuggestions?: { // Updated structure
     status: "completed" | "error" | "pending" | "skipped";
@@ -125,10 +135,14 @@ const ReportPage: React.FC = () => {
 
     // Screenshot status
     if (reportData.playwrightReport) {
-      if (reportData.playwrightReport.screenshotUrl) statuses['screenshot'] = 'COMPLETED';
-      else if (reportData.playwrightReport.error) statuses['screenshot'] = 'ERROR';
-      else statuses['screenshot'] = isProcessing ? 'LOADING' : 'PENDING'; // Defined, but no URL or error yet
-    } else { // No playwrightReport object yet
+      if (reportData.playwrightReport.screenshotUrls && Object.values(reportData.playwrightReport.screenshotUrls).some(url => typeof url === 'string' && url.length > 0)) {
+        statuses['screenshot'] = 'COMPLETED';
+      } else if (reportData.playwrightReport.error) {
+        statuses['screenshot'] = 'ERROR';
+      } else {
+        statuses['screenshot'] = isProcessing ? 'LOADING' : 'PENDING';
+      }
+    } else {
       statuses['screenshot'] = isProcessing ? 'LOADING' : 'PENDING';
     }
 
@@ -244,23 +258,31 @@ const ReportPage: React.FC = () => {
         );
       case 'screenshot':
         return (
-          <Card title="Screenshot" className="font-sans">
-            {reportData.playwrightReport?.screenshotUrl ? (
-              <div className="flex flex-col items-center">
-                <img
-                  src={reportData.playwrightReport.screenshotUrl}
-                  alt="Website Screenshot"
-                  className="max-w-full max-h-[70vh] rounded shadow-md border border-slate-300 object-contain bg-slate-50"
-                />
-                <a href={reportData.playwrightReport.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-3 text-sm text-blue-600 hover:underline">Open full size</a>
+          <Card title="Screenshots" className="font-sans">
+            {reportData.playwrightReport?.screenshotUrls && Object.values(reportData.playwrightReport.screenshotUrls).some(url => !!url) ? (
+              <div className="space-y-8">
+                {(Object.entries(reportData.playwrightReport.screenshotUrls) as Array<[keyof ScreenshotUrls, string]>)
+                  .filter(([, url]) => !!url)
+                  .map(([device, url]) => (
+                  <div key={device} className="flex flex-col items-center">
+                    <h4 className="text-xl font-semibold mb-3 capitalize text-slate-700">{device} View</h4>
+                    <img
+                      src={url}
+                      alt={`Website Screenshot on ${device}`}
+                      className="max-w-full max-h-[70vh] rounded shadow-lg border border-slate-300 object-contain bg-slate-100 p-1"
+                    />
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="mt-4 text-sm text-blue-600 hover:underline">Open full size {device} screenshot</a>
+                  </div>
+                ))}
               </div>
+            ) : reportData.playwrightReport?.error ? (
+              <p className="text-red-600">Error capturing screenshots: {reportData.playwrightReport.error}</p>
             ) : (
-              <p className="text-slate-600">Screenshot will appear here when scan is complete.</p>
+              <p className="text-slate-600">Screenshots will appear here when scan is complete.</p>
             )}
-            {/* Log if playwrightReport exists but screenshotUrl is missing/falsy */}
-            {reportData.playwrightReport && !reportData.playwrightReport.screenshotUrl && (
-              <p className="text-xs text-red-400 mt-2">
-                Debug: Playwright report exists, but screenshotUrl is falsy (Value: {String(reportData.playwrightReport.screenshotUrl)})
+            {reportData.playwrightReport && !(reportData.playwrightReport.screenshotUrls && Object.values(reportData.playwrightReport.screenshotUrls).some(url => !!url)) && !reportData.playwrightReport.error && (
+              <p className="text-xs text-orange-500 mt-2">
+                Debug: Playwright report exists, but no valid screenshot URLs found. Status: {reportData.status}
               </p>
             )}
           </Card>
