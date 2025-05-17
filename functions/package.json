@@ -6,7 +6,7 @@
     "node": "22"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cpx \"src/prompts/**/*.md\" lib/prompts",
     "lint": "npx eslint --ext .js,.ts .",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
@@ -34,6 +34,7 @@
     "@types/node-fetch": "2.6.12",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
+    "cpx": "^1.5.0",
     "eslint": "^9.26.0",
     "firebase-functions-test": "^3.4.1"
   }

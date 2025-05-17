@@ -211,7 +211,8 @@ async function performGeminiAnalysis(
   screenshotUrl: string, // Keep for logging or future use if direct URL needed
   reportId: string,
   geminiApiKey: string | undefined,
-  geminiModelName: string | undefined
+  geminiModelName: string | undefined,
+  urlToScan: string // Added urlToScan to potentially pass to the prompt
 ): Promise<AiUxDesignSuggestions> {
   if (!geminiApiKey || !geminiModelName) {
     let skipReason = "";
@@ -222,6 +223,7 @@ async function performGeminiAnalysis(
       status: "skipped",
       error: `AI analysis skipped: ${skipReason}`,
       suggestions: [],
+      modelUsed: geminiModelName,
     };
   }
 
@@ -237,10 +239,29 @@ async function performGeminiAnalysis(
     logger.info(`Screenshot (${screenshotBuffer.length} bytes) fetched successfully for Gemini analysis.`, { reportId });
 
     const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
-    const prompt = `Analyze the user interface and user experience of the webpage in this screenshot. Provide a list of actionable suggestions to improve it. Focus on clarity, usability, accessibility, and overall design effectiveness. For each suggestion, briefly explain the reasoning. Format each suggestion as a separate point. Limit to 10 concise suggestions.`;
+
+    // Read prompt from file
+    const promptFilePath = path.join(__dirname, "..", "prompts", "ai_ux_design_prompt.md");
+    let promptTemplate = "";
+    try {
+      promptTemplate = fs.readFileSync(promptFilePath, "utf-8");
+    } catch (e: any) {
+      logger.error("Failed to read AI UX Design prompt template file: " + e.message, { reportId, path: promptFilePath });
+      return {
+        status: "error",
+        error: `Failed to read AI UX Design prompt template: ${e.message}`,
+        suggestions: [],
+        modelUsed: geminiModelName,
+      };
+    }
+    // The new prompt doesn't have explicit placeholders for URL, but we pass it in case it's useful contextually for the model
+    // or if we want to add a placeholder like __URL_TO_SCAN__ to ai_ux_design_prompt.md later.
+    // For now, the prompt primarily relies on the screenshot.
+    const finalPrompt = promptTemplate; // If URL needs to be injected: promptTemplate.replace("__URL_TO_SCAN__", urlToScan);
+
     const imagePart: Part = { inlineData: { data: screenshotBuffer.toString("base64"), mimeType: "image/jpeg" } };
-    const textPart: Part = { text: prompt };
-    const generationConfig = { temperature: 0.3, topK: 32, topP: 1, maxOutputTokens: 2048 };
+    const textPart: Part = { text: finalPrompt }; // Use the prompt from file
+    const generationConfig = { temperature: 0.4, topK: 32, topP: 1, maxOutputTokens: 2048 }; // Slightly increased temperature for more varied suggestions
     const safetySettings = [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -257,8 +278,15 @@ async function performGeminiAnalysis(
     const responseText = result.text;
     logger.info("Gemini analysis response received.", { reportId });
 
-    const suggestionsArray = responseText ? responseText.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0) : [];
-    const parsedSuggestions = suggestionsArray.map((s: string) => ({ suggestion: s, reasoning: "Provided by AI" }));
+    // Suggestions are expected to be newline-separated, without explicit numbering or separate reasoning.
+    // Each line is a complete suggestion with integrated reasoning.
+    const suggestionsArray = responseText ? responseText.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0 && s !== "---") : [];
+
+    // The new prompt structure implies reasoning is part of the suggestion text.
+    // We will store the full text as the 'suggestion' and leave 'reasoning' empty or more appropriately,
+    // adjust the AiUxDesignSuggestions interface if we want to reflect this change.
+    // For now, let's keep the structure and assign the full text to 'suggestion'.
+    const parsedSuggestions = suggestionsArray.map((s: string) => ({ suggestion: s, reasoning: "" }));
 
     return {
       status: "completed",
@@ -438,7 +466,8 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
           playwrightReport.screenshotUrl,
           reportId,
           GEMINI_API_KEY,
-          GEMINI_MODEL_NAME
+          GEMINI_MODEL_NAME,
+          urlToScan // Pass urlToScan
         );
         logger.info(`Gemini analysis result status: ${aiUxDesignSuggestions.status}`, { reportId });
         await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);

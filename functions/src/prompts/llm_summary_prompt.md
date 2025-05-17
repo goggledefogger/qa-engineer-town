@@ -5,39 +5,42 @@ The goal is to highlight key findings that they can act upon or communicate to s
 
 The website scanned is: __URL_TO_SCAN__
 
+**Important Contextual Consideration: Page Type**
+Before generating the summary, try to infer the primary purpose or type of the webpage (e.g., e-commerce product page, blog post, marketing landing page, login form, dashboard, etc.) based on the URL and the content of the `playwright.pageTitle` and `aiUxSuggestions` fields in the JSON data. This inference should subtly guide your assessment of severity and relevance for different findings. For example, SEO might be more critical for a public marketing page than an internal dashboard.
+
 You will be provided with a JSON object containing data from different parts of the scan:
 - "url": The URL that was scanned.
-- "playwright": Basic page information (e.g., title) and status of visual snapshot capture.
+- "playwright": Basic page information (e.g., pageTitle) and status of visual snapshot capture.
 - "lighthouse": Automated scores and findings related to performance (speed), accessibility (ease of use for people with disabilities), SEO (search engine visibility), and best-practices (technical soundness). This section includes overall scores and lists of specific issues or opportunities.
-- "aiUxSuggestions": AI-generated feedback on user experience and visual design, based on a snapshot of the page.
+- "aiUxSuggestions": AI-generated feedback on user experience and visual design, based on a snapshot of the page (this might also hint at page type).
 
 Based on ALL the provided JSON data, synthesize the information and generate a summary in MARKDOWN format (approximately 250-400 words).
 
 Your Markdown summary MUST include the following sections using H3 (###) headings:
 
 ### Overall Health Assessment
-First, provide a quick status overview for each main category of the scan. Use a bulleted list. For each category (Performance, Accessibility, SEO, Best Practices, AI UX & Design Feedback), indicate a status (e.g., ✅ Good, ⚠️ Needs Attention, ❌ Critical, or N/A if data is missing/incomplete).
+First, provide a quick status overview for each main category of the scan. Use a bulleted list. For each category (Performance, Accessibility, SEO, Best Practices, AI UX & Design Feedback), indicate a status (e.g., ✅ Good, ⚠️ Needs Attention, ❌ Critical, or N/A if data is missing/incomplete). **Subtly let your inferred page type influence the perceived severity if appropriate (e.g., a lower SEO score might be less critical for an internal tool's login page).**
 
 Example:
 *   Performance: ⚠️ Needs Attention
 *   Accessibility: ✅ Good
-*   SEO: ✅ Good
+*   SEO: ✅ Good (Noted as satisfactory for an internal dashboard)
 *   Best Practices: ⚠️ Needs Attention
-*   AI UX & Design Feedback: ❌ Critical
+*   AI UX & Design Feedback: ❌ Critical (Especially concerning for a primary landing page)
 
-After this status list, then provide a brief, holistic narrative assessment of the page's current state, considering all aspects and elaborating on the statuses you just listed.
+After this status list, then provide a brief, holistic narrative assessment of the page\'s current state, considering all aspects and elaborating on the statuses you just listed. **Mention the inferred page type if it significantly contextualizes the assessment.**
 
 ### Key Areas for Immediate Attention
 Identify the 2-3 most critical issues or areas needing urgent attention. For each:
     *   Clearly describe the issue in simple terms.
-    *   Explain its potential impact (e.g., on users, business goals, or search ranking).
+    *   Explain its potential impact (e.g., on users, business goals, or search ranking), **considering the inferred page type.**
     *   If obvious, suggest the general type of action needed (e.g., "address accessibility errors," "optimize images," "review layout concerns").
 
 ### Noteworthy Strengths
 Briefly mention 1-2 positive findings or areas where the page is performing well, if any are apparent from the data. This helps provide a balanced view.
 
 ### Summary & Next Steps
-Offer a concise concluding remark and suggest a general next step for the QA Engineer (e.g., "prioritize fixing critical issues," "perform deeper investigation into performance bottlenecks," "discuss design feedback with the team").
+Offer a concise concluding remark and suggest a general next step for the QA Engineer (e.g., "prioritize fixing critical issues identified for this [inferred page type]," "perform deeper investigation into performance bottlenecks," "discuss design feedback with the team").
 
 Remember:
 - Use Markdown for all formatting (H3 headings, bullet points using an asterisk like so: `* Item`, bold like so: `**Bold Text**`).

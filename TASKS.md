@@ -132,6 +132,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Refine LLM prompt for clarity, tone (non-technical), and desired output format (Markdown).
     - [x] Externalize LLM prompt to a separate .md file (`functions/src/prompts/llm_summary_prompt.md`) for easier maintenance. ✅
     - [x] Enhance frontend to correctly render Markdown for the LLM summary.
+    - [x] Enhance LLM prompts (summary and UX/design) to be page-type aware for more contextual feedback. ✅
 - [ ] **NEW: Implement Tech Stack Detection:**
     - [ ] Research and integrate tools/libraries (e.g., Wappalyzer, builtwith.com API, or custom heuristics) to identify the website's tech stack.
     - [ ] Initial focus on major platforms (WordPress, Shopify, Squarespace, Wix), CMS, and frontend frameworks.
@@ -167,6 +168,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - `functions/package.json` - Backend dependencies ✅ (emulator scripts removed)
 - `functions/src/index.ts` - Backend Cloud Functions (apiScan, processScanTask) ✅
 - `functions/src/prompts/llm_summary_prompt.md` - Markdown template for the LLM report summary prompt. ✅
+- `functions/src/prompts/ai_ux_design_prompt.md` - Markdown template for the AI UX & Design Insights prompt. ✅
 - `functions/.env.example` - Example environment variables for backend (e.g., `PROCESS_SCAN_TASK_URL`)
 - `package.json` - Root package config (emulator scripts removed)
 
@@ -238,6 +240,12 @@ gcloud logging read \
   ```
 - After adding/changing dependencies, run `npm install` from the **project root** to ensure all workspaces are synchronized.
 - The primary `package-lock.json` is the one in the project root. Individual workspaces (like `functions/`) should generally not have their own `package-lock.json` when managed by root workspaces; if one exists, it's often removed/ignored in favor of the root lockfile.
+
+**Note on Non-TypeScript Assets (e.g., Prompt Files):**
+- The `functions` workspace build process (`npm run build` within `functions/package.json`) is configured to compile TypeScript files from `src/` to `lib/` and also copy specific non-TS assets.
+- For example, Markdown prompt files located in `functions/src/prompts/` are copied to `functions/lib/prompts/` by the `cpx` utility as part of the build script.
+- This ensures that these files are available at runtime when the compiled JavaScript in `lib/` tries to read them using relative paths (e.g., `path.join(__dirname, "..", "prompts", "prompt_file.md")` when the code is in `lib/tasks/`).
+- If you add new types of non-TS assets that need to be available at runtime, ensure the build script in `functions/package.json` is updated to copy them accordingly.
 
 Before deploying or running the backend, ensure the Cloud Tasks queue exists:
 
