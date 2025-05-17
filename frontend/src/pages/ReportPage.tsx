@@ -171,7 +171,6 @@ const ReportPage: React.FC = () => {
       statuses['ai-ux-design'] = isProcessing ? 'LOADING' : 'PENDING';
     }
 
-    console.log("Calculated Section Statuses:", statuses); // For debugging
     return statuses;
   }, [reportData, loading]);
 
@@ -191,11 +190,9 @@ const ReportPage: React.FC = () => {
       if (snapshot.exists()) {
         setReportData(data as ReportData);
         setError(null);
-        console.log("Report data received:", data);
       } else {
         setError(`Report not found for ID: ${reportId}`);
         setReportData(null);
-        console.log(`No data found for report ID: ${reportId}`);
       }
       setLoading(false);
     }, (dbError) => {
@@ -209,7 +206,6 @@ const ReportPage: React.FC = () => {
     // or when reportId changes (though it shouldn't change in this component)
     return () => {
       off(reportRef, 'value', unsubscribe);
-      console.log("Detached RTDB listener for report:", reportId);
     };
 
   }, [reportId]); // Re-run effect if reportId changes
@@ -247,7 +243,6 @@ const ReportPage: React.FC = () => {
           </Card>
         );
       case 'screenshot':
-        console.log("Rendering screenshot section. Playwright report:", reportData.playwrightReport);
         return (
           <Card title="Screenshot" className="font-sans">
             {reportData.playwrightReport?.screenshotUrl ? (
