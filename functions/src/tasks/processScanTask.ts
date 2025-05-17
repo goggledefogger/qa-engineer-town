@@ -23,6 +23,7 @@ async function performPlaywrightScan(urlToScan: string, reportId: string): Promi
   let browser = null;
   const screenshotUrls: ScreenshotUrls = {};
   let pageTitle: string | undefined;
+  let overallSuccess = false; // Track if at least one screenshot succeeds
 
   const viewports: Array<{ name: keyof ScreenshotUrls; width: number; height: number }> = [
     { name: "desktop", width: 1280, height: 720 },
@@ -32,38 +33,76 @@ async function performPlaywrightScan(urlToScan: string, reportId: string): Promi
 
   try {
     browser = await playwright.launchChromium({ headless: true });
-    const context = await browser.newContext({ deviceScaleFactor: 1 }); // Viewport set per screenshot
+    const context = await browser.newContext({ deviceScaleFactor: 1 });
     const page = await context.newPage();
 
     logger.info(`Navigating to ${urlToScan} for screenshots...`, { reportId });
     await page.goto(urlToScan, { waitUntil: "load", timeout: 120000 });
     pageTitle = await page.title();
 
-    const bucket = admin.storage().bucket(); // Default bucket
+    const bucket = admin.storage().bucket();
+    const capturedScreenshotData: Array<{ name: keyof ScreenshotUrls; buffer: Buffer }> = [];
 
+    // Step 1: Sequentially capture all screenshot buffers
     for (const viewport of viewports) {
-      logger.info(`Setting viewport to ${viewport.name} (${viewport.width}x${viewport.height})`, { reportId });
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      // Add a small delay or wait for a specific element if necessary for content to reflow
-      await page.waitForTimeout(1000); // Wait 1 second for reflow
+      try {
+        logger.info(`Setting viewport to ${viewport.name} (${viewport.width}x${viewport.height}) and capturing screenshot...`, { reportId, viewport: viewport.name });
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.waitForTimeout(1000); // Wait for reflow
+        const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });
+        capturedScreenshotData.push({ name: viewport.name, buffer: screenshotBuffer });
+        logger.info(`Screenshot captured for ${viewport.name}.`, { reportId, viewport: viewport.name });
+      } catch (captureError: any) {
+        logger.error(`Failed to capture screenshot for viewport: ${viewport.name}`, { reportId, viewport: viewport.name, error: captureError.message, stack: captureError.stack });
+        // Continue to next viewport even if one fails
+      }
+    }
 
-      const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });
-      logger.info(`Screenshot captured for ${viewport.name}.`, { reportId });
-
-      const screenshotFileName = `screenshots/${reportId}/screenshot_${viewport.name}.jpg`;
-      const file = bucket.file(screenshotFileName);
-      await file.save(screenshotBuffer, {
-        metadata: { contentType: "image/jpeg" },
+    // Step 2: Parallelize uploading of captured buffers
+    if (capturedScreenshotData.length > 0) {
+      const uploadPromises = capturedScreenshotData.map(async (data) => {
+        try {
+          const screenshotFileName = `screenshots/${reportId}/screenshot_${data.name}.jpg`;
+          const file = bucket.file(screenshotFileName);
+          await file.save(data.buffer, {
+            metadata: { contentType: "image/jpeg" },
+          });
+          await file.makePublic();
+          const publicUrl = file.publicUrl();
+          logger.info(`Screenshot for ${data.name} uploaded and made public.`, { reportId, viewport: data.name, url: publicUrl });
+          return { name: data.name, url: publicUrl, status: 'fulfilled' as const };
+        } catch (uploadError: any) {
+          logger.error(`Failed to upload screenshot for viewport: ${data.name}`, { reportId, viewport: data.name, error: uploadError.message, stack: uploadError.stack });
+          return { name: data.name, error: uploadError.message, status: 'rejected' as const };
+        }
       });
-      await file.makePublic();
-      screenshotUrls[viewport.name] = file.publicUrl();
-      logger.info(`Screenshot for ${viewport.name} uploaded and made public.`, { reportId, url: screenshotUrls[viewport.name] });
+
+      const uploadResults = await Promise.allSettled(uploadPromises);
+
+      uploadResults.forEach(result => {
+        if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
+          screenshotUrls[result.value.name] = result.value.url;
+          overallSuccess = true;
+        } else if (result.status === 'rejected') {
+          logger.error(`Upload promise for a viewport was rejected directly.`, { reportId, reason: result.reason });
+        } else if (result.value.status === 'rejected') {
+          logger.warn(`Screenshot upload failed for viewport: ${result.value.name}`, { reportId, viewport: result.value.name, error: result.value.error });
+        }
+      });
+    }
+
+    if (!overallSuccess && Object.keys(screenshotUrls).length === 0) {
+      // If no screenshot was captured OR uploaded successfully, reflect this.
+      // Check if there were capture attempts, if not, it's a more general failure.
+      const initialCaptureAttempts = viewports.length;
+      const errorMsg = capturedScreenshotData.length === 0 && initialCaptureAttempts > 0 ? "All screenshot captures failed." : "All screenshot uploads failed or no screenshots were captured.";
+      throw new Error(errorMsg);
     }
 
     return {
-      success: true,
+      success: overallSuccess,
       pageTitle: pageTitle,
-      screenshotUrls: screenshotUrls, // Use the new structure
+      screenshotUrls: screenshotUrls,
     };
   } catch (playwrightError: any) {
     logger.error("Error during Playwright screenshot capture or upload:", { reportId, errorMessage: playwrightError.message, stack: playwrightError.stack, detail: playwrightError });
@@ -470,37 +509,28 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
     await reportRef.update({ status: "processing", updatedAt: Date.now() });
 
     try {
-      logger.info("Starting parallel scans for Playwright and Lighthouse...", { reportId });
+      logger.info("Starting Playwright scan...", { reportId });
       const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
       const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
       const GEMINI_MODEL_NAME = process.env.GEMINI_MODEL;
 
-      // Perform Playwright and Lighthouse scans in parallel
-      const [playwrightReport, lighthouseReport] = await Promise.all([
-        performPlaywrightScan(urlToScan, reportId),
-        performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY),
-      ]);
-      logger.info("Completed parallel scans. Playwright success: " + playwrightReport.success + ", Lighthouse success: " + lighthouseReport.success, { reportId });
+      // 1. Perform Playwright scan first as Gemini depends on its output
+      const playwrightReport = await performPlaywrightScan(urlToScan, reportId);
+      logger.info("Playwright scan completed. Success: " + playwrightReport.success, { reportId });
+      // Update RTDB with Playwright results promptly
+      await reportRef.child("playwrightReport").update(playwrightReport);
+      logger.info("Report updated with Playwright results.", { reportId });
 
-      // Prepare data for RTDB update
-      const updateData: Partial<ReportData> = {
-        playwrightReport: playwrightReport,
-        lighthouseReport: lighthouseReport,
-        updatedAt: Date.now(),
-      };
 
-      // Update RTDB with Playwright and Lighthouse results
-      logger.info("Updating report with Playwright and Lighthouse results...", { reportId, dataKeys: Object.keys(updateData) });
-      await reportRef.update(updateData);
-      logger.info("Report updated with Playwright and Lighthouse results.", { reportId });
+      // 2. Perform Lighthouse and Gemini scans in parallel
+      logger.info("Starting parallel Lighthouse and Gemini AI scans...", { reportId });
 
-      // Perform Gemini analysis if Playwright was successful and screenshots are available
-      let aiUxDesignSuggestions: AiUxDesignSuggestions | undefined = undefined;
+      const lighthousePromise = performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY);
+
+      let geminiPromise: Promise<AiUxDesignSuggestions>;
       if (playwrightReport && playwrightReport.success && playwrightReport.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) {
-        logger.info("Playwright successful, proceeding with Gemini analysis.", { reportId });
-
         let screenshotUrlForAnalysis: string | undefined = undefined;
-        let deviceTypeForAnalysis: ScreenContextType = 'general'; // Default context
+        let deviceTypeForAnalysis: ScreenContextType = 'general';
 
         if (playwrightReport.screenshotUrls.desktop) {
           screenshotUrlForAnalysis = playwrightReport.screenshotUrls.desktop;
@@ -511,11 +541,10 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         } else if (playwrightReport.screenshotUrls.mobile) {
           screenshotUrlForAnalysis = playwrightReport.screenshotUrls.mobile;
           deviceTypeForAnalysis = 'mobile';
-        } else { // Fallback to the first available URL if specific ones aren't named or present
+        } else {
           const firstAvailableUrl = Object.values(playwrightReport.screenshotUrls).find(url => typeof url === 'string');
           if (firstAvailableUrl) {
             screenshotUrlForAnalysis = firstAvailableUrl;
-            // Try to infer device type from key if possible, otherwise keep 'general'
             const deviceKey = (Object.keys(playwrightReport.screenshotUrls) as Array<keyof ScreenshotUrls>).find(key => playwrightReport.screenshotUrls![key] === firstAvailableUrl);
             if (deviceKey && (deviceKey === 'desktop' || deviceKey === 'tablet' || deviceKey === 'mobile')) {
               deviceTypeForAnalysis = deviceKey;
@@ -524,49 +553,60 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         }
 
         if (screenshotUrlForAnalysis) {
-          aiUxDesignSuggestions = await performGeminiAnalysis(
+          geminiPromise = performGeminiAnalysis(
             screenshotUrlForAnalysis,
-            deviceTypeForAnalysis, // Pass the determined device type
+            deviceTypeForAnalysis,
             reportId,
             GEMINI_API_KEY,
             GEMINI_MODEL_NAME,
             urlToScan
           );
-          logger.info(`Gemini analysis result status: ${aiUxDesignSuggestions.status}`, { reportId });
-          await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
-          logger.info("Report updated with AI UX design suggestions.", { reportId });
         } else {
           logger.warn("Skipping Gemini analysis as no valid screenshot URL found despite Playwright success.", { reportId });
-          aiUxDesignSuggestions = {
+          geminiPromise = Promise.resolve({
             status: "skipped",
             error: "AI analysis skipped as no screenshot URL was available after Playwright scan.",
             suggestions: [],
             modelUsed: GEMINI_MODEL_NAME || undefined,
-          };
-          await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
+          });
         }
       } else {
         logger.info("Skipping Gemini analysis due to Playwright failure or no screenshot URLs.", { reportId, playwrightSuccess: playwrightReport?.success, hasScreenshots: !!(playwrightReport?.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) });
-        aiUxDesignSuggestions = {
-            status: "skipped",
-            error: "AI analysis skipped due to Playwright failure or missing screenshots.",
-            suggestions: [],
-            modelUsed: GEMINI_MODEL_NAME || undefined,
-        };
-        await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
-        logger.info("Report updated with skipped AI UX design suggestions.", { reportId });
+        geminiPromise = Promise.resolve({
+          status: "skipped",
+          error: "AI analysis skipped due to Playwright failure or missing screenshots.",
+          suggestions: [],
+          modelUsed: GEMINI_MODEL_NAME || undefined,
+        });
       }
 
-      // Perform LLM Report Summary
+      const [lighthouseReport, aiUxDesignSuggestions] = await Promise.all([
+        lighthousePromise,
+        geminiPromise,
+      ]);
+
+      logger.info("Lighthouse and Gemini AI scans completed.", { reportId, lighthouseSuccess: lighthouseReport.success, aiStatus: aiUxDesignSuggestions.status });
+
+      // Update RTDB with Lighthouse and AI UX suggestions results
+      const updatesForLighthouseAndAi: Partial<ReportData> = {
+        lighthouseReport: lighthouseReport,
+        aiUxDesignSuggestions: aiUxDesignSuggestions,
+        updatedAt: Date.now(),
+      };
+      await reportRef.update(updatesForLighthouseAndAi);
+      logger.info("Report updated with Lighthouse and AI UX Design results.", { reportId });
+
+
+      // 3. Perform LLM Report Summary
       let llmReportSummary: LLMReportSummary | undefined = undefined;
       if (GEMINI_API_KEY && GEMINI_MODEL_NAME) {
         logger.info("Proceeding with LLM Report Summary generation.", { reportId });
         llmReportSummary = await performLLMReportSummary(
           reportId,
           urlToScan,
-          playwrightReport,
-          lighthouseReport,
-          aiUxDesignSuggestions,
+          playwrightReport, // from step 1
+          lighthouseReport, // from parallel step 2
+          aiUxDesignSuggestions, // from parallel step 2
           GEMINI_API_KEY,
           GEMINI_MODEL_NAME
         );
@@ -579,10 +619,11 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
           status: "skipped",
           error: "LLM Report Summary skipped due to missing Gemini API key or Model Name.",
         };
-        await reportRef.child("llmReportSummary").update(llmReportSummary);
+        await reportRef.child("llmReportSummary").update(llmReportSummary); // Still update RTDB with skipped status
         logger.info("Report updated with skipped LLM Report Summary.", { reportId });
       }
 
+      // 4. Final status update
       await reportRef.update({ status: "completed", updatedAt: Date.now() });
       logger.info(`processScanTask completed for reportId: ${reportId}`);
 
