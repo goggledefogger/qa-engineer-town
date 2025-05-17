@@ -74,16 +74,16 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Update RTDB with the AI-generated suggestions.
   - [x] Add environment variables for AI API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.) in `.env` and `.env.example`.
   - [x] Implement robust error handling for AI API calls (e.g., API errors, rate limits, content moderation issues) and store relevant error information in RTDB. (Fixed screenshot fetching issue by using direct file path).
-- [ ] **NEW: Firebase Security & Rules**
-  - [x] Secure backend API (`/api/scan`) to only allow access from the admin user (email from `.env`).
+- [x] **NEW: Firebase Security & Rules**
+  - [x] Secure backend API (`/api/scan`) to only allow access from the admin user (email configured in `functions/.env`).
     - [x] Verify Firebase ID token in `apiScan`.
     - [x] Check decoded token's email against `ALLOWED_ADMIN_EMAIL` from `functions/.env`.
     - [x] Update frontend to send ID token in `Authorization` header for `/api/scan`.
     - [x] Add `predeploy` hook to `firebase.json` for `hosting` to ensure `npm run build --workspace=frontend` runs before deploy.
-  - [x] Secure Firebase Realtime Database rules to only allow read/write by the admin user. (User manually updated with placeholder, needs actual email)
-  - [x] Secure Firebase Storage rules to only allow read/write by the admin user. (User manually updated with placeholder, needs actual email)
+  - [x] Secure Firebase Realtime Database rules to only allow read/write by the admin user (configured via `ALLOWED_ADMIN_EMAIL` in `functions/.env` and manually updated in `database.rules.json`).
+  - [x] Secure Firebase Storage rules to only allow read/write by the admin user (configured via `ALLOWED_ADMIN_EMAIL` in `functions/.env` and manually updated in `storage.rules`).
   - [ ] Explore using Firebase Custom Claims for admin checks instead of direct email comparison in API and rules (add to Future Tasks).
-  - [ ] Remove hardcoded allowed email from Firebase rules and use a script or environment variable for dynamic configuration.
+  - [ ] Remove the need for manual updates to Firebase rules by using a script or environment variable for dynamic configuration based on the `ALLOWED_ADMIN_EMAIL` from `functions/.env`.
 
 ## Future Tasks (Initial Prototype - MVP)
 
