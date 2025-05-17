@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm'; // Import remark-gfm
 import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
 import { ReportPageLayout } from '../components/layout';
-import SidebarNav, { type SectionStatus, type SectionStatuses } from '../components/navigation/SidebarNav';
+import SidebarNav, { type SectionStatuses } from '../components/navigation/SidebarNav';
 import { Card, ScanProgressIndicator } from '../components/ui'; // Assuming Card component is in ui
 
 // Define an interface for Lighthouse report data

@@ -1,25 +1,63 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { User } from 'firebase/auth'; // Import User type
+import { signOut } from '../../authService'; // Import signOut
 
 interface AppLayoutProps {
   children: React.ReactNode;
+  user: User | null;
+  loadingAuth: boolean;
+  allowedEmail: string;
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, user, loadingAuth, allowedEmail }) => {
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      // The onAuthStateChanged listener in App.tsx will handle redirecting to /signin
+      // or App.tsx will re-render and ProtectedRoute will kick in.
+      navigate('/signin'); // Optionally navigate immediately
+    } catch (error) {
+      console.error("Error signing out in layout:", error);
+      // Handle error display if necessary
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col">
-      {/* Header could go here if we had one application-wide */}
+    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-2xl font-bold text-slate-900 hover:text-slate-700">
+        <div className="max-w-7xl mx-auto py-3 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <Link to="/" className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-slate-700">
             AI QA Engineer
           </Link>
+          <div className="flex items-center space-x-3">
+            {!loadingAuth && user && user.email === allowedEmail && (
+              <span className="text-sm text-slate-600 hidden sm:inline">Welcome, {user.email}</span>
+            )}
+            {!loadingAuth && user && (
+              <button
+                onClick={handleSignOut}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Sign Out
+              </button>
+            )}
+            {!loadingAuth && !user && (
+              <Link
+                to="/signin"
+                className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
       </header>
-      <main className="flex-grow w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
         {children}
       </main>
-      {/* Footer could go here */}
       {/* <footer className="bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-500">
           &copy; {new Date().getFullYear()} AI QA Engineer Assistant

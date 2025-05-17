@@ -16,6 +16,19 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Create basic React frontend layout (Landing Page `/` with URL input)
 - [x] Refine frontend layout and styling (Responsiveness, Spacing, Alignment)
 - [x] Remove Firebase Emulator usage from project configuration, scripts, and documentation.
+- [x] **Implement Firebase Email Link Authentication (Restricted Access)**
+  - [x] Configure Firebase Console for Email Link & disable Anonymous Auth.
+  - [x] Create `authService.ts` for Firebase auth functions (send link, complete sign-in, state change, sign out).
+  - [x] Develop `SignInPage.tsx` for user email input.
+  - [x] Develop `HandleSignInPage.tsx` to process the email link and verify allowed email.
+  - [x] Update `App.tsx` to integrate new auth flow:
+    - [x] Remove anonymous sign-in.
+    - [x] Add routes for `/signin` and `/handle-signin`.
+    - [x] Implement `ProtectedRoute` component to restrict access to a specific email.
+  - [x] Update `AppLayout.tsx` to display user email and Sign Out button.
+  - [x] Parameterize the allowed email using `VITE_ALLOWED_EMAIL` environment variable.
+  - [x] Debug and resolve `auth/email-already-in-use` error.
+  - [x] Debug and resolve `auth/invalid-action-code` error (related to React StrictMode in development).
 
 ## In Progress Tasks
 
