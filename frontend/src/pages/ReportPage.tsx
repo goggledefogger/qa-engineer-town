@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import remarkGfm from 'remark-gfm'; // Import remark-gfm
 import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
 import { ReportPageLayout } from '../components/layout';
@@ -421,7 +422,20 @@ const ReportPage: React.FC = () => {
                 )}
                 <div className="prose prose-sm max-w-none text-slate-700">
                   {/* Using ReactMarkdown to render Markdown content */}
-                  <ReactMarkdown>{llmSummary.summaryText}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h3: ({node, ...props}) => <h3 className="text-lg font-semibold mt-4 mb-2 text-slate-800" {...props} />,
+                      p: ({node, ...props}) => <p className="mb-2 leading-relaxed text-slate-700" {...props} />,
+                      ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+                      li: ({node, ...props}) => <li className="text-slate-700" {...props} />,
+                      a: ({node, ...props}) => <a className="text-blue-600 hover:text-blue-700 hover:underline" {...props} />,
+                      strong: ({node, ...props}) => <strong className="font-semibold text-slate-800" {...props} />,
+                    }}
+                  >
+                    {/* Strip leading/trailing markdown code fences if present */}
+                    {llmSummary.summaryText.replace(/^(\s*`{3}(markdown|\w+)?\n)?([\s\S]+?)(\n\s*`{3}\s*)?$/, '$3').trim()}
+                  </ReactMarkdown>
                 </div>
               </>
             ) : llmSummary.status === 'completed' ? (
