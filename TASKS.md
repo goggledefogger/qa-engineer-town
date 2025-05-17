@@ -132,6 +132,12 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Refine LLM prompt for clarity, tone (non-technical), and desired output format (Markdown).
     - [x] Externalize LLM prompt to a separate .md file (`functions/src/prompts/llm_summary_prompt.md`) for easier maintenance. ✅
     - [x] Enhance frontend to correctly render Markdown for the LLM summary.
+- [ ] **NEW: Implement Tech Stack Detection:**
+    - [ ] Research and integrate tools/libraries (e.g., Wappalyzer, builtwith.com API, or custom heuristics) to identify the website's tech stack.
+    - [ ] Initial focus on major platforms (WordPress, Shopify, Squarespace, Wix), CMS, and frontend frameworks.
+    - [ ] Extend to backend languages, web servers, CDNs, and cloud platforms if feasible.
+    - [ ] Design data structure in RTDB for storing detected technologies.
+    - [ ] Create a new section/tab in the frontend Report Page to display the tech stack information.
 
 ## Implementation Plan
 

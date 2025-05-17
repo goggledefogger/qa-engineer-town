@@ -4,7 +4,7 @@
 
 *   **Landing Page (`/`)**: Single-column, centered layout. Minimalist design focused solely on the URL input task. Contains a header (optional logo/title) and the main input area.
 *   **Report Page (`/report/:reportId`)**: Transitions to a two-column layout on wider screens after scan initiation.
-    *   **Left Sidebar:** Vertical navigation for different report categories (initially Performance, Accessibility, Screenshot; planned: Errors, Network, AI UX & Design Insights, etc.). Remains fixed/sticky.
+    *   **Left Sidebar:** Vertical navigation for different report categories (initially Performance, Accessibility, Screenshot; planned: Errors, Network, AI UX & Design Insights, Tech Stack, etc.). Remains fixed/sticky.
     *   **Main Content Area:** Displays the content for the selected category from the sidebar. This area will initially show a progress indicator/status updates and then populate with report data as it becomes available.
 
 ## Core Components

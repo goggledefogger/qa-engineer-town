@@ -19,6 +19,7 @@ This document outlines the user interface design for the AI QA Engineer Assistan
         *   SEO
         *   Best Practices
         *   **AI UX & Design Insights** (New section for vision model analysis)
+        *   **(Future) Tech Stack** (Detected website technologies)
     *   **Main Content Area:** This area dynamically updates based on the selected navigation item. It will display the specific details for each report section.
 
 ## Core Components
