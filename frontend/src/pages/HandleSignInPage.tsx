@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   isSignInWithEmailLink,
@@ -13,23 +13,18 @@ const HandleSignInPage: React.FC = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [error, setError] = useState<string | null>(null);
+  const hasProcessedSignIn = useRef(false); // Added ref to track processing
 
   useEffect(() => {
+    if (hasProcessedSignIn.current) {
+      return; // Don't process more than once
+    }
+
     const processSignIn = async () => {
+      hasProcessedSignIn.current = true; // Mark as processed
       const link = window.location.href;
       if (isSignInWithEmailLink(link)) {
         try {
-          // Attempt to sign out any existing user first (temporary test)
-          // This is to ensure a clean state before completing the email link sign-in.
-          // In a normal flow, this shouldn't be strictly necessary if the user is already signed out
-          // or if Firebase handles the session correctly.
-          try {
-            await firebaseSignOut();
-            console.log("Attempted pre-sign-out before completing link.");
-          } catch (signOutError) {
-            console.warn("Error during pre-sign-out (might be normal if no user was signed in):", signOutError);
-          }
-
           const user = await completeSignInWithEmailLink(link);
           if (user) {
             if (user.email === ALLOWED_EMAIL_FROM_ENV) {
@@ -51,7 +46,14 @@ const HandleSignInPage: React.FC = () => {
           }
         } catch (e: any) {
           console.error('Sign-in failed:', e);
-          setError(e.message || 'Failed to sign in. The link may be invalid or expired.');
+          // Check for specific auth/email-already-in-use error to provide a more specific message
+          if (e.code === 'auth/email-already-in-use') {
+            setError(
+              'This email is already in use or the link has been used. Please try signing in again, or check if you have an existing account with a different sign-in method.'
+            );
+          } else {
+            setError(e.message || 'Failed to sign in. The link may be invalid or expired.');
+          }
           setStatus('error');
         }
       } else {

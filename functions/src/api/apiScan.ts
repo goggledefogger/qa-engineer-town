@@ -21,8 +21,39 @@ const QUEUE_ID = "scanProcessingQueue";
  * HTTP Function to trigger a website scan and store reports.
  */
 export const apiScan = onRequest({cors: true}, async (request, response) => {
-  const rtdb = admin.database(); // <-- ADD HERE
-  logger.info("apiScan function triggered.", {structuredData: true});
+  // ===== BEGIN AUTH CHECK =====
+  const authorizationHeader = request.headers.authorization;
+  if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
+    logger.warn("Missing or invalid Authorization header.");
+    response.status(401).send("Unauthorized: Missing or invalid token.");
+    return;
+  }
+  const idToken = authorizationHeader.split('Bearer ')[1];
+  const allowedAdminEmail = process.env.ALLOWED_ADMIN_EMAIL;
+
+  if (!allowedAdminEmail) {
+    logger.error("ALLOWED_ADMIN_EMAIL environment variable is not set. Cannot perform auth check.");
+    response.status(500).send("Server configuration error: Admin email not set.");
+    return;
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    if (decodedToken.email !== allowedAdminEmail) {
+      logger.warn("Forbidden: User email does not match allowed admin email.", {userEmail: decodedToken.email, allowedEmail: allowedAdminEmail});
+      response.status(403).send("Forbidden: You do not have permission to access this resource.");
+      return;
+    }
+    logger.info("User authenticated successfully as admin.", {email: decodedToken.email});
+  } catch (error) {
+    logger.error("Error verifying ID token:", error);
+    response.status(401).send("Unauthorized: Invalid token.");
+    return;
+  }
+  // ===== END AUTH CHECK =====
+
+  const rtdb = admin.database();
+  logger.info("apiScan function triggered by authenticated admin.", {structuredData: true});
 
   const urlToScan = request.body.url as string;
 

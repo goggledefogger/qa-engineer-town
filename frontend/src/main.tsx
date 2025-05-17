@@ -6,7 +6,7 @@ import App from './App.tsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode> // Re-enabled
+  <React.StrictMode>
     <BrowserRouter>
       <App /> {/* App component now handles all routing */}
     </BrowserRouter>

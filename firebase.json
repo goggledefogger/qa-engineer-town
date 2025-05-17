@@ -32,6 +32,9 @@
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "predeploy": [
+      "echo \"Building frontend for hosting...\" && npm run build --workspace=frontend"
     ]
   },
   "storage": {

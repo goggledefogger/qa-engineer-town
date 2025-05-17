@@ -71,7 +71,7 @@ const LandingPage: React.FC<{
 };
 
 function App() {
-  const [user, setUser] = useState<User | null>(getCurrentUser()); // Initialize with current user
+  const [user, setUser] = useState<User | null>(getCurrentUser());
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -80,37 +80,64 @@ function App() {
     const unsubscribe = onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setLoadingAuth(false);
-      if (currentUser && currentUser.email !== ALLOWED_EMAIL) {
-        // If user is logged in but not allowed, they will be caught by ProtectedRoute
-        // or HandleSignInPage logic.
-      } else if (!currentUser) {
-        // If no user, and not on a public page, ProtectedRoute will redirect
-      }
     });
     return () => unsubscribe();
   }, []);
 
   const handleUrlSubmit = async (url: string) => {
-    if (!user || user.email !== ALLOWED_EMAIL) { // Check for allowed user here as well for core action
+    if (!user || user.email !== ALLOWED_EMAIL) {
       alert("You are not authorized to perform this action. Please sign in with the correct account.");
       if (!user) navigate('/signin');
       return;
     }
-    console.log('Submitting URL:', url, 'by user:', user.uid);
+
     setIsSubmitting(true);
+    let idToken = '';
+    try {
+      if (user) {
+        idToken = await user.getIdToken();
+        console.log("[FRONTEND_DEBUG] ID Token to be sent:", idToken ? idToken.substring(0, 30) + '...' : 'EMPTY_OR_NULL_TOKEN');
+      } else {
+        throw new Error("User object is null, cannot get ID token.");
+      }
+    } catch (tokenError) {
+      console.error("Error getting ID token:", tokenError);
+      alert("Authentication error: Could not retrieve ID token. Please try signing out and in again.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!idToken) {
+       console.error("[FRONTEND_DEBUG] ID Token is empty after trying to fetch it. Aborting API call.");
+       alert("Authentication error: Failed to obtain a valid ID token. Please try again.");
+       setIsSubmitting(false);
+       return;
+    }
+
+    console.log('Submitting URL:', url, 'by user:', user.uid);
 
     try {
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({ url: url }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
-        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorData?.message || 'Unknown error'}`);
+        // Try to parse error response, but handle cases where it might not be JSON
+        let errorText = `API Error: ${response.status} ${response.statusText}`;
+        try {
+           const errorData = await response.json();
+           errorText += ` - ${errorData?.message || 'Unknown error'}`;
+        } catch (parseError) {
+           // If parsing errorData as JSON fails, use the raw response text if available
+           const rawText = await response.text().catch(() => ''); // Prevent further errors
+           if (rawText) errorText += ` - ${rawText}`;
+        }
+        throw new Error(errorText);
       }
 
       const data = await response.json();
