@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm'; // Import remark-gfm
 import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
 import { ReportPageLayout } from '../components/layout';
-import { SidebarNav } from '../components/navigation';
+import SidebarNav, { type SectionStatus, type SectionStatuses } from '../components/navigation/SidebarNav';
 import { Card, ScanProgressIndicator } from '../components/ui'; // Assuming Card component is in ui
 
 // Define an interface for Lighthouse report data
@@ -89,7 +89,91 @@ const ReportPage: React.FC = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<string>('summary'); // Default to summary
+  const [activeSection, setActiveSection] = useState<string>('summary');
+
+  const sectionStatuses = React.useMemo<SectionStatuses>(() => {
+    const statuses: SectionStatuses = {};
+    if (!reportData) {
+      // If no reportData, all sections that would eventually have data are effectively PENDING or LOADING
+      // For simplicity, let's mark them based on the global loading state, or PENDING if loading is false but still no data.
+      const defaultStatus = loading ? 'LOADING' : 'PENDING';
+      ['summary', 'llm-summary', 'screenshot', 'performance', 'accessibility', 'seo', 'best-practices', 'ai-ux-design'].forEach(id => {
+        statuses[id] = defaultStatus;
+      });
+      return statuses;
+    }
+
+    // Overall report status
+    const isProcessing = reportData.status === 'processing' || reportData.status === 'pending';
+
+    // Summary status
+    statuses['summary'] = 'COMPLETED'; // Always completed if reportData exists
+
+    // LLM Summary status
+    if (reportData.llmReportSummary) {
+      switch (reportData.llmReportSummary.status) {
+        case 'completed': statuses['llm-summary'] = 'COMPLETED'; break;
+        case 'error': statuses['llm-summary'] = 'ERROR'; break;
+        case 'skipped': statuses['llm-summary'] = 'SKIPPED'; break;
+        case 'pending':
+        case 'processing':
+        default: statuses['llm-summary'] = 'LOADING'; break;
+      }
+    } else { // No llmReportSummary object yet
+      statuses['llm-summary'] = isProcessing ? 'LOADING' : 'PENDING';
+    }
+
+    // Screenshot status
+    if (reportData.playwrightReport) {
+      if (reportData.playwrightReport.screenshotUrl) statuses['screenshot'] = 'COMPLETED';
+      else if (reportData.playwrightReport.error) statuses['screenshot'] = 'ERROR';
+      else statuses['screenshot'] = isProcessing ? 'LOADING' : 'PENDING'; // Defined, but no URL or error yet
+    } else { // No playwrightReport object yet
+      statuses['screenshot'] = isProcessing ? 'LOADING' : 'PENDING';
+    }
+
+    // Lighthouse sections status (Performance, Accessibility, SEO, Best Practices)
+    const lighthouseSections: Array<{id: string, scoreKey?: keyof NonNullable<LighthouseReportData['scores']>}> = [
+      { id: 'performance', scoreKey: 'performance' },
+      { id: 'accessibility', scoreKey: 'accessibility' },
+      { id: 'seo', scoreKey: 'seo' },
+      { id: 'best-practices', scoreKey: 'bestPractices' },
+    ];
+
+    lighthouseSections.forEach(section => {
+      if (reportData.lighthouseReport) {
+        if (reportData.lighthouseReport.error) {
+          statuses[section.id] = 'ERROR';
+        } else if (reportData.lighthouseReport.success === false && !section.scoreKey) { // Generic failure not tied to a score
+          statuses[section.id] = 'ERROR';
+        } else if (section.scoreKey && reportData.lighthouseReport.scores && reportData.lighthouseReport.scores[section.scoreKey] !== undefined) {
+          statuses[section.id] = 'COMPLETED';
+        } else if (reportData.lighthouseReport.success === false) { // If success is explicitly false, but we didn't hit other error conditions for this specific section
+            statuses[section.id] = 'ERROR';
+        } else {
+          statuses[section.id] = isProcessing ? 'LOADING' : 'PENDING';
+        }
+      } else { // No lighthouseReport object yet
+        statuses[section.id] = isProcessing ? 'LOADING' : 'PENDING';
+      }
+    });
+
+    // AI UX Design suggestions status
+    if (reportData.aiUxDesignSuggestions) {
+      switch (reportData.aiUxDesignSuggestions.status) {
+        case 'completed': statuses['ai-ux-design'] = 'COMPLETED'; break;
+        case 'error': statuses['ai-ux-design'] = 'ERROR'; break;
+        case 'skipped': statuses['ai-ux-design'] = 'SKIPPED'; break;
+        case 'pending':
+        default: statuses['ai-ux-design'] = 'LOADING'; break;
+      }
+    } else { // No aiUxDesignSuggestions object yet
+      statuses['ai-ux-design'] = isProcessing ? 'LOADING' : 'PENDING';
+    }
+
+    console.log("Calculated Section Statuses:", statuses); // For debugging
+    return statuses;
+  }, [reportData, loading]);
 
   useEffect(() => {
     if (!reportId) {
@@ -499,7 +583,7 @@ const ReportPage: React.FC = () => {
   // --- Display Report Data ---
   return (
     <ReportPageLayout
-      sidebarContent={<SidebarNav activeSection={activeSection} onSelectSection={setActiveSection} />}
+      sidebarContent={<SidebarNav activeSection={activeSection} onSelectSection={setActiveSection} sectionStatuses={sectionStatuses} />}
       mainContent={
         <div className="space-y-6 font-sans"> {/* Apply font-sans to the main content wrapper */}
           <div className="bg-white shadow rounded-lg p-4 md:p-6">
