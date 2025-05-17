@@ -12,6 +12,7 @@ import {
   AiUxDesignSuggestions,
   LLMReportSummary,
   ScreenshotUrls,
+  ScreenContextType,
 } from "../types";
 import * as fs from "fs";
 import * as path from "path";
@@ -227,6 +228,7 @@ async function performLighthouseScan(urlToScan: string, reportId: string, pagesp
 // Helper function for Gemini AI analysis
 async function performGeminiAnalysis(
   screenshotUrl: string, // This is the specific public URL of the screenshot to analyze
+  analyzedDeviceType: ScreenContextType, // Added parameter for screen context
   reportId: string,
   geminiApiKey: string | undefined,
   geminiModelName: string | undefined,
@@ -293,7 +295,6 @@ async function performGeminiAnalysis(
 
     logger.info(`Screenshot (${screenshotBuffer.length} bytes) fetched successfully for Gemini analysis.`, { reportId });
 
-    // Call the refactored processing logic directly here, as screenshotBuffer is now always initialized if no error thrown
     const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
     const imagePart: Part = { inlineData: { data: screenshotBuffer.toString("base64"), mimeType: "image/jpeg" } };
     const textPart: Part = { text: finalPrompt };
@@ -315,7 +316,11 @@ async function performGeminiAnalysis(
     logger.info("Gemini analysis response received.", { reportId });
 
     const suggestionsArray = responseText ? responseText.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0 && s !== "---") : [];
-    const parsedSuggestions = suggestionsArray.map((s: string) => ({ suggestion: s, reasoning: "" }));
+    const parsedSuggestions = suggestionsArray.map((s: string) => ({
+      suggestion: s,
+      reasoning: "", // Reasoning might be part of the suggestion text itself based on current prompt
+      screenContext: analyzedDeviceType
+    }));
 
     return {
       status: "completed",
@@ -493,10 +498,35 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       let aiUxDesignSuggestions: AiUxDesignSuggestions | undefined = undefined;
       if (playwrightReport && playwrightReport.success && playwrightReport.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) {
         logger.info("Playwright successful, proceeding with Gemini analysis.", { reportId });
-        const screenshotUrlForAnalysis = playwrightReport.screenshotUrls.desktop || Object.values(playwrightReport.screenshotUrls)[0];
+
+        let screenshotUrlForAnalysis: string | undefined = undefined;
+        let deviceTypeForAnalysis: ScreenContextType = 'general'; // Default context
+
+        if (playwrightReport.screenshotUrls.desktop) {
+          screenshotUrlForAnalysis = playwrightReport.screenshotUrls.desktop;
+          deviceTypeForAnalysis = 'desktop';
+        } else if (playwrightReport.screenshotUrls.tablet) {
+          screenshotUrlForAnalysis = playwrightReport.screenshotUrls.tablet;
+          deviceTypeForAnalysis = 'tablet';
+        } else if (playwrightReport.screenshotUrls.mobile) {
+          screenshotUrlForAnalysis = playwrightReport.screenshotUrls.mobile;
+          deviceTypeForAnalysis = 'mobile';
+        } else { // Fallback to the first available URL if specific ones aren't named or present
+          const firstAvailableUrl = Object.values(playwrightReport.screenshotUrls).find(url => typeof url === 'string');
+          if (firstAvailableUrl) {
+            screenshotUrlForAnalysis = firstAvailableUrl;
+            // Try to infer device type from key if possible, otherwise keep 'general'
+            const deviceKey = (Object.keys(playwrightReport.screenshotUrls) as Array<keyof ScreenshotUrls>).find(key => playwrightReport.screenshotUrls![key] === firstAvailableUrl);
+            if (deviceKey && (deviceKey === 'desktop' || deviceKey === 'tablet' || deviceKey === 'mobile')) {
+              deviceTypeForAnalysis = deviceKey;
+            }
+          }
+        }
+
         if (screenshotUrlForAnalysis) {
           aiUxDesignSuggestions = await performGeminiAnalysis(
             screenshotUrlForAnalysis,
+            deviceTypeForAnalysis, // Pass the determined device type
             reportId,
             GEMINI_API_KEY,
             GEMINI_MODEL_NAME,

@@ -139,14 +139,14 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Extend to backend languages, web servers, CDNs, and cloud platforms if feasible.
     - [ ] Design data structure in RTDB for storing detected technologies.
     - [ ] Create a new section/tab in the frontend Report Page to display the tech stack information.
-- [ ] **NEW: Implement Responsive Screenshot Capture and Analysis:**
-    - [ ] Modify `performPlaywrightScan` to capture screenshots at different viewport sizes (e.g., desktop, tablet, mobile).
-    - [ ] Store multiple screenshots in Firebase Storage (e.g., `screenshots/{reportId}/screenshot_desktop.jpg`, `screenshot_tablet.jpg`, `screenshot_mobile.jpg`).
-    - [ ] Update `playwrightReport` in RTDB to include URLs for all screenshot sizes.
-    - [ ] Adjust `performGeminiAnalysis` to potentially analyze multiple screenshots or a composite view if the AI model supports it, or select the most relevant one.
-    - [ ] Ensure AI UX/Design suggestions consider responsiveness based on the different viewport captures.
-    - [ ] Update `performLLMReportSummary` to incorporate findings from responsive analysis, highlighting any discrepancies or issues across device types.
-    - [ ] Update the frontend Report Page to display the different screenshots (e.g., in a carousel or tabs) and reflect responsive design feedback in the AI suggestions and summary.
+- [x] **NEW: Implement Responsive Screenshot Capture and Analysis:**
+    - [x] Modify `performPlaywrightScan` to capture screenshots at different viewport sizes (e.g., desktop, tablet, mobile).
+    - [x] Store multiple screenshots in Firebase Storage (e.g., `screenshots/{reportId}/screenshot_desktop.jpg`, `screenshot_tablet.jpg`, `screenshot_mobile.jpg`).
+    - [x] Update `playwrightReport` in RTDB to include URLs for all screenshot sizes.
+    - [x] Adjust `performGeminiAnalysis` to potentially analyze multiple screenshots or a composite view if the AI model supports it, or select the most relevant one. (Selected desktop first, and added screenContext tag)
+    - [x] Ensure AI UX/Design suggestions consider responsiveness based on the different viewport captures. (Updated prompt & added screenContext)
+    - [x] Update `performLLMReportSummary` to incorporate findings from responsive analysis, highlighting any discrepancies or issues across device types. (Updated prompt to use screenContext)
+    - [x] Update the frontend Report Page to display the different screenshots (e.g., in a carousel or tabs) and reflect responsive design feedback in the AI suggestions and summary. (Displays multiple screenshots and screenContext tag)
 - [ ] **NEW: AI-Assisted Playwright for User Flow Testing & Interactive Suggestions:**
     - [ ] Research AI-assisted browser control libraries/frameworks compatible with Playwright/Node.js (e.g., exploring options that can intelligently interact with web elements).
     - [ ] Define a set of common key user flows to test automatically (e.g., login, registration, product search, add to cart, checkout process).

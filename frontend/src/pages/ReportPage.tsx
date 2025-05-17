@@ -76,6 +76,16 @@ interface PlaywrightReport {
   error?: string;
 }
 
+// Define ScreenContextType matching backend
+export type ScreenContextType = 'desktop' | 'tablet' | 'mobile' | 'general';
+
+// Define AiUxDesignSuggestionItem matching backend
+export interface AiUxDesignSuggestionItem {
+  suggestion: string;
+  reasoning: string;
+  screenContext?: ScreenContextType;
+}
+
 // Define an interface for the report data structure
 interface ReportData {
   url: string;
@@ -85,7 +95,7 @@ interface ReportData {
   lighthouseReport?: LighthouseReportData;
   aiUxDesignSuggestions?: { // Updated structure
     status: "completed" | "error" | "pending" | "skipped";
-    suggestions: Array<{ suggestion: string; reasoning: string }>;
+    suggestions?: AiUxDesignSuggestionItem[]; // Use the new item type
     modelUsed?: string;
     error?: string;
   };
@@ -473,6 +483,12 @@ const ReportPage: React.FC = () => {
                 <ul className="space-y-4 list-none p-0">
                   {aiSuggestions.suggestions.map((item, index) => (
                     <li key={index} className="p-4 bg-slate-50 rounded-md shadow-sm border border-slate-200">
+                      {/* Display Screen Context */}
+                      {item.screenContext && (
+                        <p className="text-xs text-sky-700 font-medium mb-1 capitalize">
+                          Context: {item.screenContext}
+                        </p>
+                      )}
                       <p className="text-sm text-slate-800 font-medium mb-1.5 leading-snug">{item.suggestion}</p>
                       {item.reasoning && (
                         <p className="text-xs text-slate-600 pl-1 border-l-2 border-slate-300 italic">

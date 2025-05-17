@@ -12,7 +12,7 @@ You will be provided with a JSON object containing data from different parts of 
 - "url": The URL that was scanned.
 - "playwright": Basic page information (e.g., pageTitle) and a list of available screenshot types (e.g., "desktop", "tablet", "mobile") from the visual capture process.
 - "lighthouse": Automated scores and findings related to performance (speed), accessibility (ease of use for people with disabilities), SEO (search engine visibility), and best-practices (technical soundness). This section includes overall scores and lists of specific issues or opportunities.
-- "aiUxSuggestions": AI-generated feedback on user experience and visual design, based on a snapshot of the page (this might also hint at page type).
+- "aiUxSuggestions": AI-generated feedback on user experience and visual design. Each suggestion includes the main insight, detailed reasoning (which should discuss cross-device implications), and a `screenContext` field (e.g., 'desktop', 'tablet', 'mobile') indicating the primary screenshot view analyzed for that suggestion.
 
 Based on ALL the provided JSON data, synthesize the information and generate a summary in MARKDOWN format (approximately 250-400 words).
 
@@ -36,7 +36,7 @@ Identify the 2-3 most critical issues or areas needing urgent attention. For eac
     *   Clearly describe the issue in simple terms.
     *   Explain its potential impact (e.g., on users, business goals, or search ranking), **considering the inferred page type.**
     *   If obvious, suggest the general type of action needed (e.g., "address accessibility errors," "optimize images," "review layout concerns").
-If the data (e.g., AI UX suggestions or the `screenshotsAvailable` field in the playwright data) hints at specific responsiveness issues or successes, these could be highlighted here, especially if they impact usability across devices.
+If the data (e.g., AI UX suggestions or the `screenshotsAvailable` field in the playwright data) hints at specific responsiveness issues or successes, these could be highlighted here, especially if they impact usability across devices. When discussing issues from "aiUxSuggestions", explicitly mention the `screenContext` it was based on (e.g., "Based on the desktop view...") and synthesize the AI's reasoning about its impact on other devices.
 
 ### Noteworthy Strengths
 Briefly mention 1-2 positive findings or areas where the page is performing well, if any are apparent from the data. This helps provide a balanced view.

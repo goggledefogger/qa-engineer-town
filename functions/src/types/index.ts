@@ -55,9 +55,17 @@ export interface LighthouseReportData {
   }>;
 }
 
+export type ScreenContextType = 'desktop' | 'tablet' | 'mobile' | 'general';
+
+export interface AiUxDesignSuggestionItem {
+  suggestion: string;
+  reasoning: string;
+  screenContext?: ScreenContextType; // Indicates the primary screenshot view used for this suggestion
+}
+
 export interface AiUxDesignSuggestions {
   status: "pending" | "processing" | "completed" | "error" | "skipped";
-  suggestions?: Array<{ suggestion: string; reasoning: string }>;
+  suggestions?: AiUxDesignSuggestionItem[];
   error?: string;
   modelUsed?: string;
 }
