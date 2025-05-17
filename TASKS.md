@@ -130,6 +130,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Define a data structure in RTDB for storing this comprehensive summary (e.g., `reportData.llmReportSummary`).
     - [x] Update the frontend Report Page to display this summary prominently.
     - [x] Refine LLM prompt for clarity, tone (non-technical), and desired output format (Markdown).
+    - [x] Externalize LLM prompt to a separate .md file (`functions/src/prompts/llm_summary_prompt.md`) for easier maintenance. ✅
     - [x] Enhance frontend to correctly render Markdown for the LLM summary.
 
 ## Implementation Plan
@@ -159,6 +160,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - `firebase.json` - Firebase project config
 - `functions/package.json` - Backend dependencies ✅ (emulator scripts removed)
 - `functions/src/index.ts` - Backend Cloud Functions (apiScan, processScanTask) ✅
+- `functions/src/prompts/llm_summary_prompt.md` - Markdown template for the LLM report summary prompt. ✅
 - `functions/.env.example` - Example environment variables for backend (e.g., `PROCESS_SCAN_TASK_URL`)
 - `package.json` - Root package config (emulator scripts removed)
 
