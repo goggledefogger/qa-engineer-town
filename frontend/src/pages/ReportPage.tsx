@@ -6,7 +6,8 @@ import { db } from '../firebaseConfig'; // Import RTDB instance
 import { ref, onValue, off } from "firebase/database"; // Import RTDB functions
 import { ReportPageLayout } from '../components/layout';
 import SidebarNav, { type SectionStatuses } from '../components/navigation/SidebarNav';
-import { Card, ScanProgressIndicator } from '../components/ui'; // Assuming Card component is in ui
+import { Card, ScanProgressIndicator, OverallScoreGauge, MetricDisplay } from '../components/ui'; // Assuming Card component is in ui
+import type { PerformanceCategory } from '../components/ui/MetricDisplay'; // Import the type
 
 // Define an interface for Lighthouse report data
 interface LighthouseReportData {
@@ -52,6 +53,70 @@ interface LighthouseReportData {
     score: number | null;
   }>;
 }
+
+// Helper data for Lighthouse Performance Metrics
+const lighthouseMetricDetails: Record<string, {
+  name: string;
+  unit?: string;
+  explanation: string;
+  thresholds: { good: string; needsImprovement: string; poor: string; }; // Display thresholds
+  getCategory: (value: number) => PerformanceCategory;
+}> = {
+  firstContentfulPaint: {
+    name: 'First Contentful Paint (FCP)',
+    unit: 'ms',
+    explanation: 'FCP marks the time at which the first text or image is painted. It indicates when users first see something on the screen.',
+    thresholds: { good: '<= 1800 ms', needsImprovement: '<= 3000 ms', poor: '> 3000 ms' },
+    getCategory: (value: number) => {
+      if (value <= 1800) return 'Good';
+      if (value <= 3000) return 'Needs Improvement';
+      return 'Poor';
+    },
+  },
+  largestContentfulPaint: {
+    name: 'Largest Contentful Paint (LCP)',
+    unit: 'ms',
+    explanation: 'LCP marks the time at which the largest text or image is painted. It measures perceived load speed.',
+    thresholds: { good: '<= 2500 ms', needsImprovement: '<= 4000 ms', poor: '> 4000 ms' },
+    getCategory: (value: number) => {
+      if (value <= 2500) return 'Good';
+      if (value <= 4000) return 'Needs Improvement';
+      return 'Poor';
+    },
+  },
+  totalBlockingTime: {
+    name: 'Total Blocking Time (TBT)',
+    unit: 'ms',
+    explanation: 'TBT measures the total amount of time that the main thread was blocked long enough to prevent input responsiveness. It is a lab proxy for Interaction to Next Paint (INP).',
+    thresholds: { good: '<= 200 ms', needsImprovement: '<= 600 ms', poor: '> 600 ms' }, // Common TBT thresholds
+    getCategory: (value: number) => {
+      if (value <= 200) return 'Good'; // Stricter "Good" often cited
+      if (value <= 600) return 'Needs Improvement'; // Typical "Needs Improvement" range
+      return 'Poor';
+    },
+  },
+  cumulativeLayoutShift: {
+    name: 'Cumulative Layout Shift (CLS)',
+    explanation: 'CLS measures visual stability by quantifying how much visible content shifts unexpectedly. A low CLS helps ensure that the page is delightful.',
+    thresholds: { good: '<= 0.1', needsImprovement: '<= 0.25', poor: '> 0.25' },
+    getCategory: (value: number) => {
+      if (value <= 0.1) return 'Good';
+      if (value <= 0.25) return 'Needs Improvement';
+      return 'Poor';
+    },
+  },
+  speedIndex: {
+    name: 'Speed Index (SI)',
+    unit: 'ms',
+    explanation: 'Speed Index shows how quickly the contents of a page are visibly populated. It measures how quickly visual content is displayed during page load.',
+    thresholds: { good: '<= 3400 ms', needsImprovement: '<= 5800 ms', poor: '> 5800 ms' },
+    getCategory: (value: number) => {
+      if (value <= 3400) return 'Good';
+      if (value <= 5800) return 'Needs Improvement';
+      return 'Poor';
+    },
+  },
+};
 
 // Define an interface for the LLM Report Summary data structure
 interface LLMReportSummary {
@@ -298,55 +363,58 @@ const ReportPage: React.FC = () => {
           </Card>
         );
       case 'performance':
+        const perfReport = reportData.lighthouseReport;
+        const perfScores = perfReport?.scores;
+        const detailedMetrics = perfReport?.detailedMetrics;
+
         return (
           <Card title="Performance (Lighthouse)" className="font-sans">
-            {/* Overall Score */}
-            {reportData.lighthouseReport?.scores?.performance !== undefined && (
-              <p className="text-lg text-slate-700 mb-4">
-                Overall Performance Score: <span className="font-bold">{reportData.lighthouseReport.scores.performance}</span>/100
-              </p>
-            )}
+            <div className="flex flex-col items-center mb-8">
+              <OverallScoreGauge score={perfScores?.performance} categoryName="Overall Performance" />
+            </div>
 
-            {/* Detailed Metrics */}
-            {reportData.lighthouseReport?.detailedMetrics && Object.keys(reportData.lighthouseReport.detailedMetrics).length > 0 && (
+            {detailedMetrics && Object.keys(detailedMetrics).length > 0 && (
               <div className="mb-6">
-                <h4 className="font-semibold text-md text-slate-800 mb-2">Key Metrics:</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                  {reportData.lighthouseReport.detailedMetrics.firstContentfulPaint !== undefined && (
-                    <DetailItem label="First Contentful Paint">{reportData.lighthouseReport.detailedMetrics.firstContentfulPaint.toLocaleString()} ms</DetailItem>
-                  )}
-                  {reportData.lighthouseReport.detailedMetrics.largestContentfulPaint !== undefined && (
-                    <DetailItem label="Largest Contentful Paint">{reportData.lighthouseReport.detailedMetrics.largestContentfulPaint.toLocaleString()} ms</DetailItem>
-                  )}
-                  {reportData.lighthouseReport.detailedMetrics.totalBlockingTime !== undefined && (
-                    <DetailItem label="Total Blocking Time">{reportData.lighthouseReport.detailedMetrics.totalBlockingTime.toLocaleString()} ms</DetailItem>
-                  )}
-                  {reportData.lighthouseReport.detailedMetrics.cumulativeLayoutShift !== undefined && (
-                    <DetailItem label="Cumulative Layout Shift">{reportData.lighthouseReport.detailedMetrics.cumulativeLayoutShift}</DetailItem>
-                  )}
-                  {reportData.lighthouseReport.detailedMetrics.speedIndex !== undefined && (
-                    <DetailItem label="Speed Index">{reportData.lighthouseReport.detailedMetrics.speedIndex.toLocaleString()} ms</DetailItem>
-                  )}
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Core Web Vitals & Key Metrics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(detailedMetrics).map(([key, value]) => {
+                    const metricConfig = lighthouseMetricDetails[key as keyof typeof lighthouseMetricDetails];
+                    if (!metricConfig || value === undefined) return null;
+
+                    return (
+                      <MetricDisplay
+                        key={key}
+                        metricName={metricConfig.name}
+                        value={value}
+                        unit={metricConfig.unit}
+                        category={metricConfig.getCategory(value as number)}
+                        explanation={metricConfig.explanation}
+                        thresholds={metricConfig.thresholds}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Performance Opportunities */}
-            {reportData.lighthouseReport?.performanceOpportunities && reportData.lighthouseReport.performanceOpportunities.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-semibold text-md text-slate-800 mb-2">Top Performance Opportunities:</h4>
+            {perfReport?.performanceOpportunities && perfReport.performanceOpportunities.length > 0 && (
+              <div className="mb-4 mt-8">
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Top Performance Opportunities</h3>
                 <ul className="space-y-3 list-none p-0">
-                  {reportData.lighthouseReport.performanceOpportunities.map((opp) => (
-                    <li key={opp.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200">
-                      <h5 className="font-semibold text-slate-800 mb-0.5">{opp.title}</h5>
-                      {opp.overallSavingsMs !== undefined && (
-                        <p className="text-xs text-slate-500 mb-1">Est. savings: {opp.overallSavingsMs.toLocaleString()} ms</p>
-                      )}
-                      {opp.overallSavingsBytes !== undefined && (
-                        <p className="text-xs text-slate-500 mb-1">Est. savings: {(opp.overallSavingsBytes / 1024).toFixed(1)} KiB</p>
-                      )}
+                  {perfReport.performanceOpportunities.map((opp) => (
+                    <li key={opp.id} className="p-4 bg-slate-50 rounded-lg shadow border border-slate-200 hover:shadow-md transition-shadow">
+                      <h5 className="font-semibold text-slate-800 mb-1">{opp.title}</h5>
+                      <div className="flex flex-wrap text-xs text-slate-500 mb-1.5 space-x-3">
+                        {opp.overallSavingsMs !== undefined && (
+                          <p>Est. savings: <span className="font-medium">{opp.overallSavingsMs.toLocaleString()} ms</span></p>
+                        )}
+                        {opp.overallSavingsBytes !== undefined && (
+                          <p>Est. savings: <span className="font-medium">{(opp.overallSavingsBytes / 1024).toFixed(1)} KiB</span></p>
+                        )}
+                      </div>
                       <div
-                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
+                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono"
                         dangerouslySetInnerHTML={{ __html: opp.description }}
                       />
                     </li>
@@ -355,107 +423,126 @@ const ReportPage: React.FC = () => {
               </div>
             )}
 
-            {( !reportData.lighthouseReport?.detailedMetrics || Object.keys(reportData.lighthouseReport.detailedMetrics).length === 0 ) &&
-             ( !reportData.lighthouseReport?.performanceOpportunities || reportData.lighthouseReport.performanceOpportunities.length === 0 ) &&
-             !reportData.lighthouseReport?.scores?.performance &&
-             !reportData.lighthouseReport?.error &&
+            {( !detailedMetrics || Object.keys(detailedMetrics).length === 0 ) &&
+             ( !perfReport?.performanceOpportunities || perfReport.performanceOpportunities.length === 0 ) &&
+             !perfScores?.performance &&
+             !perfReport?.error &&
              (reportData.status === 'processing' || reportData.status === 'pending') && (
-              <p className="text-slate-600">Performance details will appear here when scan is complete.</p>
+              <p className="text-slate-600 text-center py-8">Performance details will appear here when scan is complete.</p>
             )}
-            {reportData.lighthouseReport?.error && <p className="text-red-600 mt-2 text-sm">Lighthouse Performance check error: {reportData.lighthouseReport.error}</p>}
+            {perfReport?.error && <p className="text-red-600 mt-4 text-sm text-center">Lighthouse Performance check error: {perfReport.error}</p>}
           </Card>
         );
       case 'accessibility':
+        const accessibilityReport = reportData.lighthouseReport;
+        const accessibilityScore = accessibilityReport?.scores?.accessibility;
         return (
-          <Card title="Accessibility Issues (Lighthouse)" className="font-sans">
-            {reportData.lighthouseReport?.accessibilityIssues && reportData.lighthouseReport.accessibilityIssues.length > 0 ? (
-              <ul className="space-y-3 list-none p-0">
-                {reportData.lighthouseReport.accessibilityIssues.map((issue) => (
-                  <li key={issue.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200">
-                    <h4 className="font-semibold text-md text-slate-800 mb-0.5">{issue.title}</h4>
-                    <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {issue.id} | Score: {issue.score === null ? 'N/A' : issue.score}</p>
-                    <div
-                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
-                        dangerouslySetInnerHTML={{ __html: issue.description }}
-                    />
-                    {/* We could add a link to more info if 'helpUrl' was available and populated */}
-                  </li>
-                ))}
-              </ul>
-            ) : reportData.lighthouseReport?.success === false && reportData.lighthouseReport?.error ? (
-              <p className="text-slate-600">Accessibility check could not be completed due to an error: {reportData.lighthouseReport.error}</p>
+          <Card title="Accessibility (Lighthouse)" className="font-sans">
+            <div className="flex flex-col items-center mb-6">
+              <OverallScoreGauge score={accessibilityScore} categoryName="Overall Accessibility" />
+            </div>
+            {accessibilityReport?.accessibilityIssues && accessibilityReport.accessibilityIssues.length > 0 ? (
+              <>
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Identified Accessibility Issues</h3>
+                <ul className="space-y-3 list-none p-0">
+                  {accessibilityReport.accessibilityIssues.map((issue) => (
+                    <li key={issue.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-md text-slate-800 mb-0.5">{issue.title}</h4>
+                      <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {issue.id} | Score: {issue.score === null ? 'N/A' : issue.score}</p>
+                      <div
+                          className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
+                          dangerouslySetInnerHTML={{ __html: issue.description }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : accessibilityReport?.success === false && accessibilityReport?.error ? (
+              <p className="text-slate-600 text-center py-4">Accessibility check could not be completed due to an error: {accessibilityReport.error}</p>
             ) : reportData.status === 'processing' || reportData.status === 'pending' ? (
-              <p className="text-slate-600">Accessibility issues will appear here when the scan is complete.</p>
+              <p className="text-slate-600 text-center py-8">Accessibility issues will appear here when the scan is complete.</p>
+            ) : accessibilityScore !== undefined ? (
+              <p className="text-slate-600 text-center py-4">No specific accessibility issues flagged by Lighthouse. Great job!</p>
             ) : (
-              <p className="text-slate-600">No specific accessibility issues flagged by Lighthouse, or the check did not run. Ensure the overall accessibility score is reviewed.</p>
+              <p className="text-slate-600 text-center py-4">Accessibility data is not available. The check might not have run or an unknown error occurred.</p>
             )}
-            {/* Display overall accessibility score if available and not already part of the items */}
-            {reportData.lighthouseReport?.scores?.accessibility !== undefined && (
-                <p className="mt-4 text-sm text-slate-700">
-                    Overall Accessibility Score: <span className="font-bold">{reportData.lighthouseReport.scores.accessibility}</span>/100
-                </p>
+            {/* Display overall accessibility score if available and not already part of the items - Covered by Gauge */}
+            {accessibilityReport?.error && !accessibilityReport?.accessibilityIssues?.length && (
+                <p className="text-red-600 mt-4 text-sm text-center">Lighthouse Accessibility check error: {accessibilityReport.error}</p>
             )}
           </Card>
         );
       case 'seo':
+        const seoReport = reportData.lighthouseReport;
+        const seoScore = seoReport?.scores?.seo;
         return (
-          <Card title="SEO Audits (Lighthouse)" className="font-sans">
-            {reportData.lighthouseReport?.scores?.seo !== undefined && (
-              <p className="text-lg text-slate-700 mb-4">
-                Overall SEO Score: <span className="font-bold">{reportData.lighthouseReport.scores.seo}</span>/100
-              </p>
-            )}
-            {reportData.lighthouseReport?.seoAudits && reportData.lighthouseReport.seoAudits.length > 0 ? (
-              <ul className="space-y-3 list-none p-0">
-                {reportData.lighthouseReport.seoAudits.map((audit) => (
-                  <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200">
-                    <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
-                    <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
-                    <div
-                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
-                        dangerouslySetInnerHTML={{ __html: audit.description }}
-                    />
-                  </li>
-                ))}
-              </ul>
+          <Card title="SEO (Lighthouse)" className="font-sans">
+            <div className="flex flex-col items-center mb-6">
+              <OverallScoreGauge score={seoScore} categoryName="Overall SEO" />
+            </div>
+
+            {seoReport?.seoAudits && seoReport.seoAudits.length > 0 ? (
+              <>
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Identified SEO Audits</h3>
+                <ul className="space-y-3 list-none p-0">
+                  {seoReport.seoAudits.map((audit) => (
+                    <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
+                      <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
+                      <div
+                          className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
+                          dangerouslySetInnerHTML={{ __html: audit.description }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : reportData.status === 'processing' || reportData.status === 'pending' ? (
-              <p className="text-slate-600">SEO audit details will appear here when scan is complete.</p>
+              <p className="text-slate-600 text-center py-8">SEO audit details will appear here when scan is complete.</p>
+            ) : seoScore !== undefined ? (
+              <p className="text-slate-600 text-center py-4">No specific SEO issues flagged by Lighthouse. Looks good!</p>
             ) : (
-              <p className="text-slate-600">No specific SEO issues flagged by Lighthouse, or the check did not run. Review overall SEO score.</p>
+              <p className="text-slate-600 text-center py-4">SEO data is not available. The check might not have run or an unknown error occurred.</p>
             )}
-            {reportData.lighthouseReport?.error && !reportData.lighthouseReport.seoAudits && (
-                <p className="text-red-600 mt-2 text-sm">Lighthouse SEO check error: {reportData.lighthouseReport.error}</p>
+            {seoReport?.error && !seoReport.seoAudits?.length && (
+                <p className="text-red-600 mt-4 text-sm text-center">Lighthouse SEO check error: {seoReport.error}</p>
             )}
           </Card>
         );
       case 'best-practices':
+        const bpReport = reportData.lighthouseReport;
+        const bpScore = bpReport?.scores?.bestPractices;
         return (
-          <Card title="Best Practices Audits (Lighthouse)" className="font-sans">
-            {reportData.lighthouseReport?.scores?.bestPractices !== undefined && (
-              <p className="text-lg text-slate-700 mb-4">
-                Overall Best Practices Score: <span className="font-bold">{reportData.lighthouseReport.scores.bestPractices}</span>/100
-              </p>
-            )}
-            {reportData.lighthouseReport?.bestPracticesAudits && reportData.lighthouseReport.bestPracticesAudits.length > 0 ? (
-              <ul className="space-y-3 list-none p-0">
-                {reportData.lighthouseReport.bestPracticesAudits.map((audit) => (
-                  <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200">
-                    <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
-                    <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
-                    <div
-                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
-                        dangerouslySetInnerHTML={{ __html: audit.description }}
-                    />
-                  </li>
-                ))}
-              </ul>
+          <Card title="Best Practices (Lighthouse)" className="font-sans">
+            <div className="flex flex-col items-center mb-6">
+              <OverallScoreGauge score={bpScore} categoryName="Overall Best Practices" />
+            </div>
+
+            {bpReport?.bestPracticesAudits && bpReport.bestPracticesAudits.length > 0 ? (
+              <>
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Identified Best Practices Audits</h3>
+                <ul className="space-y-3 list-none p-0">
+                  {bpReport.bestPracticesAudits.map((audit) => (
+                    <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
+                      <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
+                      <div
+                          className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
+                          dangerouslySetInnerHTML={{ __html: audit.description }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : reportData.status === 'processing' || reportData.status === 'pending' ? (
-              <p className="text-slate-600">Best Practices audit details will appear here when scan is complete.</p>
+              <p className="text-slate-600 text-center py-8">Best Practices audit details will appear here when scan is complete.</p>
+            ) : bpScore !== undefined ? (
+              <p className="text-slate-600 text-center py-4">No specific Best Practices issues flagged by Lighthouse. Well done!</p>
             ) : (
-              <p className="text-slate-600">No specific Best Practices issues flagged by Lighthouse, or the check did not run. Review overall Best Practices score.</p>
+              <p className="text-slate-600 text-center py-4">Best Practices data is not available. The check might not have run or an unknown error occurred.</p>
             )}
-            {reportData.lighthouseReport?.error && !reportData.lighthouseReport.bestPracticesAudits && (
-                <p className="text-red-600 mt-2 text-sm">Lighthouse Best Practices check error: {reportData.lighthouseReport.error}</p>
+            {bpReport?.error && !bpReport.bestPracticesAudits?.length && (
+                <p className="text-red-600 mt-4 text-sm text-center">Lighthouse Best Practices check error: {bpReport.error}</p>
             )}
           </Card>
         );
