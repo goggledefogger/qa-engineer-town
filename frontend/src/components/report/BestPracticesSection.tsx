@@ -26,7 +26,7 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
     return (
       <Card title="Best Practices (Lighthouse)" className="font-sans">
         <div className="flex flex-col items-center mb-6">
-          <OverallScoreGauge score={undefined} categoryName="Overall Best Practices" />
+          {/* <OverallScoreGauge score={undefined} categoryName="Overall Best Practices" /> */}
         </div>
         <p className="text-slate-600 text-center py-8">Best Practices audit details will appear here when scan is complete.</p>
       </Card>
@@ -35,9 +35,9 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
 
   return (
     <Card title="Best Practices (Lighthouse)" className="font-sans">
-      <div className="flex flex-col items-center mb-6">
+      {/* <div className="flex flex-col items-center mb-6">
         <OverallScoreGauge score={bpScore} categoryName="Overall Best Practices" />
-      </div>
+      </div> */}
 
       {/* Always show raw Lighthouse Best Practices audits if available */}
       {bpAudits && bpAudits.length > 0 && (
