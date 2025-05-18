@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/report';
+import { Card } from '../ui';
+import type { LighthouseReportData, ReportData } from '../../types/report';
 import { unwrapMarkdown } from '../../utils/textUtils';
 
 interface BestPracticesSectionProps {
@@ -11,84 +11,85 @@ interface BestPracticesSectionProps {
 }
 
 const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseReport, reportStatus }) => {
-  // console.log('[BestPracticesSection] Props:', { lighthouseReport, reportStatus });
-
-  const bpScore = lighthouseReport?.scores?.bestPractices;
   const bpAudits = lighthouseReport?.bestPracticesAudits;
   const llmExplainedAudits = lighthouseReport?.llmExplainedBestPracticesAudits;
-  // console.log('[BestPracticesSection] Data:', { bpScore, bpAudits, llmExplainedAudits });
+  const isLoading = reportStatus === 'processing' || reportStatus === 'pending';
+  const isCompleted = reportStatus === 'complete';
+  const isFailed = reportStatus === 'error' || (isCompleted && lighthouseReport?.success === false);
 
-  const noAuditsFound = bpAudits && bpAudits.length === 0;
-  const hasExplicitError = lighthouseReport?.success === false && lighthouseReport?.error;
+  // console.log('[BestPracticesSection] Props:', { lighthouseReport, reportStatus });
+  // console.log('[BestPracticesSection] Data:', { bpAudits, llmExplainedAudits });
 
-  if (!lighthouseReport && (reportStatus === 'pending' || reportStatus === 'processing')) {
-    // console.log('[BestPracticesSection] Rendering: Loading state (report pending/processing)');
+  const renderContent = () => {
+    if (!lighthouseReport && isLoading) {
+      // console.log('[BestPracticesSection] Rendering: Loading state (report pending/processing)');
+      return <p className="text-slate-500">Best practices analysis in progress...</p>;
+    }
+    if (lighthouseReport?.success === false && lighthouseReport?.error) {
+      // console.log('[BestPracticesSection] Rendering: Explicit error from lighthouseReport');
+      return <p className="text-red-500">Best practices analysis failed: {lighthouseReport.error}</p>;
+    }
+    if (isFailed && !bpAudits) {
+      // console.log('[BestPracticesSection] Rendering: Failed state, no audits data');
+      return <p className="text-red-500">Best practices analysis could not be completed or data is unavailable.</p>;
+    }
+    if (isCompleted && (!bpAudits || bpAudits.length === 0) && (!llmExplainedAudits || llmExplainedAudits.length === 0)) {
+      // console.log('[BestPracticesSection] Rendering: Completed, but no audits found');
+      return <p className="text-slate-500">No best practices audits found for this report.</p>;
+    }
+
+    // console.log('[BestPracticesSection] Rendering: Main content with audits');
     return (
-      <Card title="Best Practices (Lighthouse)" className="font-sans">
-        <div className="flex flex-col items-center mb-6">
-          {/* <OverallScoreGauge score={undefined} categoryName="Overall Best Practices" /> */}
-        </div>
-        <p className="text-slate-600 text-center py-8">Best Practices audit details will appear here when scan is complete.</p>
-      </Card>
+      <>
+        {/* Always show raw Lighthouse Best Practices audits if available */}
+        {bpAudits && bpAudits.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-slate-200">
+            <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Lighthouse Best Practices Audits</h3>
+            <ul className="space-y-4 list-none p-0">
+              {bpAudits.map((audit: any) => (
+                <li key={audit.id} className="p-4 bg-slate-50 rounded-lg shadow border border-slate-200">
+                  <h5 className="font-semibold text-sky-700 mb-2">{audit.title}</h5>
+                  {audit.description && (
+                    <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(audit.description)}</ReactMarkdown>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {/* Show LLM explanations if available, with pending/error states */}
+        {llmExplainedAudits && llmExplainedAudits.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-slate-200">
+            <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">AI-Explained Best Practices Audits</h3>
+            <ul className="space-y-4 list-none p-0">
+              {llmExplainedAudits.map((item: any) => (
+                <li key={item.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
+                  <h5 className="font-semibold text-sky-700 mb-2">{item.title}</h5>
+                  {item.llmExplanation && (
+                    <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(item.llmExplanation)}</ReactMarkdown>
+                    </div>
+                  )}
+                  {item.status === 'pending' && (
+                    <p className="text-xs text-slate-400 mt-1">AI explanation pending...</p>
+                  )}
+                  {item.status === 'error' && item.error && (
+                    <p className="text-xs text-red-500 mt-1">AI explanation error: {item.error}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </>
     );
-  }
+  };
 
   return (
-    <Card title="Best Practices (Lighthouse)" className="font-sans">
-      {/* <div className="flex flex-col items-center mb-6">
-        <OverallScoreGauge score={bpScore} categoryName="Overall Best Practices" />
-      </div> */}
-
-      {/* Always show raw Lighthouse Best Practices audits if available */}
-      {bpAudits && bpAudits.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Lighthouse Best Practices Audits</h3>
-          <ul className="space-y-3 list-none p-0">
-            {bpAudits.map((audit) => (
-              <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
-                <p className={`text-xs mb-1.5 font-mono ${
-                  audit.score === 0 ? 'text-red-600' : 'text-slate-500'
-                }`}>
-                  ID: {audit.id} | Status: {audit.score === 1 ? 'Passed' : audit.score === 0 ? 'Failed' : 'N/A'}
-                </p>
-                <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(audit.description)}</ReactMarkdown>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {/* Show LLM explanations if available, with pending/error states */}
-      {llmExplainedAudits && llmExplainedAudits.length > 0 && (
-        <div className="mt-8 pt-6 border-t border-slate-200">
-          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">AI-Explained Best Practices Audits</h3>
-          <ul className="space-y-4 list-none p-0">
-            {llmExplainedAudits.map((item) => (
-              <li key={item.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
-                <h5 className="font-semibold text-sky-700 mb-2">{item.title}</h5>
-                {item.llmExplanation && (
-                  <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(item.llmExplanation)}</ReactMarkdown>
-                  </div>
-                )}
-                {item.status === 'pending' && (
-                  <p className="text-xs text-slate-400 mt-1">AI explanation pending...</p>
-                )}
-                {item.status === 'error' && item.error && (
-                  <p className="text-xs text-red-500 mt-1">AI explanation error: {item.error}</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {lighthouseReport?.error && (!bpAudits || bpAudits.length === 0) && (
-        // console.log('[BestPracticesSection] Rendering: Lighthouse general error message');
-          <p className="text-red-600 mt-4 text-sm text-center">Lighthouse Best Practices check error: {lighthouseReport.error}</p>
-      )}
+    <Card title="Best Practices">
+      {renderContent()}
     </Card>
   );
 };

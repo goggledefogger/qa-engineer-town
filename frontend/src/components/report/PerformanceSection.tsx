@@ -13,7 +13,7 @@ interface PerformanceSectionProps {
 }
 
 const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseReport, reportStatus }) => {
-  const perfScores = lighthouseReport?.scores;
+  // const perfScores = lighthouseReport?.scores;
   const detailedMetrics = lighthouseReport?.detailedMetrics;
   const rawOpportunities = lighthouseReport?.performanceOpportunities;
   const llmExplainedOpportunities = lighthouseReport?.llmExplainedPerformanceOpportunities;

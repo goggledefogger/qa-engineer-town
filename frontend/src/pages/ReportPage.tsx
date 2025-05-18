@@ -7,7 +7,7 @@ import { ReportPageLayout } from '../components/layout';
 import SidebarNav, { type SectionStatuses } from '../components/navigation/SidebarNav';
 import { Card, ScanProgressIndicator } from '../components/ui'; // OverallScoreGauge, MetricDisplay are used in section components
 
-import type { ReportData, ScreenshotUrls } from '../types/report';
+import type { ReportData } from '../types/report';
 // lighthouseMetricDetails is now in PerformanceSection.tsx
 
 // Import the new section components

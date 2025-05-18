@@ -2,7 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/report';
+import type { LighthouseReportData, ReportData } from '../../types/report';
 import { unwrapMarkdown } from '../../utils/textUtils';
 
 interface AccessibilitySectionProps {
@@ -11,8 +11,6 @@ interface AccessibilitySectionProps {
 }
 
 const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseReport, reportStatus }) => {
-  console.log('[AccessibilitySection] Props Received:', { lighthouseReport, reportStatus });
-
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
   const accessibilityIssues = lighthouseReport?.accessibilityIssues;
   const llmExplainedIssues = lighthouseReport?.llmExplainedAccessibilityIssues;
@@ -23,7 +21,6 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
     console.log('[AccessibilitySection] COMPLETE state. LLM explained issues from prop:', llmExplainedIssues);
   }
 
-  const noIssuesFound = accessibilityIssues && accessibilityIssues.length === 0;
   const hasExplicitError = lighthouseReport?.success === false && lighthouseReport?.error;
   const isLoading = reportStatus === 'processing' || reportStatus === 'pending';
   const isCompleted = reportStatus === 'complete';
