@@ -104,7 +104,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
               <li key={item.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
                 <h5 className="font-semibold text-sky-700 mb-2">{item.title}</h5>
                 {item.overallSavingsMs !== undefined && (
-                    <p className="text-xs text-slate-500 mb-1.5">Est. savings: <span className="font-medium">{item.overallSavingsMs.toLocaleString()} ms</span></p>
+                    <p className="text-xs text-slate-500 mb-1.5">Est. savings: <span className="font-medium">{Math.round(item.overallSavingsMs).toLocaleString()} ms</span></p>
                 )}
                 {item.overallSavingsBytes !== undefined && !(item.overallSavingsMs && item.overallSavingsMs > 0) && (
                     <p className="text-xs text-slate-500 mb-1.5">Est. savings: <span className="font-medium">{(item.overallSavingsBytes / 1024).toFixed(1)} KiB</span></p>

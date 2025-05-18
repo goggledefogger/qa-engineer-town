@@ -36,7 +36,11 @@ const MetricDisplay: React.FC<MetricDisplayProps> = ({
   explanation,
   thresholds,
 }) => {
-  const displayValue = value !== undefined ? `${value}${unit ? ` ${unit}` : ''}` : 'N/A';
+  const displayValue = value !== undefined
+    ? typeof value === 'number' && unit === 'ms'
+      ? `${Math.round(value)}${unit ? ` ${unit}` : ''}`
+      : `${value}${unit ? ` ${unit}` : ''}`
+    : 'N/A';
   const colorClasses = getCategoryColorClasses(category);
 
   return (
