@@ -39,15 +39,15 @@ export async function performLLMReportSummary(
     },
     lighthouse: {
       overallScores: lighthouseReport?.scores,
-      accessibilityIssues: lighthouseReport?.accessibilityIssues?.slice(0, 3).map(issue => ({ title: issue.title, description: issue.description, score: issue.score })),
-      performanceOpportunities: lighthouseReport?.performanceOpportunities?.slice(0, 2).map(opp => ({ title: opp.title, potentialSavingsMs: opp.overallSavingsMs, description: opp.description })),
-      seoIssues: lighthouseReport?.seoAudits?.filter(a => a.score !== null && a.score < 1).slice(0,2).map(a => ({title: a.title, description: a.description, score: a.score})),
-      bestPracticesIssues: lighthouseReport?.bestPracticesAudits?.filter(a => a.score !== null && a.score < 1).slice(0,2).map(a => ({title: a.title, description: a.description, score: a.score})),
+      accessibilityIssues: lighthouseReport?.accessibilityIssues?.slice(0, 3).map((issue: { title: string; description: string; score: number | null; }) => ({ title: issue.title, description: issue.description, score: issue.score })),
+      performanceOpportunities: lighthouseReport?.performanceOpportunities?.slice(0, 2).map((opp: { title: string; overallSavingsMs?: number; description: string; }) => ({ title: opp.title, potentialSavingsMs: opp.overallSavingsMs, description: opp.description })),
+      seoIssues: lighthouseReport?.seoAudits?.filter((a: { score: number | null; }) => a.score !== null && a.score < 1).slice(0,2).map((a: {title: string; description: string; score: number | null;}) => ({title: a.title, description: a.description, score: a.score})),
+      bestPracticesIssues: lighthouseReport?.bestPracticesAudits?.filter((a: { score: number | null; }) => a.score !== null && a.score < 1).slice(0,2).map((a: {title: string; description: string; score: number | null;}) => ({title: a.title, description: a.description, score: a.score})),
       error: lighthouseReport?.error,
     },
     aiUxSuggestions: {
       status: aiUxDesignSuggestions?.status,
-      suggestions: aiUxDesignSuggestions?.suggestions?.slice(0, 5).map(s => s.suggestion),
+      suggestions: aiUxDesignSuggestions?.suggestions?.slice(0, 5).map((s: { suggestion: string; }) => s.suggestion),
       error: aiUxDesignSuggestions?.error,
     },
   };

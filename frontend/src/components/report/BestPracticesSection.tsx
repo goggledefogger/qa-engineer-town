@@ -2,7 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card } from '../ui';
-import type { LighthouseReportData, ReportData } from '../../types/report';
+import type { LighthouseReportData, ReportData } from '../../types/reportTypes';
 import { unwrapMarkdown } from '../../utils/textUtils';
 
 interface BestPracticesSectionProps {
@@ -14,8 +14,8 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
   const bpAudits = lighthouseReport?.bestPracticesAudits;
   const llmExplainedAudits = lighthouseReport?.llmExplainedBestPracticesAudits;
   const isLoading = reportStatus === 'processing' || reportStatus === 'pending';
-  const isCompleted = reportStatus === 'complete';
-  const isFailed = reportStatus === 'error' || (isCompleted && lighthouseReport?.success === false);
+  const isCompleted = reportStatus === 'completed';
+  const isFailed = reportStatus === 'failed' || (isCompleted && lighthouseReport?.success === false);
 
   // console.log('[BestPracticesSection] Props:', { lighthouseReport, reportStatus });
   // console.log('[BestPracticesSection] Data:', { bpAudits, llmExplainedAudits });

@@ -2,29 +2,29 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData } from '../../types/report';
+import type { LighthouseReportData, ReportData } from '../../types/reportTypes';
 import { unwrapMarkdown } from '../../utils/textUtils';
 
 interface AccessibilitySectionProps {
-  lighthouseReport: LighthouseReportData | undefined;
-  reportStatus: ReportData['status'];
+  lighthouseReport?: LighthouseReportData;
+  reportStatus?: ReportData['status'];
 }
 
 const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseReport, reportStatus }) => {
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
-  const accessibilityIssues = lighthouseReport?.accessibilityIssues;
-  const llmExplainedIssues = lighthouseReport?.llmExplainedAccessibilityIssues;
+  const accessibilityAudits = lighthouseReport?.accessibilityIssues;
+  const llmExplainedAudits = lighthouseReport?.llmExplainedAccessibilityIssues;
+  const hasExplicitError = !!lighthouseReport?.error;
 
-  if (reportStatus === 'complete') {
-    console.log('[AccessibilitySection] COMPLETE state. Full lighthouseReport:', JSON.parse(JSON.stringify(lighthouseReport || {})));
-    console.log('[AccessibilitySection] COMPLETE state. Raw accessibilityIssues:', accessibilityIssues);
-    console.log('[AccessibilitySection] COMPLETE state. LLM explained issues from prop:', llmExplainedIssues);
-  }
-
-  const hasExplicitError = lighthouseReport?.success === false && lighthouseReport?.error;
   const isLoading = reportStatus === 'processing' || reportStatus === 'pending';
-  const isCompleted = reportStatus === 'complete';
-  const isFailed = reportStatus === 'error' || (isCompleted && lighthouseReport?.success === false && !hasExplicitError);
+  const isCompleted = reportStatus === 'completed';
+  const isFailed = reportStatus === 'failed' || (isCompleted && lighthouseReport?.success === false && !hasExplicitError);
+
+  if (reportStatus === 'completed') {
+    console.log('[AccessibilitySection] COMPLETE state. Full lighthouseReport:', JSON.parse(JSON.stringify(lighthouseReport || {})));
+    console.log('[AccessibilitySection] COMPLETE state. Raw accessibilityIssues:', accessibilityAudits);
+    console.log('[AccessibilitySection] COMPLETE state. LLM explained issues from prop:', llmExplainedAudits);
+  }
 
   const renderContent = () => {
     if (isLoading) {
@@ -36,7 +36,7 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
     if (isFailed && !lighthouseReport?.scores) {
       return <p className="text-red-500">Accessibility analysis could not be completed or data is unavailable.</p>;
     }
-    if (!accessibilityScore && !accessibilityIssues?.length && isCompleted) {
+    if (!accessibilityScore && !accessibilityAudits?.length && isCompleted) {
       return <p className="text-slate-500">No accessibility data available for this report.</p>;
     }
 
@@ -49,11 +49,11 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
         )}
 
         {/* Always show raw Lighthouse Accessibility issues if available */}
-        {accessibilityIssues && accessibilityIssues.length > 0 && (
+        {accessibilityAudits && accessibilityAudits.length > 0 && (
           <div className="mt-8 pt-6 border-t border-slate-200">
             <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Lighthouse Accessibility Issues</h3>
             <ul className="space-y-4 list-none p-0">
-              {accessibilityIssues.map((issue) => (
+              {accessibilityAudits.map((issue) => (
                 <li key={issue.id} className="p-4 bg-slate-50 rounded-lg shadow border border-slate-200">
                   <h5 className="font-semibold text-sky-700 mb-2">{issue.title}</h5>
                   <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
@@ -65,11 +65,11 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
           </div>
         )}
         {/* Show LLM explanations if available, with pending/error states */}
-        {llmExplainedIssues && llmExplainedIssues.length > 0 && (
+        {llmExplainedAudits && llmExplainedAudits.length > 0 && (
           <div className="mt-8 pt-6 border-t border-slate-200">
             <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">AI-Explained Accessibility Issues</h3>
             <ul className="space-y-4 list-none p-0">
-              {llmExplainedIssues.map((item) => (
+              {llmExplainedAudits.map((item) => (
                 <li key={item.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
                   <h5 className="font-semibold text-sky-700 mb-2">{item.title}</h5>
                   {item.llmExplanation && (
@@ -91,6 +91,20 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
       </>
     );
   };
+
+  if (reportStatus === 'pending' || reportStatus === 'processing') {
+    return <Card title="Accessibility Audit"><p className="text-slate-500">Accessibility analysis is pending or in progress...</p></Card>;
+  }
+  if (reportStatus === 'failed') {
+    return <Card title="Accessibility Audit"><p className="text-red-500">Accessibility analysis encountered an error or the report failed.</p></Card>;
+  }
+  if (!lighthouseReport || !lighthouseReport.success || lighthouseReport.scores?.accessibility === undefined) {
+    const errorMessage = lighthouseReport?.error || 'Accessibility data is unavailable.';
+    return <Card title="Accessibility Audit"><p className="text-red-500">{errorMessage}</p></Card>;
+  }
+  if (reportStatus === 'completed' && lighthouseReport.scores.accessibility === undefined) {
+    return <Card title="Accessibility Audit"><p className="text-slate-500">Accessibility audit was likely skipped or no score was provided.</p></Card>;
+  }
 
   return (
     <Card title="Accessibility">

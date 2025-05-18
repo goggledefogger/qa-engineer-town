@@ -104,10 +104,21 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Implement basic styling with Tailwind CSS for all components (core components styled; ongoing polish as needed)
 - [x] Set up Firebase Hosting for deployment (firebase.json configured, frontend build script in place)
 - [x] Basic responsive design for mobile/desktop (foundational responsive classes sm:, md:, lg: used in layouts)
+- [x] **NEW: Implement Tech Stack Detection (Frontend):**
+    - [x] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
+    - [x] Fetch and display detected technologies from `reportData.techStack.detectedTechnologies`.
+    - [x] Design UI to present technologies clearly (e.g., cards, list with icons).
+    - [x] Group technologies by category (using `tech.categories`).
+    - [x] Display technology name, version (if available), icon (if available from Wappalyzer, or use a default), and link to technology website.
 
 ## In Progress Tasks
 
-(No tasks currently in progress)
+- [ ] **NEW: Implement Tech Stack Detection (Frontend):**
+    - [ ] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
+    - [ ] Fetch and display detected technologies from `reportData.techStack.detectedTechnologies`.
+    - [ ] Design UI to present technologies clearly (e.g., cards, list with icons).
+    - [ ] Group technologies by category (using `tech.categories`).
+    - [ ] Display technology name, version (if available), icon (if available from Wappalyzer, or use a default), and link to technology website.
 
 ## Future Tasks (Initial Prototype - MVP)
 
@@ -157,12 +168,14 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Externalize LLM prompt to a separate .md file (`functions/src/prompts/llm_summary_prompt.md`) for easier maintenance. ✅
     - [x] Enhance frontend to correctly render Markdown for the LLM summary.
     - [x] Enhance LLM prompts (summary and UX/design) to be page-type aware for more contextual feedback. ✅
-- [ ] **NEW: Implement Tech Stack Detection:**
-    - [ ] Research and integrate tools/libraries (e.g., Wappalyzer, builtwith.com API, or custom heuristics) to identify the website's tech stack.
-    - [ ] Initial focus on major platforms (WordPress, Shopify, Squarespace, Wix), CMS, and frontend frameworks.
-    - [ ] Extend to backend languages, web servers, CDNs, and cloud platforms if feasible.
-    - [ ] Design data structure in RTDB for storing detected technologies.
-    - [ ] Create a new section/tab in the frontend Report Page to display the tech stack information.
+- [x] **NEW: Implement Tech Stack Detection (Backend):**
+    - [x] Researched and selected Wappalyzer (community fork `Lissy93/wapalyzer`) for local analysis.
+    - [x] Installed `Lissy93/wapalyzer#main` into `functions` workspace.
+    - [x] Defined `TechStackData` and `DetectedTechnology` types in `functions/src/types/index.ts`.
+    - [x] Added `techStack` field to `ReportData` in `functions/src/types/index.ts`.
+    - [x] Created `functions/src/types/wapalyzer.d.ts` for basic type declarations.
+    - [x] Implemented `performTechStackScan` in `functions/src/services/techStackService.ts`.
+    - [x] Integrated `performTechStackScan` into `functions/src/tasks/processScanTask.ts` to run in parallel and save results to RTDB.
 - [x] **NEW: Implement Responsive Screenshot Capture and Analysis:**
     - [x] Modify `performPlaywrightScan` to capture screenshots at different viewport sizes (e.g., desktop, tablet, mobile).
     - [x] Store multiple screenshots in Firebase Storage (e.g., `screenshots/{reportId}/screenshot_desktop.jpg`, `screenshot_tablet.jpg`, `screenshot_mobile.jpg`).
@@ -208,6 +221,9 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - `functions/src/index.ts` - Backend Cloud Functions (apiScan, processScanTask) ✅
 - `functions/src/prompts/llm_summary_prompt.md` - Markdown template for the LLM report summary prompt. ✅
 - `functions/src/prompts/ai_ux_design_prompt.md` - Markdown template for the AI UX & Design Insights prompt. ✅
+- `functions/src/services/techStackService.ts` - Service for Wappalyzer integration. ✅
+- `functions/src/types/index.ts` - Core type definitions for backend. ✅
+- `functions/src/types/wapalyzer.d.ts` - Type declarations for Wappalyzer module. ✅
 - `functions/.env.example` - Example environment variables for backend (e.g., `PROCESS_SCAN_TASK_URL`)
 - `package.json` - Root package config (emulator scripts removed)
 

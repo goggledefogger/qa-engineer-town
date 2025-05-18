@@ -6,6 +6,7 @@ import PerformanceSection from './PerformanceSection';
 import ScreenshotsSection from './ScreenshotsSection';
 import SeoSection from './SeoSection';
 import SummarySection from './SummarySection';
+import TechStackSection from './TechStackSection';
 
 export {
   AccessibilitySection,
@@ -16,4 +17,5 @@ export {
   ScreenshotsSection,
   SeoSection,
   SummarySection,
+  TechStackSection,
 };

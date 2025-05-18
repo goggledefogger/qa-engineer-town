@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../ui';
-import type { PlaywrightReport, ScreenshotUrls, ReportData } from '../../types/report'; // Ensure ReportData is imported for overall status if needed, or just PlaywrightReport
+import type { PlaywrightReport, ScreenshotUrls, ReportData } from '../../types/reportTypes'; // <<< CORRECTED PATH
 
 interface ScreenshotsSectionProps {
   playwrightReport: PlaywrightReport | undefined;

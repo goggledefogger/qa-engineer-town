@@ -7,7 +7,7 @@ import { ReportPageLayout } from '../components/layout';
 import SidebarNav, { type SectionStatuses } from '../components/navigation/SidebarNav';
 import { Card, ScanProgressIndicator } from '../components/ui'; // OverallScoreGauge, MetricDisplay are used in section components
 
-import type { ReportData } from '../types/report';
+import type { ReportData } from '../types/reportTypes';
 // lighthouseMetricDetails is now in PerformanceSection.tsx
 
 // Import the new section components
@@ -19,7 +19,8 @@ import {
   SeoSection,
   BestPracticesSection,
   AiUxDesignSection,
-  LlmSummarySection
+  LlmSummarySection,
+  TechStackSection
 } from '../components/report'; // Assuming index.ts handles exports
 
 const ReportPage: React.FC = () => {
@@ -60,7 +61,7 @@ const ReportPage: React.FC = () => {
     const statuses: SectionStatuses = {};
     if (!reportData) {
       const defaultStatus = loading ? 'LOADING' : 'PENDING';
-      ['summary', 'llm-summary', 'screenshot', 'performance', 'accessibility', 'seo', 'best-practices', 'ai-ux-design'].forEach(id => {
+      ['summary', 'llm-summary', 'screenshot', 'performance', 'accessibility', 'seo', 'best-practices', 'ai-ux-design', 'tech-stack'].forEach(id => {
         statuses[id] = defaultStatus;
       });
       return statuses;
@@ -108,6 +109,18 @@ const ReportPage: React.FC = () => {
         case 'pending': default: statuses['ai-ux-design'] = 'LOADING'; break;
       }
     } else { statuses['ai-ux-design'] = isProcessing ? 'LOADING' : 'PENDING'; }
+
+    // Tech Stack Status Calculation
+    if (reportData.techStack) {
+      switch (reportData.techStack.status) {
+        case 'completed': statuses['tech-stack'] = 'COMPLETED'; break;
+        case 'error': statuses['tech-stack'] = 'ERROR'; break;
+        case 'skipped': statuses['tech-stack'] = 'SKIPPED'; break;
+        case 'pending': case 'processing': default: statuses['tech-stack'] = 'LOADING'; break;
+      }
+    } else { statuses['tech-stack'] = isProcessing ? 'LOADING' : 'PENDING'; }
+    console.log("[ReportPage] Tech Stack Status in sectionStatuses:", statuses['tech-stack']);
+
     return statuses;
   }, [reportData, loading]);
 
@@ -132,6 +145,8 @@ const ReportPage: React.FC = () => {
         return <AiUxDesignSection aiUxDesignSuggestions={reportData.aiUxDesignSuggestions} />;
       case 'llm-summary':
         return <LlmSummarySection llmReportSummary={reportData.llmReportSummary} />;
+      case 'tech-stack':
+        return <TechStackSection techStackData={reportData.techStack} />;
       default:
         return <Card title="Section Not Found" className="font-sans"><p className="text-slate-600">Content for {activeSection} is not available yet.</p></Card>;
     }

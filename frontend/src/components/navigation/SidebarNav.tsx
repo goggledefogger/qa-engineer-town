@@ -17,6 +17,7 @@ const reportSections: NavItem[] = [
   { id: 'seo', label: 'SEO' },
   { id: 'best-practices', label: 'Best Practices' },
   { id: 'ai-ux-design', label: 'AI UX & Design Insights' },
+  { id: 'tech-stack', label: 'Tech Stack' },
 ];
 
 export type SectionStatus = 'LOADING' | 'COMPLETED' | 'ERROR' | 'SKIPPED' | 'PENDING';

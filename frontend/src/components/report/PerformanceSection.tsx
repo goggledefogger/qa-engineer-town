@@ -2,14 +2,14 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, OverallScoreGauge, MetricDisplay } from '../ui';
-import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/report';
-import { lighthouseMetricDetails } from '../../types/report';
+import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/reportTypes';
+import { lighthouseMetricDetails } from '../../types/reportTypes';
 import type { PerformanceCategory } from '../ui/MetricDisplay';
 import { unwrapMarkdown } from '../../utils/textUtils';
 
 interface PerformanceSectionProps {
-  lighthouseReport: LighthouseReportData | undefined;
-  reportStatus: ReportData['status'];
+  lighthouseReport?: LighthouseReportData;
+  reportStatus?: ReportData['status'];
 }
 
 const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseReport, reportStatus }) => {
@@ -82,7 +82,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
     }
 
     if (items.length === 0) {
-      if (reportStatus === 'complete' && lighthouseReport?.success) {
+      if (reportStatus === 'completed' && lighthouseReport?.success) {
          // Check if there were opportunities in the raw data, even if filtered out or not processed by LLM
         if (!lighthouseReport?.performanceOpportunities || lighthouseReport.performanceOpportunities.length === 0) {
             return <p className="text-slate-600 text-center py-4">No specific performance opportunities found by Lighthouse.</p>;
@@ -143,7 +143,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
     }
 
     // State 3: Overall report generation error (and not a more specific Lighthouse error already shown)
-    if (reportStatus === 'error') {
+    if (reportStatus === 'failed') {
       return <p className="text-red-500 text-center py-8">Performance analysis could not be completed or data is unavailable.</p>;
     }
 
@@ -154,7 +154,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
     const hasDetailedMetrics = lighthouseReport?.detailedMetrics && Object.keys(lighthouseReport.detailedMetrics).length > 0;
 
     // If the report is fully complete, Lighthouse was successful, but absolutely no performance data was found.
-    if (reportStatus === 'complete' && lighthouseReport?.success === true &&
+    if (reportStatus === 'completed' && lighthouseReport?.success === true &&
         !hasPerformanceScore && !hasDetailedMetrics &&
         (!lighthouseReport?.performanceOpportunities || lighthouseReport.performanceOpportunities.length === 0)) {
       return <p className="text-slate-500 text-center py-8">No performance data available for this report.</p>;

@@ -33,14 +33,14 @@ export async function performPlaywrightScan(urlToScan: string, reportId: string)
     // Step 1: Sequentially capture all screenshot buffers
     for (const viewport of viewports) {
       try {
-        logger.info(`Setting viewport to ${viewport.name} (${viewport.width}x${viewport.height}) and capturing screenshot...`, { reportId, viewport: viewport.name });
+        logger.info(`Setting viewport to ${String(viewport.name)} (${viewport.width}x${viewport.height}) and capturing screenshot...`, { reportId, viewport: String(viewport.name) });
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.waitForTimeout(1000); // Wait for reflow
         const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });
         capturedScreenshotData.push({ name: viewport.name, buffer: screenshotBuffer });
-        logger.info(`Screenshot captured for ${viewport.name}.`, { reportId, viewport: viewport.name });
+        logger.info(`Screenshot captured for ${String(viewport.name)}.`, { reportId, viewport: String(viewport.name) });
       } catch (captureError: any) {
-        logger.error(`Failed to capture screenshot for viewport: ${viewport.name}`, { reportId, viewport: viewport.name, error: captureError.message, stack: captureError.stack });
+        logger.error(`Failed to capture screenshot for viewport: ${String(viewport.name)}`, { reportId, viewport: String(viewport.name), error: captureError.message, stack: captureError.stack });
         // Continue to next viewport even if one fails
       }
     }
@@ -49,17 +49,17 @@ export async function performPlaywrightScan(urlToScan: string, reportId: string)
     if (capturedScreenshotData.length > 0) {
       const uploadPromises = capturedScreenshotData.map(async (data) => {
         try {
-          const screenshotFileName = `screenshots/${reportId}/screenshot_${data.name}.jpg`;
+          const screenshotFileName = `screenshots/${reportId}/screenshot_${String(data.name)}.jpg`;
           const file = bucket.file(screenshotFileName);
           await file.save(data.buffer, {
             metadata: { contentType: "image/jpeg" },
           });
           await file.makePublic();
           const publicUrl = file.publicUrl();
-          logger.info(`Screenshot for ${data.name} uploaded and made public.`, { reportId, viewport: data.name, url: publicUrl });
+          logger.info(`Screenshot for ${String(data.name)} uploaded and made public.`, { reportId, viewport: String(data.name), url: publicUrl });
           return { name: data.name, url: publicUrl, status: 'fulfilled' as const };
         } catch (uploadError: any) {
-          logger.error(`Failed to upload screenshot for viewport: ${data.name}`, { reportId, viewport: data.name, error: uploadError.message, stack: uploadError.stack });
+          logger.error(`Failed to upload screenshot for viewport: ${String(data.name)}`, { reportId, viewport: String(data.name), error: uploadError.message, stack: uploadError.stack });
           return { name: data.name, error: uploadError.message, status: 'rejected' as const };
         }
       });
@@ -73,7 +73,7 @@ export async function performPlaywrightScan(urlToScan: string, reportId: string)
         } else if (result.status === 'rejected') {
           logger.error(`Upload promise for a viewport was rejected directly.`, { reportId, reason: result.reason });
         } else if (result.value.status === 'rejected') {
-          logger.warn(`Screenshot upload failed for viewport: ${result.value.name}`, { reportId, viewport: result.value.name, error: result.value.error });
+          logger.warn(`Screenshot upload failed for viewport: ${String(result.value.name)}`, { reportId, viewport: String(result.value.name), error: result.value.error });
         }
       });
     }

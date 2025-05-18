@@ -60,11 +60,11 @@ export interface LighthouseReportData {
 }
 
 export interface LLMExplainedAuditItem {
-  id: string; // Original audit/opportunity ID
-  title: string; // Original title, useful for matching or display
-  llmExplanation?: string; // LLM-generated explanation (Markdown format)
-  status: "pending" | "completed" | "error";
-  error?: string;
+  id: string; // Original audit ID
+  title: string; // Original audit title
+  status: "pending" | "completed" | "error" | "skipped";
+  llmExplanation?: string; // AI-generated explanation/advice
+  error?: string; // Error message if LLM explanation failed
 }
 
 export type ScreenContextType = 'desktop' | 'tablet' | 'mobile' | 'general';
@@ -97,6 +97,7 @@ export interface ReportData {
   lighthouseReport?: LighthouseReportData;
   aiUxDesignSuggestions?: AiUxDesignSuggestions;
   llmReportSummary?: LLMReportSummary;
+  techStack?: TechStackData;
   createdAt: number;
   updatedAt: number;
   error?: string;
@@ -105,4 +106,25 @@ export interface ReportData {
 export interface ScanTaskPayload {
   reportId: string;
   urlToScan: string;
+}
+
+export interface DetectedTechnology {
+  name: string;
+  slug: string; // Wappalyzer's unique key for the technology
+  version?: string | null;
+  confidence: number;
+  // Wappalyzer category structure: Array of { id: number, name: string, slug: string }
+  categories: Array<{ id: number; name: string; slug: string }>;
+  icon?: string; // e.g., "React.svg"
+  website?: string;
+}
+
+export interface TechStackData {
+  status: "pending" | "processing" | "completed" | "error" | "skipped";
+  error?: string;
+  detectedTechnologies?: DetectedTechnology[];
+}
+
+export enum ScreenContext {
+  // ... existing code ...
 }
