@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card } from '../ui';
 import type { ReportData } from '../../types/report'; // Only need ReportData for aiUxDesignSuggestions
 
@@ -35,11 +37,13 @@ const AiUxDesignSection: React.FC<AiUxDesignSectionProps> = ({ aiUxDesignSuggest
                     Context: {item.screenContext}
                   </p>
                 )}
-                <p className="text-sm text-slate-800 font-medium mb-1.5 leading-snug">{item.suggestion}</p>
+                <div className="prose prose-sm max-w-none text-slate-800 prose-p:font-medium prose-p:mb-1.5 prose-p:leading-snug">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.suggestion}</ReactMarkdown>
+                </div>
                 {item.reasoning && (
-                  <p className="text-xs text-slate-600 pl-1 border-l-2 border-slate-300 italic">
-                    <span className="font-semibold not-italic">Reasoning:</span> {item.reasoning}
-                  </p>
+                  <div className="prose prose-xs max-w-none text-slate-600 pl-1 border-l-2 border-slate-300 italic prose-p:italic prose-strong:font-semibold prose-strong:not-italic">
+                    <strong>Reasoning:</strong> <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.reasoning}</ReactMarkdown>
+                  </div>
                 )}
               </li>
             ))}

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, OverallScoreGauge } from '../ui';
 import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/report';
+import { unwrapMarkdown } from '../../utils/textUtils';
 
 interface AccessibilitySectionProps {
   lighthouseReport: LighthouseReportData | undefined;
@@ -10,97 +11,89 @@ interface AccessibilitySectionProps {
 }
 
 const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseReport, reportStatus }) => {
+  console.log('[AccessibilitySection] Props Received:', { lighthouseReport, reportStatus });
+
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
   const accessibilityIssues = lighthouseReport?.accessibilityIssues;
   const llmExplainedIssues = lighthouseReport?.llmExplainedAccessibilityIssues;
 
-  const noIssuesFound = accessibilityIssues && accessibilityIssues.length === 0;
-  const hasExplicitError = lighthouseReport?.success === false && lighthouseReport?.error;
-
-  if (!lighthouseReport && (reportStatus === 'pending' || reportStatus === 'processing')) {
-    return (
-      <Card title="Accessibility (Lighthouse)" className="font-sans">
-        <div className="flex flex-col items-center mb-6">
-          <OverallScoreGauge score={undefined} categoryName="Overall Accessibility" />
-        </div>
-        <p className="text-slate-600 text-center py-8">Accessibility issues will appear here when the scan is complete.</p>
-      </Card>
-    );
+  if (reportStatus === 'complete') {
+    console.log('[AccessibilitySection] COMPLETE state. Full lighthouseReport:', JSON.parse(JSON.stringify(lighthouseReport || {})));
+    console.log('[AccessibilitySection] COMPLETE state. Raw accessibilityIssues:', accessibilityIssues);
+    console.log('[AccessibilitySection] COMPLETE state. LLM explained issues from prop:', llmExplainedIssues);
   }
 
+  const noIssuesFound = accessibilityIssues && accessibilityIssues.length === 0;
+  const hasExplicitError = lighthouseReport?.success === false && lighthouseReport?.error;
+  const isLoading = reportStatus === 'processing' || reportStatus === 'pending';
+  const isCompleted = reportStatus === 'complete';
+  const isFailed = reportStatus === 'error' || (isCompleted && lighthouseReport?.success === false && !hasExplicitError);
+
+  const renderContent = () => {
+    if (isLoading) {
+      return <p className="text-slate-500">Accessibility analysis in progress...</p>;
+    }
+    if (hasExplicitError) {
+      return <p className="text-red-500">Accessibility analysis failed: {lighthouseReport.error}</p>;
+    }
+    if (isFailed && !lighthouseReport?.scores) {
+      return <p className="text-red-500">Accessibility analysis could not be completed or data is unavailable.</p>;
+    }
+    if (!accessibilityScore && !accessibilityIssues?.length && isCompleted) {
+      return <p className="text-slate-500">No accessibility data available for this report.</p>;
+    }
+
+    return (
+      <>
+        {typeof accessibilityScore === 'number' && (
+          <div className="mb-6">
+            <OverallScoreGauge score={accessibilityScore} categoryName="Accessibility" />
+          </div>
+        )}
+
+        {noIssuesFound && <p className="text-slate-600">No specific accessibility issues found by Lighthouse. Great job!</p>}
+
+        {(() => {
+          console.log('[AccessibilitySection] Checking condition for llmExplainedIssues. llmExplainedIssues:', llmExplainedIssues);
+          if (llmExplainedIssues && llmExplainedIssues.length > 0) {
+            console.log('[AccessibilitySection] Rendering llmExplainedIssues. Count:', llmExplainedIssues.length);
+            return (
+              <div className="mt-4">
+                <h4 className="text-lg font-semibold text-slate-800 mb-3">AI-Explained Accessibility Issues:</h4>
+                <ul className="space-y-3">
+                  {llmExplainedIssues.map((explainedIssue) => (
+                    <li key={explainedIssue.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
+                      <h5 className="font-semibold text-sky-700 mb-2">{explainedIssue.title}</h5>
+                      {explainedIssue.llmExplanation && (
+                        <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {unwrapMarkdown(explainedIssue.llmExplanation)}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      {explainedIssue.status === 'error' && explainedIssue.error && (
+                        <p className="text-xs text-red-500 mt-1">AI explanation error: {explainedIssue.error}</p>
+                      )}
+                      {explainedIssue.status === 'pending' && (
+                        <p className="text-xs text-slate-400 mt-1">AI explanation pending...</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          } else {
+            console.log('[AccessibilitySection] llmExplainedIssues not rendered. Condition not met or empty.');
+            return null;
+          }
+        })()}
+      </>
+    );
+  };
+
   return (
-    <Card title="Accessibility (Lighthouse)" className="font-sans">
-      <div className="flex flex-col items-center mb-6">
-        <OverallScoreGauge score={accessibilityScore} categoryName="Overall Accessibility" />
-      </div>
-
-      {accessibilityIssues && accessibilityIssues.length > 0 ? (
-        <>
-          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Identified Accessibility Issues</h3>
-          <ul className="space-y-3 list-none p-0">
-            {accessibilityIssues.map((issue) => (
-              <li key={issue.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                <h4 className="font-semibold text-md text-slate-800 mb-0.5">{issue.title}</h4>
-                <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {issue.id} | Score: {issue.score === null ? 'N/A' : issue.score}</p>
-                <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{issue.description}</ReactMarkdown>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : hasExplicitError ? (
-        <p className="text-slate-600 text-center py-4">Accessibility check could not be completed due to an error: {lighthouseReport?.error}</p>
-      ) : (reportStatus === 'processing' || reportStatus === 'pending') && !accessibilityScore ? (
-        // If still processing AND no score yet, show pending message
-        <p className="text-slate-600 text-center py-8">Accessibility issues will appear here when the scan is complete.</p>
-      ) : accessibilityScore !== undefined && noIssuesFound ? (
-        // If score is present and no issues, it means no issues were found
-        <p className="text-slate-600 text-center py-4">No specific accessibility issues flagged by Lighthouse. Great job!</p>
-      ) : (
-        // Fallback for other states (e.g. report complete, but no accessibility data at all)
-        <p className="text-slate-600 text-center py-4">Accessibility data is not available. The check might not have run or an unknown error occurred.</p>
-      )}
-
-      {/* This is a more specific error message if issues array is empty but there was a general LH error */}
-      {lighthouseReport?.error && (!accessibilityIssues || accessibilityIssues.length === 0) && (
-          <p className="text-red-600 mt-4 text-sm text-center">Lighthouse Accessibility check error: {lighthouseReport.error}</p>
-      )}
-
-      {/* LLM Enhanced Explanations for Accessibility Issues */}
-      {(accessibilityIssues && accessibilityIssues.length > 0 || llmExplainedIssues) && (
-        <div className="mt-8 pt-6 border-t border-slate-200">
-          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Simplified Explanations & Advice (AI-Powered)</h3>
-          {(!llmExplainedIssues || llmExplainedIssues.length === 0) &&
-           (reportStatus === 'processing' || reportStatus === 'pending') &&
-           (accessibilityIssues && accessibilityIssues.length > 0) && (
-            <p className="text-slate-500 text-center py-4">Generating enhanced accessibility advice... This may take a few moments.</p>
-          )}
-          {llmExplainedIssues && llmExplainedIssues.length > 0 && (
-            <ul className="space-y-4 list-none p-0">
-              {llmExplainedIssues.map((explainedIssue) => (
-                <li key={explainedIssue.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
-                  <h5 className="font-semibold text-sky-700 mb-2">Enhanced Look: {explainedIssue.title}</h5>
-                  {explainedIssue.status === 'pending' && <p className="text-sm text-slate-500 italic">Loading explanation...</p>}
-                  {explainedIssue.status === 'error' && <p className="text-sm text-red-500">Error loading explanation: {explainedIssue.error}</p>}
-                  {explainedIssue.status === 'completed' && explainedIssue.llmExplanation && (
-                    <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{explainedIssue.llmExplanation}</ReactMarkdown>
-                    </div>
-                  )}
-                  {explainedIssue.status === 'completed' && !explainedIssue.llmExplanation && (
-                      <p className="text-sm text-slate-500 italic">Enhanced explanation was processed but is empty.</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-          {llmExplainedIssues?.length === 0 && reportStatus === 'complete' &&
-            (accessibilityIssues && accessibilityIssues.length > 0) && (
-              <p className="text-slate-500 text-center py-4">No enhanced accessibility advice generated or available for these issues.</p>
-          )}
-        </div>
-      )}
+    <Card title="Accessibility">
+      {renderContent()}
     </Card>
   );
 };

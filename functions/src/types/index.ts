@@ -53,6 +53,18 @@ export interface LighthouseReportData {
     description: string;
     score: number | null;
   }>;
+  llmExplainedAccessibilityIssues?: Array<LLMExplainedAuditItem>;
+  llmExplainedSeoAudits?: Array<LLMExplainedAuditItem>;
+  llmExplainedBestPracticesAudits?: Array<LLMExplainedAuditItem>;
+  llmExplainedPerformanceOpportunities?: Array<LLMExplainedAuditItem>;
+}
+
+export interface LLMExplainedAuditItem {
+  id: string; // Original audit/opportunity ID
+  title: string; // Original title, useful for matching or display
+  llmExplanation?: string; // LLM-generated explanation (Markdown format)
+  status: "pending" | "completed" | "error";
+  error?: string;
 }
 
 export type ScreenContextType = 'desktop' | 'tablet' | 'mobile' | 'general';
