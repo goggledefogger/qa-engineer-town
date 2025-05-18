@@ -14,10 +14,16 @@ service firebase.storage {
     // in the "screenshots" folder or any other path.
     // YOU MUST REPLACE 'your_admin_email@example.com' with the actual email address
     // that you have set (or will set) in your functions/.env file as ALLOWED_ADMIN_EMAIL.
-    match /screenshots/{reportId}/{allScreenshotPaths=**} {
-      allow read: if request.auth != null && request.auth.token.email == 'roytownwizard@protonmail.com';
-      allow write: if request.auth != null && request.auth.token.email == 'roytownwizard@protonmail.com';
+    match /screenshots/{reportId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
     }
+
+    // Allow general public read access for other files if needed, or keep restricted.
+    // Example: Allow public read for a 'public_assets' folder
+    // match /public_assets/{allPaths=**} {
+    //   allow read;
+    // }
 
     // If you have other specific paths, you can add rules for them here.
     // For example, if public read is needed for some files:

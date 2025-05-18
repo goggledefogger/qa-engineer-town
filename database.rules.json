@@ -3,8 +3,15 @@
     ".read": false,
     ".write": false,
     "reports": {
-      ".read": "auth != null && auth.token.email === 'roytownwizard@protonmail.com'",
-      ".write": "auth != null && auth.token.email === 'roytownwizard@protonmail.com'"
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true",
+      "$reportId": {}
+    },
+    "adminUsers": {
+        ".read": "auth != null && auth.token.admin === true",
+        "$uid": {
+            ".write": "auth != null && auth.token.admin === true"
+        }
     }
   }
 }

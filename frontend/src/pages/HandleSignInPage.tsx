@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   isSignInWithEmailLink,
   completeSignInWithEmailLink,
-  signOut as firebaseSignOut, // Import signOut
+  signOut as firebaseSignOut,
+  isUserAdmin
 } from '../authService';
 import { Card } from '../components/ui';
 
-const ALLOWED_EMAIL_FROM_ENV = import.meta.env.VITE_ALLOWED_EMAIL || 'test@test.com'; // Fallback
+// const ALLOWED_EMAIL_FROM_ENV = import.meta.env.VITE_ALLOWED_EMAIL || 'test@test.com'; // No longer used
 
 const HandleSignInPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,27 +27,25 @@ const HandleSignInPage: React.FC = () => {
       if (isSignInWithEmailLink(link)) {
         try {
           const user = await completeSignInWithEmailLink(link);
-          if (user) {
-            if (user.email === ALLOWED_EMAIL_FROM_ENV) {
+          if (user && user.uid) {
+            const adminStatus = await isUserAdmin(user.uid);
+            if (adminStatus) {
               setStatus('success');
               navigate('/');
             } else {
               setError(
-                `Access denied. This application is restricted. Your email (${user.email}) is not authorized. Please use ${ALLOWED_EMAIL_FROM_ENV}.`
+                `Access denied. Your account (${user.email}) is not authorized to use this application. Please contact the administrator if you believe this is an error.`
               );
-              // Sign out the user who isn't allowed
               await firebaseSignOut();
               setStatus('error');
-              setTimeout(() => navigate('/signin'), 7000); // Increased timeout for reading message
+              setTimeout(() => navigate('/signin'), 7000);
             }
           } else {
-            // This case should ideally not be reached if completeSignInWithEmailLink resolves without error and without a user.
-            setError('Sign-in process did not return a user.');
+            setError('Sign-in process did not return a valid user.');
             setStatus('error');
           }
         } catch (e: any) {
           console.error('Sign-in failed:', e);
-          // Check for specific auth/email-already-in-use error to provide a more specific message
           if (e.code === 'auth/email-already-in-use') {
             setError(
               'This email is already in use or the link has been used. Please try signing in again, or check if you have an existing account with a different sign-in method.'
@@ -59,7 +58,6 @@ const HandleSignInPage: React.FC = () => {
       } else {
         setError('This is not a valid sign-in link.');
         setStatus('error');
-        // Optionally redirect to sign-in page if the link is invalid
         setTimeout(() => navigate('/signin'), 3000);
       }
     };

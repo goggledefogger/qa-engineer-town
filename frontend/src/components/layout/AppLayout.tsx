@@ -7,10 +7,11 @@ interface AppLayoutProps {
   children: React.ReactNode;
   user: User | null;
   loadingAuth: boolean;
-  allowedEmail: string;
+  isAdmin: boolean | null;
+  loadingAdminCheck: boolean;
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, user, loadingAuth, allowedEmail }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, user, loadingAuth, isAdmin, loadingAdminCheck }) => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -33,8 +34,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, user, loadingAuth, allo
             AI QA Engineer
           </Link>
           <div className="flex items-center space-x-3">
-            {!loadingAuth && user && user.email === allowedEmail && (
-              <span className="text-sm text-slate-600 hidden sm:inline">Welcome, {user.email}</span>
+            {!loadingAuth && !loadingAdminCheck && user && isAdmin && (
+              <span className="text-sm text-slate-600 hidden sm:inline">Welcome, Admin ({user.email})</span>
+            )}
+            {!loadingAuth && !loadingAdminCheck && user && !isAdmin && (
+              <span className="text-sm text-slate-600 hidden sm:inline">{user.email}</span>
+            )}
+            {(loadingAuth || loadingAdminCheck) && (
+                <span className="text-sm text-slate-500">Loading user...</span>
             )}
             {!loadingAuth && user && (
               <button

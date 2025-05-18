@@ -29,25 +29,26 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
     return;
   }
   const idToken = authorizationHeader.split('Bearer ')[1];
-  const allowedAdminEmail = process.env.ALLOWED_ADMIN_EMAIL;
+  // const allowedAdminEmail = process.env.ALLOWED_ADMIN_EMAIL; // No longer used
 
-  if (!allowedAdminEmail) {
-    logger.error("ALLOWED_ADMIN_EMAIL environment variable is not set. Cannot perform auth check.");
-    response.status(500).send("Server configuration error: Admin email not set.");
-    return;
-  }
+  // if (!allowedAdminEmail) { // No longer used
+  //   logger.error("ALLOWED_ADMIN_EMAIL environment variable is not set. Cannot perform auth check.");
+  //   response.status(500).send("Server configuration error: Admin email not set.");
+  //   return;
+  // }
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    if (decodedToken.email !== allowedAdminEmail) {
-      logger.warn("Forbidden: User email does not match allowed admin email.", {userEmail: decodedToken.email, allowedEmail: allowedAdminEmail});
+    // Check for the custom admin claim
+    if (decodedToken.admin !== true) {
+      logger.warn("Forbidden: User does not have admin custom claim.", {uid: decodedToken.uid, email: decodedToken.email});
       response.status(403).send("Forbidden: You do not have permission to access this resource.");
       return;
     }
-    logger.info("User authenticated successfully as admin.", {email: decodedToken.email});
+    logger.info("User authenticated successfully as admin via custom claim.", {uid: decodedToken.uid, email: decodedToken.email});
   } catch (error) {
-    logger.error("Error verifying ID token:", error);
-    response.status(401).send("Unauthorized: Invalid token.");
+    logger.error("Error verifying ID token or missing admin claim:", error);
+    response.status(401).send("Unauthorized: Invalid token or insufficient permissions.");
     return;
   }
   // ===== END AUTH CHECK =====

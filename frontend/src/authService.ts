@@ -7,7 +7,8 @@ import {
   signOut as firebaseSignOut,
   type User
 } from 'firebase/auth';
-import app from './firebaseConfig'; // Your main Firebase app initialization
+import app, { db } from './firebaseConfig'; // Import db from firebaseConfig
+import { ref, get } from 'firebase/database'; // Import RTDB functions
 
 const auth = getAuth(app);
 
@@ -82,4 +83,20 @@ export const signOut = async (): Promise<void> => {
 
 export const getCurrentUser = (): User | null => {
   return auth.currentUser;
+};
+
+export const isUserAdmin = async (uid: string): Promise<boolean> => {
+  if (!uid) return false;
+  try {
+    const adminUserRef = ref(db, `adminUsers/${uid}`);
+    const snapshot = await get(adminUserRef);
+    if (snapshot.exists()) {
+      const adminData = snapshot.val();
+      return adminData?.isAdmin === true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false; // Default to not admin on error
+  }
 };

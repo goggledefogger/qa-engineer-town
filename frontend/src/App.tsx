@@ -1,29 +1,31 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { useNavigate, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { User } from 'firebase/auth'; // Import User type
-import { onAuthStateChanged, getCurrentUser, signOut as firebaseSignOut } from './authService'; // Use our authService
+import { onAuthStateChanged, getCurrentUser, signOut as firebaseSignOut, isUserAdmin } from './authService'; // Use our authService
 import UrlInputForm from './components/UrlInputForm';
 import { AppLayout } from './components/layout';
 import ReportPage from './pages/ReportPage';
 import SignInPage from './pages/SignInPage'; // Import SignInPage
 import HandleSignInPage from './pages/HandleSignInPage'; // Import HandleSignInPage
 
-const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || 'test@test.com'; // Fallback for safety
+// const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || 'test@test.com'; // No longer used
 
 // ProtectedRoute component
 interface ProtectedRouteProps {
   user: User | null;
   loadingAuth: boolean;
+  isAdmin: boolean | null; // null if not yet determined, true/false once checked
+  loadingAdminCheck: boolean;
   children?: ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ user, loadingAuth, children }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ user, loadingAuth, isAdmin, loadingAdminCheck, children }) => {
   const location = useLocation();
 
-  if (loadingAuth) {
+  if (loadingAuth || loadingAdminCheck) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 font-sans antialiased">
-        <p className="text-xl text-slate-500">Loading authentication...</p>
+        <p className="text-xl text-slate-500">Loading authentication status...</p>
       </div>
     );
   }
@@ -32,12 +34,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ user, loadingAuth, chil
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  if (user.email !== ALLOWED_EMAIL) {
+  if (isAdmin === false) { // Explicitly check for false, as null means still loading or error
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-100 font-sans">
         <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
-        <p className="text-slate-700 mb-2">Your email (<span className="font-medium">{user.email}</span>) is not authorized to access this application.</p>
-        <p className="text-slate-600 text-sm mb-6">Only the administrator (<span className="font-medium">{ALLOWED_EMAIL}</span>) can access this page.</p>
+        <p className="text-slate-700 mb-2">Your account (<span className="font-medium">{user.email}</span>) is not authorized to access this application.</p>
+        <p className="text-slate-600 text-sm mb-6">Only designated administrators can access this application.</p>
         <button
           onClick={async () => {
             await firebaseSignOut();
@@ -73,20 +75,31 @@ const LandingPage: React.FC<{
 function App() {
   const [user, setUser] = useState<User | null>(getCurrentUser());
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [loadingAdminCheck, setLoadingAdminCheck] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged((currentUser) => {
+    const unsubscribe = onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
       setLoadingAuth(false);
+      if (currentUser) {
+        setLoadingAdminCheck(true);
+        const adminStatus = await isUserAdmin(currentUser.uid);
+        setIsAdmin(adminStatus);
+        setLoadingAdminCheck(false);
+      } else {
+        setIsAdmin(null); // No user, so not an admin
+        setLoadingAdminCheck(false);
+      }
     });
     return () => unsubscribe();
   }, []);
 
   const handleUrlSubmit = async (url: string) => {
-    if (!user || user.email !== ALLOWED_EMAIL) {
-      alert("You are not authorized to perform this action. Please sign in with the correct account.");
+    if (!user || !isAdmin) { // Check isAdmin flag
+      alert("You are not authorized to perform this action. Please sign in with an admin account.");
       if (!user) navigate('/signin');
       return;
     }
@@ -160,13 +173,13 @@ function App() {
   // No full-page auth loader here anymore, ProtectedRoute handles its own loading state.
 
   return (
-    <AppLayout user={user} loadingAuth={loadingAuth} allowedEmail={ALLOWED_EMAIL}>
+    <AppLayout user={user} loadingAuth={loadingAuth} isAdmin={isAdmin} loadingAdminCheck={loadingAdminCheck}>
       <Routes>
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/handle-signin" element={<HandleSignInPage />} />
 
         {/* Protected Routes */}
-        <Route element={<ProtectedRoute user={user} loadingAuth={loadingAuth} />}>
+        <Route element={<ProtectedRoute user={user} loadingAuth={loadingAuth} isAdmin={isAdmin} loadingAdminCheck={loadingAdminCheck} />}>
           <Route
             path="/"
             element={

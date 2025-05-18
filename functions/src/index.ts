@@ -22,6 +22,7 @@ if (!admin.apps.length) {
 // Export functions from their new locations
 export { apiScan } from "./api/apiScan";
 export { processScanTask } from "./tasks/processScanTask";
+export { manageAdminCustomClaims } from "./auth/customClaims";
 
 // Get a reference to the Realtime Database service - can be exported if needed by other top-level files
 // export const rtdb = admin.database();
