@@ -29,9 +29,6 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Parameterize the allowed email using `VITE_ALLOWED_EMAIL` environment variable.
   - [x] Debug and resolve `auth/email-already-in-use` error.
   - [x] Debug and resolve `auth/invalid-action-code` error (related to React StrictMode in development).
-
-## In Progress Tasks
-
 - [x] **Setup Cloud Tasks for Asynchronous Scanning**
   - [x] Create Google Cloud Tasks Queue (`scan-processing-queue` in `us-central1`).
   - [x] Grant necessary IAM permissions:
@@ -52,7 +49,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Upload screenshot to Firebase Storage.
     - [x] Save screenshot URL to RTDB.
     - [x] Implement robust error handling for Playwright-specific errors (e.g., navigation failures, timeouts) to capture errors in the `playwrightReport` object in RTDB.
-  - [ ] Implement Lighthouse integration within `processScanTask`.
+  - [x] Implement Lighthouse integration within `processScanTask`.
     - [x] Add `lighthouse` dependency to `functions` workspace (managed from project root).
     - [x] Resolve ERR_REQUIRE_ESM by using dynamic `await import('lighthouse')` in `processScanTask`.
     - [x] Implement Lighthouse audit logic (connect to Playwright's browser instance, run audit, parse scores).
@@ -65,7 +62,6 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Save detailed Lighthouse performance metrics, opportunities, and specific SEO/Best Practices audit details.
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
-
 - [x] **NEW: Implement AI-Powered UX & Design Analysis in `processScanTask`**
   - [x] Add dependencies for AI Vision Model SDKs (e.g., OpenAI, Google AI) to `functions/package.json`. (Using `@google/genai`)
   - [x] Implement logic to call the chosen AI vision model API(s) with the captured screenshot (or its URL) and relevant context (e.g., URL, device type if emulated). (Successfully calling Gemini API).
@@ -84,9 +80,6 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Secure Firebase Storage rules to only allow read/write by admin users (using `request.auth.token.admin == true` custom claim).
   - [x] Explore using Firebase Custom Claims for admin checks instead of direct email comparison in API and rules (add to Future Tasks).
   - [x] Remove the need for manual updates to Firebase rules by using a script or environment variable for dynamic configuration based on the `ALLOWED_ADMIN_EMAIL` from `functions/.env`.
-
-## Future Tasks (Initial Prototype - MVP)
-
 - [x] Create backend Firebase Function (`/api/scan`) structure
 - [x] Connect frontend form submission to /api/scan backend function
 - [x] Implement URL validation in the backend function
@@ -112,9 +105,17 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Set up Firebase Hosting for deployment (firebase.json configured, frontend build script in place)
 - [x] Basic responsive design for mobile/desktop (foundational responsive classes sm:, md:, lg: used in layouts)
 
+## In Progress Tasks
+
+(No tasks currently in progress)
+
+## Future Tasks (Initial Prototype - MVP)
+
+(All MVP tasks completed)
+
 ## Future Tasks (Post-MVP)
 
-- [x] Refactor scan logic to use Cloud Tasks for asynchronous processing (avoid timeouts) - *This is now In Progress/Partially Complete for MVP*
+- [x] Refactor scan logic to use Cloud Tasks for asynchronous processing (avoid timeouts)
 - [ ] Set up Cloud Run service for Playwright/Lighthouse execution (*Alternative if Firebase Functions approach has limitations*)
 - [ ] Implement AI analysis of screenshots (Visual/UX)
 - [ ] Implement AI analysis of text content (Advanced Accessibility)
