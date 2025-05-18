@@ -135,17 +135,17 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
 
       if (lighthouseData.success) {
         logger.info("Proceeding with LLM explanations for Lighthouse items.", { reportId });
-        logger.debug("[processScanTask] Lighthouse data BEFORE generating explanations:",
-          {
-            reportId,
-            hasAccessibilityIssues: !!lighthouseData.accessibilityIssues?.length,
-            accessibilityIssuesCount: lighthouseData.accessibilityIssues?.length,
-            hasPerformanceOpportunities: !!lighthouseData.performanceOpportunities?.length,
-            performanceOpportunitiesCount: lighthouseData.performanceOpportunities?.length,
-            // exampleAccessibilityIssue: lighthouseData.accessibilityIssues?.[0]?.title,
-            // examplePerformanceOpportunity: lighthouseData.performanceOpportunities?.[0]?.title
-          }
-        );
+        // logger.debug("[processScanTask] Lighthouse data BEFORE generating explanations:",
+        //   {
+        //     reportId,
+        //     hasAccessibilityIssues: !!lighthouseData.accessibilityIssues?.length,
+        //     accessibilityIssuesCount: lighthouseData.accessibilityIssues?.length,
+        //     hasPerformanceOpportunities: !!lighthouseData.performanceOpportunities?.length,
+        //     performanceOpportunitiesCount: lighthouseData.performanceOpportunities?.length,
+        //     // exampleAccessibilityIssue: lighthouseData.accessibilityIssues?.[0]?.title,
+        //     // examplePerformanceOpportunity: lighthouseData.performanceOpportunities?.[0]?.title
+        //   }
+        // );
 
         lighthouseData = await generateLighthouseItemExplanations(
           lighthouseData,
@@ -155,17 +155,17 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         );
         logger.info("LLM explanations for Lighthouse items completed processing.", { reportId });
 
-        logger.debug("[processScanTask] Lighthouse data AFTER generating explanations:",
-          {
-            reportId,
-            hasLlmExplainedAccessibility: !!lighthouseData.llmExplainedAccessibilityIssues?.length,
-            llmExplainedAccessibilityCount: lighthouseData.llmExplainedAccessibilityIssues?.length,
-            hasLlmExplainedPerformance: !!lighthouseData.llmExplainedPerformanceOpportunities?.length,
-            llmExplainedPerformanceCount: lighthouseData.llmExplainedPerformanceOpportunities?.length,
-            // exampleLlmAccessibility: lighthouseData.llmExplainedAccessibilityIssues?.[0]?.title,
-            // exampleLlmPerformance: lighthouseData.llmExplainedPerformanceOpportunities?.[0]?.title
-          }
-        );
+        // logger.debug("[processScanTask] Lighthouse data AFTER generating explanations:",
+        //   {
+        //     reportId,
+        //     hasLlmExplainedAccessibility: !!lighthouseData.llmExplainedAccessibilityIssues?.length,
+        //     llmExplainedAccessibilityCount: lighthouseData.llmExplainedAccessibilityIssues?.length,
+        //     hasLlmExplainedPerformance: !!lighthouseData.llmExplainedPerformanceOpportunities?.length,
+        //     llmExplainedPerformanceCount: lighthouseData.llmExplainedPerformanceOpportunities?.length,
+        //     // exampleLlmAccessibility: lighthouseData.llmExplainedAccessibilityIssues?.[0]?.title,
+        //     // exampleLlmPerformance: lighthouseData.llmExplainedPerformanceOpportunities?.[0]?.title
+        //   }
+        // );
 
       } else {
         logger.warn("Skipping LLM explanations for Lighthouse items due to Lighthouse scan failure.", { reportId, lighthouseError: lighthouseData.error });

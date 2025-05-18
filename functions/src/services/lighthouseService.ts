@@ -43,12 +43,12 @@ export async function performLighthouseScan(urlToScan: string, reportId: string,
         logger.info(`[LighthouseService] Accessibility: Found ${accessibilityCategory.auditRefs.length} auditRefs.`, { reportId });
         reportData.accessibilityIssues = accessibilityCategory.auditRefs
           .filter((auditRef: any) => {
-            if (!auditRef) { logger.debug("[LighthouseService] Accessibility Filter: Skipping null/undefined auditRef.", { reportId }); return false; }
+            if (!auditRef) { return false; }
             const audit = psJson.lighthouseResult.audits && psJson.lighthouseResult.audits[auditRef.id];
-            if (!audit) { logger.debug(`[LighthouseService] Accessibility Filter: Audit not found in global audits. ID: ${auditRef.id}`, { reportId, auditRef }); return false; }
-            if (audit.score === null) { logger.debug(`[LighthouseService] Accessibility Filter: Score is null. ID: ${auditRef.id}`, { reportId, auditRef }); return false; }
-            if (audit.score >= 1) { logger.debug(`[LighthouseService] Accessibility Filter: Score is >= 1 (value: ${audit.score}). ID: ${auditRef.id}`, { reportId, auditRef }); return false; }
-            if (!audit.details) { logger.debug(`[LighthouseService] Accessibility Filter: Details are missing. ID: ${auditRef.id}`, { reportId, auditRef }); return false; }
+            if (!audit) { return false; }
+            if (audit.score === null) { return false; }
+            if (audit.score >= 1) { return false; }
+            if (!audit.details) { return false; }
             return true;
           })
           .map((auditRef: any) => {
@@ -71,12 +71,12 @@ export async function performLighthouseScan(urlToScan: string, reportId: string,
         logger.info(`[LighthouseService] Performance: Found ${psJson.lighthouseResult.auditRefs.length} global auditRefs to check for opportunities.`, { reportId });
         reportData.performanceOpportunities = psJson.lighthouseResult.auditRefs
           .filter((auditRef: any) => {
-            if (!auditRef) { logger.debug("[LighthouseService] Performance Filter: Skipping null/undefined auditRef.", { reportId }); return false; }
+            if (!auditRef) { return false; }
             const audit = audits[auditRef.id];
-            if (!audit) { logger.debug(`[LighthouseService] Performance Filter: Audit not found in global audits. ID: ${auditRef.id}`, { reportId, auditRef }); return false; }
-            if (auditRef.group !== "opportunities") { logger.debug(`[LighthouseService] Performance Filter: Not in 'opportunities' group. ID: ${auditRef.id}, Group: ${auditRef.group}`, { reportId, auditRef }); return false; }
-            if (!audit.details) { logger.debug(`[LighthouseService] Performance Filter: Details are missing. ID: ${auditRef.id}`, { reportId, auditRef }); return false; }
-            if (!(audit.details.overallSavingsMs > 0 || audit.details.overallSavingsBytes > 0)) { logger.debug(`[LighthouseService] Performance Filter: No significant savings. ID: ${auditRef.id}`, { reportId, details: audit.details }); return false; }
+            if (!audit) { return false; }
+            if (auditRef.group !== "opportunities") { return false; }
+            if (!audit.details) { return false; }
+            if (!(audit.details.overallSavingsMs > 0 || audit.details.overallSavingsBytes > 0)) { return false; }
             return true;
           })
           .map((auditRef: any) => {

@@ -16,7 +16,7 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
   const bpScore = lighthouseReport?.scores?.bestPractices;
   const bpAudits = lighthouseReport?.bestPracticesAudits;
   const llmExplainedAudits = lighthouseReport?.llmExplainedBestPracticesAudits;
-  console.log('[BestPracticesSection] Data:', { bpScore, bpAudits, llmExplainedAudits });
+  // console.log('[BestPracticesSection] Data:', { bpScore, bpAudits, llmExplainedAudits });
 
   const noAuditsFound = bpAudits && bpAudits.length === 0;
   const hasExplicitError = lighthouseReport?.success === false && lighthouseReport?.error;
@@ -47,7 +47,11 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
             {bpAudits.map((audit) => (
               <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
                 <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
-                <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
+                <p className={`text-xs mb-1.5 font-mono ${
+                  audit.score === 0 ? 'text-red-600' : 'text-slate-500'
+                }`}>
+                  ID: {audit.id} | Status: {audit.score === 1 ? 'Passed' : audit.score === 0 ? 'Failed' : 'N/A'}
+                </p>
                 <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(audit.description)}</ReactMarkdown>
                 </div>
