@@ -413,10 +413,9 @@ const ReportPage: React.FC = () => {
                           <p>Est. savings: <span className="font-medium">{(opp.overallSavingsBytes / 1024).toFixed(1)} KiB</span></p>
                         )}
                       </div>
-                      <div
-                        className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono"
-                        dangerouslySetInnerHTML={{ __html: opp.description }}
-                      />
+                      <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{opp.description}</ReactMarkdown>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -449,10 +448,9 @@ const ReportPage: React.FC = () => {
                     <li key={issue.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
                       <h4 className="font-semibold text-md text-slate-800 mb-0.5">{issue.title}</h4>
                       <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {issue.id} | Score: {issue.score === null ? 'N/A' : issue.score}</p>
-                      <div
-                          className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
-                          dangerouslySetInnerHTML={{ __html: issue.description }}
-                      />
+                      <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{issue.description}</ReactMarkdown>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -489,10 +487,9 @@ const ReportPage: React.FC = () => {
                     <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
                       <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
                       <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
-                      <div
-                          className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
-                          dangerouslySetInnerHTML={{ __html: audit.description }}
-                      />
+                      <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{audit.description}</ReactMarkdown>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -526,10 +523,9 @@ const ReportPage: React.FC = () => {
                     <li key={audit.id} className="p-3 bg-slate-50 rounded-md shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
                       <h4 className="font-semibold text-md text-slate-800 mb-0.5">{audit.title}</h4>
                       <p className="text-xs text-slate-500 mb-1.5 font-mono">ID: {audit.id} | Score: {audit.score === null ? 'N/A' : audit.score}</p>
-                      <div
-                          className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded"
-                          dangerouslySetInnerHTML={{ __html: audit.description }}
-                      />
+                      <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{audit.description}</ReactMarkdown>
+                      </div>
                     </li>
                   ))}
                 </ul>
