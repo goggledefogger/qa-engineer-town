@@ -61,13 +61,15 @@ const TechStackSection: React.FC<TechStackSectionProps> = ({ techStackData }) =>
       <h3 className="text-xl font-semibold text-slate-700 mb-4">Detected Technologies</h3>
       {Object.entries(categories).map(([categoryName, techs]) => (
         <div key={categoryName} className="mb-6 p-4 bg-white rounded-lg shadow border border-slate-200">
-          <h4 className="text-lg font-medium text-sky-700 mb-3 capitalize">{categoryName}</h4>
+          <h4 className="text-lg font-medium text-sky-700 mb-3 capitalize">
+            {(!categoryName || categoryName.toLowerCase() === "undefined") ? "Other Technologies" : categoryName}
+          </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {techs.map((tech) => (
               <div key={tech.slug} className="p-3 border border-slate-200 rounded-md bg-slate-50 hover:shadow-md transition-shadow">
                 <div className="flex items-center mb-1.5">
                   {tech.icon && (
-                    <img 
+                    <img
                       src={`https://raw.githubusercontent.com/Lissy93/wapalyzer/main/src/drivers/webextension/images/icons/${tech.icon}`}
                       alt={`${tech.name} icon`}
                       className="w-5 h-5 mr-2 flex-shrink-0"
@@ -79,10 +81,10 @@ const TechStackSection: React.FC<TechStackSectionProps> = ({ techStackData }) =>
                 {tech.version && <p className="text-xs text-slate-600 mb-0.5">Version: {tech.version}</p>}
                 {/* <p className="text-xs text-slate-500">Confidence: {tech.confidence}%</p> */}
                 {tech.website && (
-                  <a 
+                  <a
                     href={tech.website}
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-xs text-sky-600 hover:text-sky-700 hover:underline truncate block"
                     title={tech.website}
                   >
@@ -98,4 +100,4 @@ const TechStackSection: React.FC<TechStackSectionProps> = ({ techStackData }) =>
   );
 };
 
-export default TechStackSection; 
+export default TechStackSection;
