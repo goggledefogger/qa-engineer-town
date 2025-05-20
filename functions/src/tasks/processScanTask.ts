@@ -2,45 +2,21 @@ import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 // @ts-ignore: No types for playwright-aws-lambda
-// import * as playwright from "playwright-aws-lambda"; // No longer needed here
+import * as playwright from "playwright-aws-lambda"; // Import playwright
+import { Browser, Page } from "playwright-core"; // Import Browser and Page
 import {
-  ReportData,
-  // LighthouseReportData, // <<< REMOVE THIS
-  // PlaywrightReport, // <<< REMOVE THIS
   ScanTaskPayload,
   AiUxDesignSuggestions,
-  LLMReportSummary,
   ScreenshotUrls,
   ScreenContextType,
 } from "../types/index";
-// import * as fs from "fs"; // Already removed
-// import * as path from "path"; // Already removed
 import { performPlaywrightScan } from "../services/playwrightService";
 import { performLighthouseScan } from "../services/lighthouseService";
 import { performGeminiAnalysis } from "../services/geminiVisionService";
 import {
-  performLLMReportSummary,
   generateLighthouseItemExplanations,
 } from "../services/geminiTextService";
 import { performTechStackScan } from "../services/techStackService";
-
-// Helper function for Playwright scan - REMOVED
-// async function performPlaywrightScan(...) { ... } // Entire function removed
-
-// Helper function for Lighthouse scan
-// async function performLighthouseScan(urlToScan: string, reportId: string, pagespeedApiKey: string | undefined): Promise<LighthouseReportData> { ... } // Entire function removed
-
-// Helper function for Gemini AI analysis - REMOVED
-// async function performGeminiAnalysis(...) { ... } // Removed
-
-// Helper function for LLM Report Summary Generation - REMOVED
-// async function performLLMReportSummary(...) { ... } // Removed
-
-// NEW HELPER FUNCTION to get LLM explanation for a single Lighthouse item - REMOVED
-// async function getExplanationForLighthouseItem(...) { ... } // Removed
-
-// NEW MAIN HELPER FUNCTION to generate all Lighthouse item explanations - REMOVED
-// async function generateLighthouseItemExplanations(...) { ... } // Removed
 
 export const processScanTask = onTaskDispatched<ScanTaskPayload>(
   {
@@ -62,20 +38,30 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
     const reportRef = rtdb.ref(`reports/${reportId}`);
     await reportRef.update({ status: "processing", updatedAt: Date.now() });
 
+    let browser: Browser | null = null; // Define browser variable
+
     try {
+      logger.info("Launching Playwright browser...", { reportId });
+      browser = await playwright.launchChromium({ headless: true });
+      const context = await browser.newContext({ deviceScaleFactor: 1 });
+      const page: Page = await context.newPage();
+      logger.info("Playwright browser launched and page created.", { reportId });
+
       logger.info("Starting Playwright scan...", { reportId });
       const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
       const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
       const GEMINI_MODEL_NAME = process.env.GEMINI_MODEL;
 
-      const playwrightReport = await performPlaywrightScan(urlToScan, reportId);
+      const playwrightReport = await performPlaywrightScan(page, urlToScan, reportId);
       logger.info("Playwright scan completed. Success: " + playwrightReport.success, { reportId });
       await reportRef.child("playwrightReport").update(playwrightReport);
       logger.info("Report updated with Playwright results.", { reportId });
 
       logger.info("Starting parallel Lighthouse, Gemini AI, and Tech Stack scans...", { reportId });
       const lighthousePromise = performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY);
+      // Tech stack scan no longer needs browser or page
       const techStackPromise = performTechStackScan(urlToScan, reportId);
+
       let geminiPromise: Promise<AiUxDesignSuggestions>;
       if (playwrightReport && playwrightReport.success && playwrightReport.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) {
         let screenshotUrlForAnalysis: string | undefined = undefined;
@@ -129,89 +115,57 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         });
       }
 
-      let [lighthouseData, aiUxDesignSuggestions, techStackData] = await Promise.all([
+      // Execute all scan promises in parallel and handle partial failures using Promise.allSettled
+      const results = await Promise.allSettled([
         lighthousePromise,
         geminiPromise,
         techStackPromise,
       ]);
-      logger.info("Initial Lighthouse, Gemini AI (UX/Design), and Tech Stack scans completed.", { reportId, lighthouseSuccess: lighthouseData.success, aiStatus: aiUxDesignSuggestions.status, techStackStatus: techStackData.status });
-      logger.debug("[processScanTask] Tech Stack Data received:", { reportId, techStackData: JSON.stringify(techStackData) });
 
+      const lighthouseData = results[0].status === "fulfilled" && results[0].value && typeof results[0].value.success === "boolean"
+        ? results[0].value
+        : {
+            status: "error",
+            error: "Lighthouse scan failed",
+            success: false,
+            llmExplainedAccessibilityIssues: [],
+            llmExplainedPerformanceOpportunities: [],
+            llmExplainedSeoAudits: [],
+            llmExplainedBestPracticesAudits: [],
+          };
+      const aiUxDesignSuggestions = results[1].status === "fulfilled" ? results[1].value : { status: "skipped", error: "Gemini analysis failed", suggestions: [] };
+      const techStackData = results[2].status === "fulfilled" ? results[2].value : { status: "error", error: "Tech Stack scan failed", detectedTechnologies: [] };
+
+      logger.info("Lighthouse scan raw data available.", { reportId, lighthouseSuccess: lighthouseData.success });
+      await reportRef.child("lighthouseReport").update(lighthouseData);
+
+      logger.info("Gemini AI UX suggestions available.", { reportId, aiStatus: aiUxDesignSuggestions.status });
+      await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
+
+      logger.info("Tech stack scan data available.", { reportId, techStackStatus: techStackData.status });
+      await reportRef.child("techStack").update(techStackData);
+
+      // Now process LLM explanations for Lighthouse items if Lighthouse scan was successful
       if (lighthouseData.success) {
         logger.info("Proceeding with LLM explanations for Lighthouse items.", { reportId });
-        // logger.debug("[processScanTask] Lighthouse data BEFORE generating explanations:",
-        //   {
-        //     reportId,
-        //     hasAccessibilityIssues: !!lighthouseData.accessibilityIssues?.length,
-        //     accessibilityIssuesCount: lighthouseData.accessibilityIssues?.length,
-        //     hasPerformanceOpportunities: !!lighthouseData.performanceOpportunities?.length,
-        //     performanceOpportunitiesCount: lighthouseData.performanceOpportunities?.length,
-        //     // exampleAccessibilityIssue: lighthouseData.accessibilityIssues?.[0]?.title,
-        //     // examplePerformanceOpportunity: lighthouseData.performanceOpportunities?.[0]?.title
-        //   }
-        // );
-
-        lighthouseData = await generateLighthouseItemExplanations(
+        const explainedLighthouseData = await generateLighthouseItemExplanations(
           lighthouseData,
           reportId,
           GEMINI_API_KEY,
           GEMINI_MODEL_NAME
         );
         logger.info("LLM explanations for Lighthouse items completed processing.", { reportId });
-
-        // logger.debug("[processScanTask] Lighthouse data AFTER generating explanations:",
-        //   {
-        //     reportId,
-        //     hasLlmExplainedAccessibility: !!lighthouseData.llmExplainedAccessibilityIssues?.length,
-        //     llmExplainedAccessibilityCount: lighthouseData.llmExplainedAccessibilityIssues?.length,
-        //     hasLlmExplainedPerformance: !!lighthouseData.llmExplainedPerformanceOpportunities?.length,
-        //     llmExplainedPerformanceCount: lighthouseData.llmExplainedPerformanceOpportunities?.length,
-        //     // exampleLlmAccessibility: lighthouseData.llmExplainedAccessibilityIssues?.[0]?.title,
-        //     // exampleLlmPerformance: lighthouseData.llmExplainedPerformanceOpportunities?.[0]?.title
-        //   }
-        // );
-
+        await reportRef.child("lighthouseReport").update(explainedLighthouseData);
       } else {
         logger.warn("Skipping LLM explanations for Lighthouse items due to Lighthouse scan failure.", { reportId, lighthouseError: lighthouseData.error });
         lighthouseData.llmExplainedAccessibilityIssues = [];
         lighthouseData.llmExplainedPerformanceOpportunities = [];
         lighthouseData.llmExplainedSeoAudits = [];
         lighthouseData.llmExplainedBestPracticesAudits = [];
+        await reportRef.child("lighthouseReport").update(lighthouseData);
       }
 
-      const updatesForScans: Partial<ReportData> = {
-        lighthouseReport: lighthouseData,
-        aiUxDesignSuggestions: aiUxDesignSuggestions,
-        techStack: techStackData,
-        updatedAt: Date.now(),
-      };
-      await reportRef.update(updatesForScans);
-      logger.info("Report updated with Lighthouse, AI UX Design, and Tech Stack results (including LLM item explanations if processed).", { reportId });
-
-      if (GEMINI_API_KEY && GEMINI_MODEL_NAME) {
-        logger.info("Proceeding with LLM Report Summary generation.", { reportId });
-        const summaryResult = await performLLMReportSummary(
-          reportId,
-          urlToScan,
-          playwrightReport,
-          lighthouseData,
-          aiUxDesignSuggestions,
-          GEMINI_API_KEY,
-          GEMINI_MODEL_NAME
-        );
-        logger.info(`LLM Report Summary result status: ${summaryResult.status}`, { reportId });
-        await reportRef.child("llmReportSummary").update(summaryResult);
-        logger.info("Report updated with LLM Report Summary.", { reportId });
-      } else {
-        logger.info("Skipping LLM Report Summary due to missing Gemini API key or Model Name.", { reportId });
-        const skippedSummary: LLMReportSummary = {
-          status: "skipped",
-          error: "LLM Report Summary skipped due to missing Gemini API key or Model Name.",
-        };
-        await reportRef.child("llmReportSummary").update(skippedSummary);
-        logger.info("Report updated with skipped LLM Report Summary.", { reportId });
-      }
-
+      // Update overall report status to completed
       await reportRef.update({ status: "completed", updatedAt: Date.now() });
       logger.info(`processScanTask completed for reportId: ${reportId}`);
 
@@ -230,10 +184,17 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         logger.info("Report status updated to failed.", { reportId });
       } catch (rtdbUpdateError: any) {
         logger.error("Failed to update report status to failed after critical error.", {
-            reportId,
-            updateErrorMesssage: rtdbUpdateError.message,
-            originalCriticalErrorMessage: criticalError.message
+          reportId,
+          updateErrorMesssage: rtdbUpdateError.message,
+          originalCriticalErrorMessage: criticalError.message
         });
+      }
+    } finally {
+      // Add finally block to close the browser
+      if (browser) {
+        logger.info("Closing Playwright browser in processScanTask...", { reportId });
+        await browser.close();
+        logger.info("Playwright browser closed.", { reportId });
       }
     }
   }

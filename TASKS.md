@@ -12,23 +12,14 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Set up project structure (Monorepo with `frontend` and `functions` workspaces)
 - [x] Configure Tailwind CSS V4 and PostCSS for frontend
 - [x] Initialize Firebase SDK in both frontend and functions
-- [x] Implement Firebase Anonymous Authentication on the frontend
 - [x] Create basic React frontend layout (Landing Page `/` with URL input)
 - [x] Refine frontend layout and styling (Responsiveness, Spacing, Alignment)
-- [x] Remove Firebase Emulator usage from project configuration, scripts, and documentation.
 - [x] **Implement Firebase Email Link Authentication (Restricted Access)**
   - [x] Configure Firebase Console for Email Link & disable Anonymous Auth.
   - [x] Create `authService.ts` for Firebase auth functions (send link, complete sign-in, state change, sign out).
   - [x] Develop `SignInPage.tsx` for user email input.
   - [x] Develop `HandleSignInPage.tsx` to process the email link and verify allowed email.
-  - [x] Update `App.tsx` to integrate new auth flow:
-    - [x] Remove anonymous sign-in.
-    - [x] Add routes for `/signin` and `/handle-signin`.
-    - [x] Implement `ProtectedRoute` component to restrict access to a specific email.
   - [x] Update `AppLayout.tsx` to display user email and Sign Out button.
-  - [x] Parameterize the allowed email using `VITE_ALLOWED_EMAIL` environment variable.
-  - [x] Debug and resolve `auth/email-already-in-use` error.
-  - [x] Debug and resolve `auth/invalid-action-code` error (related to React StrictMode in development).
 - [x] **Setup Cloud Tasks for Asynchronous Scanning**
   - [x] Create Google Cloud Tasks Queue (`scan-processing-queue` in `us-central1`).
   - [x] Grant necessary IAM permissions:
@@ -49,12 +40,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Upload screenshot to Firebase Storage.
     - [x] Save screenshot URL to RTDB.
     - [x] Implement robust error handling for Playwright-specific errors (e.g., navigation failures, timeouts) to capture errors in the `playwrightReport` object in RTDB.
-  - [x] Implement Lighthouse integration within `processScanTask`.
-    - [x] Add `lighthouse` dependency to `functions` workspace (managed from project root).
-    - [x] Resolve ERR_REQUIRE_ESM by using dynamic `await import('lighthouse')` in `processScanTask`.
-    - [x] Implement Lighthouse audit logic (connect to Playwright's browser instance, run audit, parse scores).
-    - [x] Debug runtime issues (e.g., Lighthouse connecting to browser, ensuring browser stays open).
-      - [x] Switched to Google PageSpeed Insights API for Lighthouse results (no local Chrome needed).
+  - [x] Implement Google PageSpeed Insights API for Lighthouse results (no local Chrome needed).
       - [x] Parse and store scores from PageSpeed API response.
       - [x] Added `node-fetch` and `@types/node-fetch` for API requests in Node.js.
       - [x] Added support for `PAGESPEED_API_KEY` in `.env` and `.env.example` (user must provide key).
@@ -62,7 +48,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Save detailed Lighthouse performance metrics, opportunities, and specific SEO/Best Practices audit details.
   - [x] Update RTDB: status to 'complete' or 'failed', add `completedAt`, results/error message.
     - [x] Implement robust error handling in the main `processScanTask` orchestrator to catch critical errors and update RTDB to 'failed' without re-throwing, thus preventing infinite Cloud Tasks retries. Tested with invalid URLs.
-- [x] **NEW: Implement AI-Powered UX & Design Analysis in `processScanTask`**
+- [x] **Implement AI-Powered UX & Design Analysis in `processScanTask`**
   - [x] Add dependencies for AI Vision Model SDKs (e.g., OpenAI, Google AI) to `functions/package.json`. (Using `@google/genai`)
   - [x] Implement logic to call the chosen AI vision model API(s) with the captured screenshot (or its URL) and relevant context (e.g., URL, device type if emulated). (Successfully calling Gemini API).
   - [x] Define a clear data structure for storing AI-generated UX/design suggestions in RTDB (under `reportData.aiUxDesignSuggestions`).
@@ -70,7 +56,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Update RTDB with the AI-generated suggestions.
   - [x] Add environment variables for AI API keys (`OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.) in `.env` and `.env.example`.
   - [x] Implement robust error handling for AI API calls (e.g., API errors, rate limits, content moderation issues) and store relevant error information in RTDB. (Fixed screenshot fetching issue by using direct file path).
-- [x] **NEW: Firebase Security & Rules**
+- [x] **Firebase Security & Rules**
   - [x] Secure backend API (`/api/scan`) to only allow access from admin users (verified via Firebase Custom Claims).
     - [x] Verify Firebase ID token in `apiScan`.
     - [x] Check decoded token for `admin: true` custom claim.
@@ -78,38 +64,29 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Add `predeploy` hook to `firebase.json` for `hosting` to ensure `npm run build --workspace=frontend` runs before deploy.
   - [x] Secure Firebase Realtime Database rules to only allow read/write by admin users (using `auth.token.admin === true` custom claim).
   - [x] Secure Firebase Storage rules to only allow read/write by admin users (using `request.auth.token.admin == true` custom claim).
-  - [x] Explore using Firebase Custom Claims for admin checks instead of direct email comparison in API and rules (add to Future Tasks).
-  - [x] Remove the need for manual updates to Firebase rules by using a script or environment variable for dynamic configuration based on the `ALLOWED_ADMIN_EMAIL` from `functions/.env`.
 - [x] Create backend Firebase Function (`/api/scan`) structure
 - [x] Connect frontend form submission to /api/scan backend function
 - [x] Implement URL validation in the backend function
-- [x] Add frontend logic to prepend https:// to URL if missing
 - [x] Implement backend logic to create initial 'pending' report entry in RTDB
 - [x] Save screenshot URL to RTDB (from `processScanTask`)
 - [x] Create frontend Report Page (`/report/:reportId`) structure (Sidebar, Main Content)
-  - [x] Display screenshot on Report Page when available (Note: Added debug logging to investigate intermittent display issue where URL is saved but not shown)
+  - [x] Display screenshot on Report Page when available
   - [x] Display Lighthouse (PageSpeed) scores on Report Page as soon as they are available from the backend
   - [x] Display Lighthouse SEO score on Report Page
   - [x] Display Lighthouse Best Practices score on Report Page
   - [x] Display detailed Lighthouse Performance metrics (FCP, LCP, TBT, CLS, Speed Index) on Report Page
   - [x] Display top Lighthouse Performance Opportunities on Report Page
-  - [x] Display top failing/relevant Lighthouse SEO audits (not just score) on Report Page
-  - [x] Display top failing/relevant Lighthouse Best Practices audits (not just score) on Report Page
-  - [x] **NEW:** Display AI-generated UX & Design suggestions on Report Page in a dedicated section/tab (UI structure in place, pending backend implementation).
+  - [x] Display top failing/relevant Lighthouse SEO audits on Report Page
+  - [x] Display top failing/relevant Lighthouse Best Practices audits on Report Page
+  - [x] Display AI-generated UX & Design suggestions on Report Page in a dedicated section/tab
 - [x] Implement frontend logic to call `/api/scan` function
 - [x] Implement frontend logic to navigate to Report Page with `reportId`
-- [x] Implement frontend logic to listen for real-time updates on the RTDB report entry (foundational listener in place)
+- [x] Implement frontend logic to listen for real-time updates on the RTDB report entr
 - [x] Implement frontend progress/loading indicator on Report Page (basic global indicator for pending/processing status added)
 - [x] Display Accessibility issues on Report Page when available
 - [x] Implement basic styling with Tailwind CSS for all components (core components styled; ongoing polish as needed)
 - [x] Set up Firebase Hosting for deployment (firebase.json configured, frontend build script in place)
 - [x] Basic responsive design for mobile/desktop (foundational responsive classes sm:, md:, lg: used in layouts)
-- [x] **NEW: Implement Tech Stack Detection (Frontend):**
-    - [x] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
-    - [x] Fetch and display detected technologies from `reportData.techStack.detectedTechnologies`.
-    - [x] Design UI to present technologies clearly (e.g., cards, list with icons).
-    - [x] Group technologies by category (using `tech.categories`).
-    - [x] Display technology name, version (if available), icon (if available from Wappalyzer, or use a default), and link to technology website.
 
 ## In Progress Tasks
 
@@ -126,7 +103,6 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ## Future Tasks (Post-MVP)
 
-- [x] Refactor scan logic to use Cloud Tasks for asynchronous processing (avoid timeouts)
 - [ ] Set up Cloud Run service for Playwright/Lighthouse execution (*Alternative if Firebase Functions approach has limitations*)
 - [ ] Implement AI analysis of screenshots (Visual/UX)
 - [ ] Implement AI analysis of text content (Advanced Accessibility)
@@ -173,9 +149,19 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Installed `Lissy93/wapalyzer#main` into `functions` workspace.
     - [x] Defined `TechStackData` and `DetectedTechnology` types in `functions/src/types/index.ts`.
     - [x] Added `techStack` field to `ReportData` in `functions/src/types/index.ts`.
-    - [x] Created `functions/src/types/wapalyzer.d.ts` for basic type declarations.
-    - [x] Implemented `performTechStackScan` in `functions/src/services/techStackService.ts`.
-    - [x] Integrated `performTechStackScan` into `functions/src/tasks/processScanTask.ts` to run in parallel and save results to RTDB.
+    - [x] Created `functions/src/types/wapalyzer.d.ts` for basic type declarations. (REMOVED - Wappalyzer replaced)
+    - [x] Implemented `performTechStackScan` in `functions/src/services/techStackService.ts`. (REWORKED for WhatCMS API)
+    - [x] Integrated `performTechStackScan` into `functions/src/tasks/processScanTask.ts` to run in parallel and save results to RTDB. (Call signature updated)
+- [x] **REWORKED: Implement Tech Stack Detection (Backend using WhatCMS.org API):**
+    - [x] Researched and selected WhatCMS.org API for tech stack detection.
+    - [x] Updated `DetectedTechnology` and `TechStackData` types in `functions/src/types/index.ts` for WhatCMS.org API response.
+    - [x] Refactored `performTechStackScan` in `functions/src/services/techStackService.ts` to use WhatCMS.org API:
+        - [x] Removed Wappalyzer and Playwright dependencies.
+        - [x] Implemented API call using `node-fetch`.
+        - [x] Added requirement for `WHATCMS_API_KEY` environment variable.
+        - [x] Mapped API response to `DetectedTechnology` type.
+    - [x] Updated call to `performTechStackScan` in `functions/src/tasks/processScanTask.ts` (removed browser/page args).
+    - [x] Added `WHATCMS_API_KEY` to `functions/.env.example` (manual step for user).
 - [x] **NEW: Implement Responsive Screenshot Capture and Analysis:**
     - [x] Modify `performPlaywrightScan` to capture screenshots at different viewport sizes (e.g., desktop, tablet, mobile).
     - [x] Store multiple screenshots in Firebase Storage (e.g., `screenshots/{reportId}/screenshot_desktop.jpg`, `screenshot_tablet.jpg`, `screenshot_mobile.jpg`).
@@ -192,15 +178,6 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Explore how AI can provide feedback on the ease of use and intuitiveness of these flows, especially on different screen contexts (e.g., mobile navigation).
     - [ ] Update RTDB and frontend reporting to include findings from these interactive user flow tests and any AI-generated interactivity suggestions.
 
-## Implementation Plan
-
-1.  **Setup:** Initialize project structure, configure Firebase, set up basic frontend and backend communication.
-2.  **Backend Core:**
-    - Initial HTTP trigger (`apiScan`): Receives URL, validates, creates initial RTDB entry, enqueues task to Cloud Tasks.
-    - Task Handler (`processScanTask`): Runs Playwright for screenshot + upload to Firebase Storage, runs Lighthouse + parses results, updates RTDB with status and data.
-3.  **Frontend Core:** Implement the landing page UI, trigger the backend scan, implement the report page UI, listen for RTDB updates, display progress, and render results incrementally.
-4.  **Styling & Polish:** Apply Tailwind CSS, ensure basic responsiveness.
-5.  **Deployment:** Configure and deploy to Firebase Hosting.
 
 ## Core Skills / Knowledge (For the AI QA Engineer)
 

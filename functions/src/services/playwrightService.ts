@@ -1,13 +1,13 @@
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 // @ts-ignore: No types for playwright-aws-lambda
-import * as playwright from "playwright-aws-lambda";
+// import * as playwright from "playwright-aws-lambda"; // No longer launching browser here
+import { Page } from "playwright-core"; // Added import
 import { ScreenshotUrls, PlaywrightReport } from "../types";
 
 // Helper function for Playwright scan
-export async function performPlaywrightScan(urlToScan: string, reportId: string): Promise<PlaywrightReport> {
-  logger.info("Launching browser for Playwright screenshots...", { reportId });
-  let browser = null;
+export async function performPlaywrightScan(page: Page, urlToScan: string, reportId: string): Promise<PlaywrightReport> {
+  logger.info("Starting Playwright screenshot capture using provided page...", { reportId, urlToScan });
   const screenshotUrls: ScreenshotUrls = {};
   let pageTitle: string | undefined;
   let overallSuccess = false; // Track if at least one screenshot succeeds
@@ -19,11 +19,13 @@ export async function performPlaywrightScan(urlToScan: string, reportId: string)
   ];
 
   try {
-    browser = await playwright.launchChromium({ headless: true });
-    const context = await browser.newContext({ deviceScaleFactor: 1 });
-    const page = await context.newPage();
+    // Browser and context are now managed externally
+    // const context = await browser.newContext({ deviceScaleFactor: 1 });
+    // const page = await context.newPage();
 
-    logger.info(`Navigating to ${urlToScan} for screenshots...`, { reportId });
+    logger.info(`Navigating to ${urlToScan} for screenshots (or using current page)...`, { reportId });
+    // Ensure the page is at the correct URL. If it's already there, this is fine.
+    // If the page was used for something else, this navigates.
     await page.goto(urlToScan, { waitUntil: "load", timeout: 120000 });
     pageTitle = await page.title();
 
@@ -98,9 +100,11 @@ export async function performPlaywrightScan(urlToScan: string, reportId: string)
       error: `Playwright operation failed: ${playwrightError.message}`,
     };
   } finally {
-    if (browser) {
-      logger.info("Closing browser (Playwright)...", { reportId });
-      await browser.close();
-    }
+    // Browser is no longer closed here; it's managed by the caller (processScanTask)
+    // if (browser) {
+    //   logger.info("Closing browser (Playwright)...", { reportId });
+    //   await browser.close();
+    // }
+    logger.info("Playwright scan operations finished for this service.", {reportId});
   }
 }

@@ -110,13 +110,14 @@ export interface ScanTaskPayload {
 
 export interface DetectedTechnology {
   name: string;
-  slug: string; // Wappalyzer's unique key for the technology
-  version?: string | null;
-  confidence: number;
-  // Wappalyzer category structure: Array of { id: number, name: string, slug: string }
-  categories: Array<{ id: number; name: string; slug: string }>;
-  icon?: string; // e.g., "React.svg"
-  website?: string;
+  slug: string; // Derived from name, e.g., for CSS classes or keys
+  version: string | null;
+  categories: string[]; // Simplified to array of strings from WhatCMS
+  confidence?: number; // WhatCMS doesn't provide directly, can default or be omitted
+  icon?: string; // WhatCMS doesn't provide directly
+  website?: string; // WhatCMS provides a link to their own info page, not the tech's official site
+  whatCmsId?: number; // To store the ID from WhatCMS API
+  whatCmsUrl?: string; // To store the URL to WhatCMS description page
 }
 
 export interface TechStackData {

@@ -1,75 +1,108 @@
 import * as logger from "firebase-functions/logger";
-import Wappalyzer from 'wapalyzer'; // Community fork
-import { TechStackData, DetectedTechnology } from "../types"; // Assuming types are in ../types/index.ts
+let fetchFn: typeof import('node-fetch').default | undefined;
+async function getFetch() {
+  if (!fetchFn) {
+    const { default: importedFetch } = await import('node-fetch');
+    fetchFn = importedFetch;
+  }
+  return fetchFn;
+}
+import { TechStackData, DetectedTechnology } from "../types";
 
-// Default options for Wappalyzer. Fine-tuned for Cloud Function environment.
-const DEFAULT_WAPPALYZER_OPTIONS = {
-  debug: false,
-  delay: 200, // Lower delay, as we primarily analyze one page
-  maxDepth: 1, // Only analyze the given URL, no deep crawling
-  maxUrls: 1,  // Process only the initial URL
-  maxWait: 15000, // Max time to wait for page resources (15 seconds)
-  recursive: false, // No recursive crawling
-  probe: true, // Enable deeper inspection (DNS, specific file checks)
-  userAgent: "QAEngineerTown-Bot/1.0 (+https://github.com/YourOrg/YourRepo)", // Example, make it specific
-  htmlMaxCols: 2000,
-  htmlMaxRows: 2000,
-  noScripts: false, // Allow scripts to run, for better detection
-  noRedirect: false, // Allow redirects to an extent
-};
+// Removed Browser and Page imports from playwright-core
+
+const WHATCMS_API_ENDPOINT = "https://whatcms.org/API/Tech";
 
 /**
- * Performs technology stack detection on a given URL using Wappalyzer.
+ * Performs technology stack detection on a given URL using the WhatCMS.org API.
  * @param urlToScan The URL to analyze.
  * @param reportId The ID of the report for logging purposes.
  * @returns A Promise resolving to TechStackData.
  */
 export async function performTechStackScan(urlToScan: string, reportId: string): Promise<TechStackData> {
-  logger.info("Starting Tech Stack scan...", { reportId, urlToScan });
+  logger.info("[TechStackService] Starting Tech Stack scan using WhatCMS.org API...", { reportId, urlToScan });
 
-  // The 'wapalyzer' package from Lissy93 fork is expected to be a class.
-  const wappalyzer = new Wappalyzer(DEFAULT_WAPPALYZER_OPTIONS);
+  const apiKey = process.env.WHATCMS_API_KEY;
+  if (!apiKey) {
+    logger.error("[TechStackService] WHATCMS_API_KEY is not set.", { reportId });
+    return { status: "error", error: "Tech Stack scan failed: WHATCMS_API_KEY is not configured." };
+  }
+
+  const requestUrl = `${WHATCMS_API_ENDPOINT}?key=${apiKey}&url=${encodeURIComponent(urlToScan)}`;
 
   try {
-    logger.info("Initializing Wappalyzer...", { reportId });
-    await wappalyzer.init(); // Initializes Puppeteer etc.
-    logger.info("Wappalyzer initialized. Opening URL...", { reportId, urlToScan });
-    const site = await wappalyzer.open(urlToScan);
-    logger.info("URL opened. Analyzing site for technologies...", { reportId });
-    const results = await site.analyze();
-    logger.info("Site analysis complete.", { reportId });
+    logger.info("[TechStackService] Calling WhatCMS.org API...", { reportId, requestUrl });
 
-    // Ensure results.technologies is an array before mapping
-    const technologiesDetected = results.technologies && Array.isArray(results.technologies) ? results.technologies : [];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 seconds timeout
 
-    const detectedTechnologies: DetectedTechnology[] = technologiesDetected.map((tech: any) => ({
+    let response;
+    try {
+      const dynamicFetch = await getFetch();
+      response = await dynamicFetch(requestUrl, {
+        method: 'GET',
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      logger.error("[TechStackService] WhatCMS.org API request failed.", {
+        reportId,
+        urlToScan,
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorBody.substring(0, 500), // Log a snippet of the body
+      });
+      return { status: "error", error: `Tech Stack scan failed: WhatCMS API error - ${response.status} ${response.statusText}` };
+    }
+
+    const data: any = await response.json();
+    logger.info("[TechStackService] WhatCMS.org API response received.", { reportId, resultCode: data?.result?.code });
+
+    if (data?.result?.code !== 200) {
+      logger.warn("[TechStackService] WhatCMS.org API returned non-success code.", {
+        reportId,
+        urlToScan,
+        apiResultCode: data?.result?.code,
+        apiResultMessage: data?.result?.msg,
+      });
+      // Check for specific codes like 201 (not detected) which isn't strictly an error for us
+      if (data?.result?.code === 201) { // CMS/Host/Theme not detected
+        return { status: "completed", detectedTechnologies: [] }; // No technologies found is a valid completed state
+      }
+      return { status: "error", error: `Tech Stack scan failed: WhatCMS API reported code ${data?.result?.code} - ${data?.result?.msg}` };
+    }
+
+    if (!data.results || !Array.isArray(data.results)) {
+      logger.warn("[TechStackService] WhatCMS.org API response missing 'results' array.", { reportId, urlToScan, responseData: data });
+      return { status: "completed", detectedTechnologies: [] }; // Treat as no tech found
+    }
+
+    const detectedTechnologies: DetectedTechnology[] = data.results.map((tech: any) => ({
       name: tech.name || "Unknown",
-      slug: tech.slug || "unknown",
+      slug: (tech.name || "unknown").toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       version: tech.version || null,
-      confidence: tech.confidence || 0,
       categories: Array.isArray(tech.categories) ? tech.categories : [],
-      icon: tech.icon,
-      website: tech.website,
+      confidence: 100, // Default confidence as WhatCMS doesn't provide it
+      icon: null, // WhatCMS doesn't provide icons in this part of API
+      website: undefined, // WhatCMS `url` is their own info page, not official site
+      whatCmsId: tech.id,
+      whatCmsUrl: tech.url,
     }));
 
-    await wappalyzer.destroy();
-    logger.info("Tech Stack scan completed successfully.", { reportId, count: detectedTechnologies.length });
-    logger.debug("[techStackService] Attempting to return technologies:", { reportId, urlToScan, detectedTechnologies: JSON.stringify(detectedTechnologies) });
+    logger.info("[TechStackService] Tech Stack scan completed successfully using WhatCMS.org.", { reportId, count: detectedTechnologies.length });
     return { status: "completed", detectedTechnologies };
+
   } catch (error: any) {
-    logger.error("Error during Tech Stack scan:", {
+    logger.error("[TechStackService] Error during Tech Stack scan with WhatCMS.org API:", {
       reportId,
       urlToScan,
       errorMessage: error.message,
       errorStack: error.stack,
-      // errorDetails: JSON.stringify(error) // Can be too verbose
     });
-    // Attempt to destroy Wappalyzer even if an error occurred during init or analyze
-    try {
-      await wappalyzer.destroy();
-    } catch (destroyError: any) {
-      logger.warn("Error destroying Wappalyzer instance after a scan error:", { reportId, destroyErrorMessage: destroyError.message });
-    }
     return { status: "error", error: `Tech Stack scan failed: ${error.message}` };
   }
-} 
+}
