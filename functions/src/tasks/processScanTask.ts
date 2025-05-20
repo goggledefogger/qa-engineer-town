@@ -28,7 +28,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
     rateLimits: {
       maxConcurrentDispatches: 10,
     },
-    memory: "1GiB",
+    memory: "2GiB",
     timeoutSeconds: 540,
   },
   async (request) => {
