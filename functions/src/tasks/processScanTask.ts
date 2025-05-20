@@ -15,6 +15,7 @@ import { performLighthouseScan } from "../services/lighthouseService";
 import { performGeminiAnalysis } from "../services/geminiVisionService";
 import {
   generateLighthouseItemExplanations,
+  performLLMReportSummary,
 } from "../services/geminiTextService";
 import { performTechStackScan } from "../services/techStackService";
 
@@ -133,7 +134,9 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
             llmExplainedSeoAudits: [],
             llmExplainedBestPracticesAudits: [],
           };
-      const aiUxDesignSuggestions = results[1].status === "fulfilled" ? results[1].value : { status: "skipped", error: "Gemini analysis failed", suggestions: [] };
+      const aiUxDesignSuggestions = results[1].status === "fulfilled" && results[1].value && typeof results[1].value.status === "string"
+        ? results[1].value as AiUxDesignSuggestions
+        : { status: "skipped", error: "Gemini analysis failed", suggestions: [], modelUsed: GEMINI_MODEL_NAME || undefined } as AiUxDesignSuggestions;
       const techStackData = results[2].status === "fulfilled" ? results[2].value : { status: "error", error: "Tech Stack scan failed", detectedTechnologies: [] };
 
       logger.info("Lighthouse scan raw data available.", { reportId, lighthouseSuccess: lighthouseData.success });
@@ -164,6 +167,20 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         lighthouseData.llmExplainedBestPracticesAudits = [];
         await reportRef.child("lighthouseReport").update(lighthouseData);
       }
+
+      // Generate and save LLM report summary after all other sections
+      logger.info("Starting LLM report summary generation...", { reportId });
+      const llmSummary = await performLLMReportSummary(
+        reportId,
+        urlToScan,
+        playwrightReport,
+        lighthouseData,
+        aiUxDesignSuggestions,
+        GEMINI_API_KEY,
+        GEMINI_MODEL_NAME
+      );
+      await reportRef.child("llmReportSummary").set(llmSummary);
+      logger.info("LLM report summary saved to RTDB.", { reportId, summaryStatus: llmSummary.status });
 
       // Update overall report status to completed
       await reportRef.update({ status: "completed", updatedAt: Date.now() });
