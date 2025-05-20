@@ -90,12 +90,27 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ## In Progress Tasks
 
-- [ ] **NEW: Implement Tech Stack Detection (Frontend):**
-    - [ ] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
-    - [ ] Fetch and display detected technologies from `reportData.techStack.detectedTechnologies`.
-    - [ ] Design UI to present technologies clearly (e.g., cards, list with icons).
-    - [ ] Group technologies by category (using `tech.categories`).
-    - [ ] Display technology name, version (if available), icon (if available from Wappalyzer, or use a default), and link to technology website.
+- [ ] **AI-Assisted Playwright for User Flow Testing & Interactive Suggestions:**
+    - [ ] Research AI-assisted browser control libraries/frameworks compatible with Playwright/Node.js (e.g., exploring options that can intelligently interact with web elements).
+    - [ ] Define a set of common key user flows to test automatically (e.g., login, registration, product search, add to cart, checkout process).
+    - [ ] Integrate the chosen AI-assisted library to drive Playwright through these defined user flows.
+    - [ ] Develop logic to capture interaction issues, gather data on task completion success/failure, and identify elements контекст for screen-specific interactivity suggestions.
+    - [ ] Explore how AI can provide feedback on the ease of use and intuitiveness of these flows, especially on different screen contexts (e.g., mobile navigation).
+    - [ ] Update RTDB and frontend reporting to include findings from these interactive user flow tests and any AI-generated interactivity suggestions.
+
+## Completed Tasks
+
+- [x] Implement Tech Stack Detection (Frontend & Backend):
+    - [x] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
+    - [x] Fetch and display detected technologies from `reportData.techStack.detectedTechnologies`.
+    - [x] Design UI to present technologies clearly (e.g., cards, list with icons).
+    - [x] Group technologies by category (using `tech.categories`).
+    - [x] Display technology name, version (if available), icon (if available or use a default), and link to technology website.
+    - [x] Ensure robust error handling and loading states for tech stack section.
+    - [x] Tech stack results update as soon as available, independently of LLM explanations or other sections.
+    - [x] UI and backend support for incremental, per-section updates and loading/progress indicators.
+    - [x] Added robust sanitizer for DetectedTechnology to ensure all fields are string/null and never undefined for RTDB compatibility.
+    - [x] Fixed backend to prevent undefined/null errors in RTDB updates for tech stack.
 
 ## Future Tasks (Initial Prototype - MVP)
 

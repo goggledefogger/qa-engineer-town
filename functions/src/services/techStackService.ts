@@ -13,6 +13,22 @@ import { TechStackData, DetectedTechnology } from "../types";
 
 const WHATCMS_API_ENDPOINT = "https://whatcms.org/API/Tech";
 
+function sanitizeTechnology(tech: any): DetectedTechnology {
+  return {
+    name: typeof tech.name === "string" ? tech.name : "Unknown",
+    slug: typeof tech.name === "string"
+      ? tech.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      : "unknown",
+    version: typeof tech.version === "string" ? tech.version : null,
+    categories: Array.isArray(tech.categories) ? tech.categories : [],
+    confidence: 100,
+    icon: tech.icon ?? null,
+    website: typeof tech.website === "string" ? tech.website : null,
+    whatCmsId: tech.id ?? null,
+    whatCmsUrl: typeof tech.url === "string" ? tech.url : null,
+  };
+}
+
 /**
  * Performs technology stack detection on a given URL using the WhatCMS.org API.
  * @param urlToScan The URL to analyze.
@@ -81,17 +97,7 @@ export async function performTechStackScan(urlToScan: string, reportId: string):
       return { status: "completed", detectedTechnologies: [] }; // Treat as no tech found
     }
 
-    const detectedTechnologies: DetectedTechnology[] = data.results.map((tech: any) => ({
-      name: tech.name || "Unknown",
-      slug: (tech.name || "unknown").toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      version: tech.version || null,
-      categories: Array.isArray(tech.categories) ? tech.categories : [],
-      confidence: 100, // Default confidence as WhatCMS doesn't provide it
-      icon: null, // WhatCMS doesn't provide icons in this part of API
-      website: undefined, // WhatCMS `url` is their own info page, not official site
-      whatCmsId: tech.id,
-      whatCmsUrl: tech.url,
-    }));
+    const detectedTechnologies: DetectedTechnology[] = data.results.map((tech: any) => sanitizeTechnology(tech));
 
     logger.info("[TechStackService] Tech Stack scan completed successfully using WhatCMS.org.", { reportId, count: detectedTechnologies.length });
     return { status: "completed", detectedTechnologies };
