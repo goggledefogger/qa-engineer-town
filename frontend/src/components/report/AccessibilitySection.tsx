@@ -43,7 +43,7 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
     return (
       <>
         {typeof accessibilityScore === 'number' && (
-          <div className="mb-6">
+          <div className="flex flex-col items-center mb-8">
             <OverallScoreGauge score={accessibilityScore} categoryName="Accessibility" />
           </div>
         )}

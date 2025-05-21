@@ -28,6 +28,14 @@ const ReportPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<string>('summary');
+  const mainContentRef = React.useRef<HTMLDivElement>(null);
+
+  // Scroll to top of main content when activeSection changes
+  React.useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  }, [activeSection]);
 
   useEffect(() => {
     if (!reportId) {
@@ -238,7 +246,7 @@ const ReportPage: React.FC = () => {
           </div>
         </aside>
         {/* Main Content */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col" ref={mainContentRef}>
           {/* Sticky QA Report header only above main content on desktop */}
           <div className="hidden md:block sticky top-0 z-30 bg-white shadow-md">
             <ReportHeading showScreenshot={activeSection !== 'screenshot'} />

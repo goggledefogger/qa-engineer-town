@@ -40,7 +40,7 @@ const SeoSection: React.FC<SeoSectionProps> = ({ lighthouseReport, reportStatus 
   return (
     <Card title="SEO">
       {typeof seoScore === 'number' && (
-        <div className="mb-6">
+        <div className="flex flex-col items-center mb-8">
           <OverallScoreGauge score={seoScore} categoryName="SEO" />
         </div>
       )}

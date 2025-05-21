@@ -14,6 +14,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Initialize Firebase SDK in both frontend and functions
 - [x] Create basic React frontend layout (Landing Page `/` with URL input)
 - [x] Refine frontend layout and styling (Responsiveness, Spacing, Alignment)
+- [x] Implement instant scroll-to-top of main content when switching report sections
 - [x] **Implement Firebase Email Link Authentication (Restricted Access)**
   - [x] Configure Firebase Console for Email Link & disable Anonymous Auth.
   - [x] Create `authService.ts` for Firebase auth functions (send link, complete sign-in, state change, sign out).
@@ -92,6 +93,8 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Standardized Card usage, spacing, and typography across all sections.
   - [x] Ensured accessibility, readability, and usability across all device sizes.
   - [x] Updated Card component for responsive padding, border radius, and title font size.
+  - [x] Improved mobile and desktop spacing, margins, and alignment for all report sections
+  - [x] Fixed Report heading and navigation stacking on mobile
 
 ## In Progress Tasks
 
