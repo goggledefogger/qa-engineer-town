@@ -189,7 +189,7 @@ const ReportPage: React.FC = () => {
     return (
       <div className="bg-white shadow rounded-lg p-4 md:p-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
-          QA Report:
+          QA Report:&nbsp;
           {reportData?.url ? (
             <a
               href={reportData.url}
