@@ -8,6 +8,41 @@ import {
   ScreenContextType,
 } from "../types";
 
+/**
+ * Utility function to extract content from Markdown code fences,
+ * specifically targeting JSON content.
+ *
+ * If `rawText` is undefined, null, or an empty string, it returns an empty string.
+ * It looks for Markdown code fences: ```json ... ``` or ``` ... ```.
+ * Extracts and trims the content within these fences.
+ * If no fences are detected, the original `rawText` (trimmed) is returned.
+ *
+ * @param rawText The raw string potentially containing Markdown-wrapped JSON.
+ * @returns The unwrapped string, or an empty string if input is null/empty.
+ */
+function unwrapJsonMarkdown(rawText: string | undefined | null): string {
+  if (!rawText) {
+    return "";
+  }
+  // Regex to find ```json ... ``` or ``` ... ``` and capture the content within.
+  // It handles optional 'json' language specifier and surrounding whitespace.
+  // This regex attempts to capture content between fences if they exist,
+  // or the whole string if fences are not strictly matched at start/end.
+  const match = rawText.match(
+    /^\s*`{3}(?:json)?\s*([\s\S]*?)\s*`{3}\s*$/
+  );
+
+  if (match && typeof match[1] === "string") {
+    // If fences are found and content is captured (match[1]), return it trimmed.
+    return match[1].trim();
+  }
+
+  // If no fences are detected (or the regex doesn't match the fenced structure),
+  // return the original text, trimmed, as a fallback.
+  // This also handles cases where the input is just plain JSON string without fences.
+  return rawText.trim();
+}
+
 // Helper function for Gemini AI analysis (UX/Design from screenshot)
 export async function performGeminiAnalysis(
   screenshotUrl: string,
@@ -102,10 +137,23 @@ export async function performGeminiAnalysis(
     }
 
     let parsedResponse: any;
+    const unwrappedText = unwrapJsonMarkdown(responseText);
+
+    if (!unwrappedText) { // Check if unwrappedText is empty after potential unwrapping
+      logger.warn("Gemini analysis response is empty after unwrapping.", { reportId, originalResponseText: responseText });
+      return {
+        status: "error",
+        error: "AI analysis returned an empty response after unwrapping.",
+        suggestions: [],
+        introductionText: "",
+        modelUsed: geminiModelName,
+      };
+    }
+
     try {
-      parsedResponse = JSON.parse(responseText);
+      parsedResponse = JSON.parse(unwrappedText);
     } catch (parseError: any) {
-      logger.error("Failed to parse LLM response as JSON: " + parseError.message, { reportId, responseText });
+      logger.error("Failed to parse LLM response as JSON: " + parseError.message, { reportId, unwrappedText });
       return {
         status: "error",
         error: "Failed to parse LLM response as JSON.",
