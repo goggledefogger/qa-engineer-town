@@ -178,26 +178,59 @@ const ReportPage: React.FC = () => {
       );
   }
 
+  // Heading component for reuse
+  const ReportHeading = () => (
+    <div className="bg-white shadow rounded-lg p-4 md:p-6">
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
+        QA Report:
+        {reportData?.url ? (
+          <a
+            href={reportData.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-700 hover:text-blue-800 hover:underline break-all"
+          >
+            {reportData.url}
+          </a>
+        ) : (
+          "Loading URL..."
+        )}
+      </h1>
+      <p className="text-xs text-slate-500">
+        Report ID:{" "}
+        <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">
+          {reportId}
+        </span>
+      </p>
+    </div>
+  );
+
   return (
     <ReportPageLayout
-      sidebarContent={<SidebarNav activeSection={activeSection} onSelectSection={setActiveSection} sectionStatuses={sectionStatuses} />}
+      sidebarContent={
+        <>
+          {/* Show heading above menu on mobile only */}
+          <div className="block md:hidden mb-4">
+            <ReportHeading />
+          </div>
+          <SidebarNav
+            activeSection={activeSection}
+            onSelectSection={setActiveSection}
+            sectionStatuses={sectionStatuses}
+          />
+        </>
+      }
       mainContent={
         <div className="space-y-6 font-sans">
-          <div className="bg-white shadow rounded-lg p-4 md:p-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
-              QA Report:
-              {reportData?.url ?
-                <a href={reportData.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-800 hover:underline break-all">
-                  {reportData.url}
-                </a> :
-                'Loading URL...'
-              }
-            </h1>
-            <p className="text-xs text-slate-500">Report ID: <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">{reportId}</span></p>
+          {/* Show heading in main content on desktop only */}
+          <div className="hidden md:block">
+            <ReportHeading />
           </div>
-          {reportData && (reportData.status === 'pending' || reportData.status === 'processing') && (
-            <ScanProgressIndicator status={reportData.status} />
-          )}
+          {reportData &&
+            (reportData.status === "pending" ||
+              reportData.status === "processing") && (
+              <ScanProgressIndicator status={reportData.status} />
+            )}
           {renderSectionContent()}
         </div>
       }
