@@ -87,6 +87,11 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - [x] Implement basic styling with Tailwind CSS for all components (core components styled; ongoing polish as needed)
 - [x] Set up Firebase Hosting for deployment (firebase.json configured, frontend build script in place)
 - [x] Basic responsive design for mobile/desktop (foundational responsive classes sm:, md:, lg: used in layouts)
+- [x] **Comprehensive Responsive Design Refactor**
+  - [x] Refactored all report section components to use a unified, system-oriented responsive design.
+  - [x] Standardized Card usage, spacing, and typography across all sections.
+  - [x] Ensured accessibility, readability, and usability across all device sizes.
+  - [x] Updated Card component for responsive padding, border radius, and title font size.
 
 ## In Progress Tasks
 
@@ -200,7 +205,16 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ### Relevant Files
 
-*(To be populated as development progresses)*
+- `frontend/src/components/ui/Card.tsx` - Shared Card component, now fully responsive and standardized across all report sections. ✅
+- `frontend/src/components/report/AiUxDesignSection.tsx` - AI UX & Design Insights section, refactored for responsive design. ✅
+- `frontend/src/components/report/SummarySection.tsx` - Scan summary section, refactored for responsive design. ✅
+- `frontend/src/components/report/TechStackSection.tsx` - Tech stack section, refactored for responsive design. ✅
+- `frontend/src/components/report/AccessibilitySection.tsx` - Accessibility section, refactored for responsive design. ✅
+- `frontend/src/components/report/SeoSection.tsx` - SEO section, refactored for responsive design. ✅
+- `frontend/src/components/report/BestPracticesSection.tsx` - Best Practices section, refactored for responsive design. ✅
+- `frontend/src/components/report/PerformanceSection.tsx` - Performance section, refactored for responsive design. ✅
+- `frontend/src/components/report/ScreenshotsSection.tsx` - Screenshots section, refactored for responsive design. ✅
+- `frontend/src/components/report/LlmSummarySection.tsx` - LLM-powered summary section, refactored for responsive design. ✅
 
 - `PRD.md` - Product Requirements Document ✅ (Updated for AI UX/Design)
 - `SRS.md` - Software Requirements Specification ✅ (Updated for AI UX/Design)

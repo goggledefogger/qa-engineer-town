@@ -29,8 +29,8 @@ const SeoSection: React.FC<SeoSectionProps> = ({ lighthouseReport, reportStatus 
   const seoAudits = lighthouseReport?.seoAudits;
   const llmExplainedAudits = lighthouseReport?.llmExplainedSeoAudits;
 
-  if (typeof seoScore === 'undefined' && 
-      (!seoAudits || seoAudits.length === 0) && 
+  if (typeof seoScore === 'undefined' &&
+      (!seoAudits || seoAudits.length === 0) &&
       (!llmExplainedAudits || llmExplainedAudits.length === 0)) {
     // This condition means no score, no raw audits, and no LLM-explained audits.
     // It also covers cases where lighthouseReport might be undefined but status is 'completed'.
@@ -47,14 +47,23 @@ const SeoSection: React.FC<SeoSectionProps> = ({ lighthouseReport, reportStatus 
 
       {seoAudits && seoAudits.length > 0 && (
         <div className="mt-8 pt-6 border-t border-slate-200">
-          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Lighthouse SEO Audits</h3>
-          <ul className="space-y-4 list-none p-0">
+          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
+            Lighthouse SEO Audits
+          </h3>
+          <ul className="space-y-3 sm:space-y-4 list-none p-0">
             {seoAudits.map((audit: any) => (
-              <li key={audit.id} className="p-4 bg-slate-50 rounded-lg shadow border border-slate-200">
-                <h5 className="font-semibold text-sky-700 mb-2">{audit.title}</h5>
+              <li
+                key={audit.id}
+                className="p-3 sm:p-4 bg-slate-50 rounded-md sm:rounded-lg shadow border border-slate-200"
+              >
+                <h5 className="font-semibold text-sky-700 mb-1 sm:mb-2 text-base sm:text-lg">
+                  {audit.title}
+                </h5>
                 {audit.description && (
-                  <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(audit.description)}</ReactMarkdown>
+                  <div className="text-sm sm:text-base text-slate-700 prose prose-sm sm:prose-base max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {unwrapMarkdown(audit.description)}
+                    </ReactMarkdown>
                   </div>
                 )}
               </li>
@@ -64,21 +73,34 @@ const SeoSection: React.FC<SeoSectionProps> = ({ lighthouseReport, reportStatus 
       )}
       {llmExplainedAudits && llmExplainedAudits.length > 0 && (
         <div className="mt-8 pt-6 border-t border-slate-200">
-          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">AI-Explained SEO Audits</h3>
-          <ul className="space-y-4 list-none p-0">
+          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
+            AI-Explained SEO Audits
+          </h3>
+          <ul className="space-y-3 sm:space-y-4 list-none p-0">
             {llmExplainedAudits.map((item: any) => (
-              <li key={item.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
-                <h5 className="font-semibold text-sky-700 mb-2">{item.title}</h5>
+              <li
+                key={item.id}
+                className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
+              >
+                <h5 className="font-semibold text-sky-700 mb-1 sm:mb-2 text-base sm:text-lg">
+                  {item.title}
+                </h5>
                 {item.llmExplanation && (
-                  <div className="text-sm text-slate-700 prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{unwrapMarkdown(item.llmExplanation)}</ReactMarkdown>
+                  <div className="text-sm sm:text-base text-slate-700 prose prose-sm sm:prose-base max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {unwrapMarkdown(item.llmExplanation)}
+                    </ReactMarkdown>
                   </div>
                 )}
-                {item.status === 'pending' && (
-                  <p className="text-xs text-slate-400 mt-1">AI explanation pending...</p>
+                {item.status === "pending" && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    AI explanation pending...
+                  </p>
                 )}
-                {item.status === 'error' && item.error && (
-                  <p className="text-xs text-red-500 mt-1">AI explanation error: {item.error}</p>
+                {item.status === "error" && item.error && (
+                  <p className="text-xs text-red-500 mt-1">
+                    AI explanation error: {item.error}
+                  </p>
                 )}
               </li>
             ))}

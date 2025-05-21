@@ -19,25 +19,55 @@ const SummarySection: React.FC<SummarySectionProps> = ({ reportData }) => {
 
   return (
     <Card title="Scan Summary" className="font-sans">
-      <div className="space-y-2">
+      <div className="space-y-2 sm:space-y-3">
         <DetailItem label="Status">
-          <span className={`capitalize font-medium
+          <span
+            className={`capitalize font-medium text-sm sm:text-base
             ${
-              reportData.status === 'pending' ? 'text-amber-600' :
-              reportData.status === 'processing' ? 'text-blue-600' :
-              reportData.status === 'completed' ? 'text-green-600' :
-              reportData.status === 'failed' ? 'text-red-600' : 'text-slate-600'
+              reportData.status === 'pending'
+                ? 'text-amber-600'
+                : reportData.status === 'processing'
+                ? 'text-blue-600'
+                : reportData.status === 'completed'
+                ? 'text-green-600'
+                : reportData.status === 'failed'
+                ? 'text-red-600'
+                : 'text-slate-600'
             }
-          `}>{reportData.status}</span>
+          `}
+          >
+            {reportData.status}
+          </span>
         </DetailItem>
         <DetailItem label="URL">
-          <a href={reportData.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+          <a
+            href={reportData.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline break-all text-sm sm:text-base"
+          >
             {reportData.url}
           </a>
         </DetailItem>
-        <DetailItem label="Created">{new Date(reportData.createdAt).toLocaleString()}</DetailItem>
-        {reportData.completedAt && <DetailItem label="Completed">{new Date(reportData.completedAt).toLocaleString()}</DetailItem>}
-        {reportData.errorMessage && <DetailItem label="Error"><span className="text-red-600">{reportData.errorMessage}</span></DetailItem>}
+        <DetailItem label="Created">
+          <span className="text-sm sm:text-base">
+            {new Date(reportData.createdAt).toLocaleString()}
+          </span>
+        </DetailItem>
+        {reportData.completedAt && (
+          <DetailItem label="Completed">
+            <span className="text-sm sm:text-base">
+              {new Date(reportData.completedAt).toLocaleString()}
+            </span>
+          </DetailItem>
+        )}
+        {reportData.errorMessage && (
+          <DetailItem label="Error">
+            <span className="text-red-600 text-sm sm:text-base">
+              {reportData.errorMessage}
+            </span>
+          </DetailItem>
+        )}
       </div>
     </Card>
   );

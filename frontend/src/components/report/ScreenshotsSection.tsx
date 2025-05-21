@@ -47,13 +47,20 @@ const ScreenshotsSection: React.FC<ScreenshotsSectionProps> = ({ playwrightRepor
             .filter(([, url]) => !!url) // Ensure URL is not null or empty
             .map(([device, url]) => (
             <div key={device} className="flex flex-col items-center">
-              <h4 className="text-xl font-semibold mb-3 capitalize text-slate-700">{device} View</h4>
+              <h4 className="text-base sm:text-lg md:text-xl font-semibold mb-2 sm:mb-3 capitalize text-slate-700">
+                {device} View
+              </h4>
               <img
                 src={url}
                 alt={`Website Screenshot on ${device}`}
-                className="max-w-full max-h-[70vh] rounded shadow-lg border border-slate-300 object-contain bg-slate-100 p-1"
+                className="max-w-full max-h-[70vh] rounded-md sm:rounded-lg shadow-lg border border-slate-300 object-contain bg-slate-100 p-1"
               />
-              <a href={url} target="_blank" rel="noopener noreferrer" className="mt-4 text-sm text-blue-600 hover:underline">
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 sm:mt-4 text-xs sm:text-sm text-blue-600 hover:underline"
+              >
                 Open full size {device} screenshot
               </a>
             </div>

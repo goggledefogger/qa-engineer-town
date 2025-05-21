@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card } from '../ui';
 import { DetectedTechnology, TechStackData } from '../../types/reportTypes'; // Use local frontend types
 
 interface TechStackSectionProps {
@@ -55,46 +56,66 @@ const TechStackSection: React.FC<TechStackSectionProps> = ({ techStackData }) =>
   });
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-xl font-semibold text-slate-700 mb-4">Detected Technologies</h3>
-      {Object.entries(categories).map(([categoryName, techs]) => (
-        <div key={categoryName} className="mb-6 p-4 bg-white rounded-lg shadow border border-slate-200">
-          <h4 className="text-lg font-medium text-sky-700 mb-3 capitalize">
-            {(!categoryName || categoryName.toLowerCase() === "undefined") ? "Other Technologies" : categoryName}
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {techs.map((tech) => (
-              <div key={tech.slug} className="p-3 border border-slate-200 rounded-md bg-slate-50 hover:shadow-md transition-shadow">
-                <div className="flex items-center mb-1.5">
-                  {tech.icon && (
-                    <img
-                      src={`https://raw.githubusercontent.com/Lissy93/wapalyzer/main/src/drivers/webextension/images/icons/${tech.icon}`}
-                      alt={`${tech.name} icon`}
-                      className="w-5 h-5 mr-2 flex-shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} // Hide if icon fails to load
-                    />
+    <Card title="Detected Technologies" className="font-sans">
+      <div className="space-y-4 sm:space-y-6">
+        {Object.entries(categories).map(([categoryName, techs]) => (
+          <div
+            key={categoryName}
+            className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
+          >
+            <h4 className="text-base sm:text-lg font-medium text-sky-700 mb-2 sm:mb-3 capitalize">
+              {(!categoryName || categoryName.toLowerCase() === "undefined")
+                ? "Other Technologies"
+                : categoryName}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {techs.map((tech) => (
+                <div
+                  key={tech.slug}
+                  className="p-2 sm:p-3 border border-slate-200 rounded-md bg-slate-50 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center mb-1">
+                    {tech.icon && (
+                      <img
+                        src={`https://raw.githubusercontent.com/Lissy93/wapalyzer/main/src/drivers/webextension/images/icons/${tech.icon}`}
+                        alt={`${tech.name} icon`}
+                        className="w-5 h-5 mr-2 flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }} // Hide if icon fails to load
+                      />
+                    )}
+                    <h5
+                      className="font-semibold text-slate-800 truncate text-sm sm:text-base"
+                      title={tech.name}
+                    >
+                      {tech.name}
+                    </h5>
+                  </div>
+                  {tech.version && (
+                    <p className="text-xs text-slate-600 mb-0.5">
+                      Version: {tech.version}
+                    </p>
                   )}
-                  <h5 className="font-semibold text-slate-800 truncate" title={tech.name}>{tech.name}</h5>
+                  {/* <p className="text-xs text-slate-500">Confidence: {tech.confidence}%</p> */}
+                  {tech.website && (
+                    <a
+                      href={tech.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-sky-600 hover:text-sky-700 hover:underline truncate block"
+                      title={tech.website}
+                    >
+                      Visit website
+                    </a>
+                  )}
                 </div>
-                {tech.version && <p className="text-xs text-slate-600 mb-0.5">Version: {tech.version}</p>}
-                {/* <p className="text-xs text-slate-500">Confidence: {tech.confidence}%</p> */}
-                {tech.website && (
-                  <a
-                    href={tech.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-sky-600 hover:text-sky-700 hover:underline truncate block"
-                    title={tech.website}
-                  >
-                    Visit website
-                  </a>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Card>
   );
 };
 
