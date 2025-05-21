@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 // ReactMarkdown and remarkGfm are now used within section components
 import { db } from '../firebaseConfig';
 import { ref, onValue, off } from "firebase/database";
-import { ReportPageLayout } from '../components/layout';
 import SidebarNav, { type SectionStatuses } from '../components/navigation/SidebarNav';
 import { Card, ScanProgressIndicator } from '../components/ui'; // OverallScoreGauge, MetricDisplay are used in section components
 
