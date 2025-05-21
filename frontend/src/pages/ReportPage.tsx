@@ -178,7 +178,7 @@ const ReportPage: React.FC = () => {
   }
 
   // Heading component for reuse
-  const ReportHeading = () => {
+  const ReportHeading = ({ showScreenshot = true }: { showScreenshot?: boolean }) => {
     // Prefer desktop screenshot, fallback to any available
     const screenshotUrls = reportData?.playwrightReport?.screenshotUrls || {};
     const screenshotUrl =
@@ -208,7 +208,7 @@ const ReportPage: React.FC = () => {
             {reportId}
           </span>
         </p>
-        {screenshotUrl && (
+        {showScreenshot && screenshotUrl && (
           <img
             src={screenshotUrl}
             alt="Website Screenshot"
@@ -228,7 +228,7 @@ const ReportPage: React.FC = () => {
           <div className="sticky top-0 md:top-0 md:h-screen bg-white shadow-sm rounded-none md:rounded-lg p-4 flex flex-col">
             {/* Show heading above nav menu only on mobile */}
             <div className="block md:hidden mb-4">
-              <ReportHeading />
+              <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
             </div>
             <SidebarNav
               activeSection={activeSection}
@@ -241,7 +241,7 @@ const ReportPage: React.FC = () => {
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Sticky QA Report header only above main content on desktop */}
           <div className="hidden md:block sticky top-0 z-30 bg-white shadow-md">
-            <ReportHeading />
+            <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
           </div>
           <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
             {reportData &&
