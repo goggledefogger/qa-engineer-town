@@ -104,6 +104,49 @@ export async function performLighthouseScan(urlToScan: string, reportId: string,
         speedIndex: audits["speed-index"]?.numericValue,
       };
 
+      // Add non-perfect performance audits (score < 1, not core metrics, not opportunities)
+      const coreMetricIds = [
+        "first-contentful-paint",
+        "largest-contentful-paint",
+        "total-blocking-time",
+        "cumulative-layout-shift",
+        "speed-index"
+      ];
+      const opportunityIds = (reportData.performanceOpportunities || []).map(o => o.id);
+      reportData.nonPerfectPerformanceAudits = Object.values(audits)
+        .filter((audit: any) => {
+          if (!audit || typeof audit.id !== "string") return false;
+          if (coreMetricIds.includes(audit.id)) return false;
+          if (opportunityIds.includes(audit.id)) return false;
+          if (typeof audit.score !== "number" || audit.score === 1) return false;
+          if (audit.score === null) return false;
+          if (audit.score > 1 || audit.score < 0) return false;
+          // Only include audits from the performance category
+          if (!audit.category || audit.category !== "performance") {
+            // Some audits may not have a category, so fallback: include if referenced in performance category
+            const perfCat = psJson.lighthouseResult.categories["performance"];
+            if (
+              !perfCat ||
+              !perfCat.auditRefs ||
+              !perfCat.auditRefs.some((ref: any) => ref.id === audit.id)
+            ) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .map((audit: any) => ({
+          id: audit.id,
+          title: audit.title,
+          description: audit.description,
+          score: audit.score,
+          numericValue: audit.numericValue ?? null,
+          displayValue: audit.displayValue ?? null,
+          explanation: audit.explanation ?? null,
+          thresholds: audit.thresholds ?? null,
+        }))
+        .sort((a: any, b: any) => (a.score === null ? 1 : a.score) - (b.score === null ? 1 : b.score));
+
       const extractCategoryAudits = (categoryKey: string, maxItems: number = 3) => {
         const category = psJson.lighthouseResult.categories[categoryKey];
         if (!category || !category.auditRefs || !Array.isArray(category.auditRefs) || !psJson.lighthouseResult.audits) {

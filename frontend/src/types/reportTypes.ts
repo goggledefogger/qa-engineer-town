@@ -22,6 +22,17 @@ export interface LLMExplainedAuditItem {
   error?: string; // Error message if LLM explanation failed
 }
 
+export interface LighthousePerformanceAudit {
+  id: string;
+  title: string;
+  description: string;
+  score: number | null;
+  numericValue?: number;
+  displayValue?: string;
+  explanation?: string;
+  thresholds?: Record<string, number>;
+}
+
 export interface LighthouseReportData {
   success: boolean;
   error?: string;
@@ -52,6 +63,10 @@ export interface LighthouseReportData {
     overallSavingsMs?: number;
     overallSavingsBytes?: number;
   }>;
+  /**
+   * All performance audits with score < 1 (excluding core metrics and opportunities).
+   */
+  nonPerfectPerformanceAudits?: LighthousePerformanceAudit[];
   seoAudits?: Array<{
     id: string;
     title: string;
@@ -193,4 +208,4 @@ export const lighthouseMetricDetails: { [key: string]: MetricDetail } = {
   // Possible future additions:
   // timeToInteractive: { name: 'Time to Interactive (TTI)', unit: 'ms', ... }
   // serverResponseTime: { name: 'Server Response Time (TTFB)', unit: 'ms', ... }
-}; 
+};

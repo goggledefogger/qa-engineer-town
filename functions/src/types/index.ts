@@ -41,6 +41,19 @@ export interface LighthouseReportData {
     overallSavingsMs?: number;
     overallSavingsBytes?: number;
   }>;
+  /**
+   * All performance audits with score < 1 (excluding core metrics and opportunities).
+   */
+  nonPerfectPerformanceAudits?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    score: number | null;
+    numericValue?: number;
+    displayValue?: string;
+    explanation?: string;
+    thresholds?: Record<string, number>;
+  }>;
   seoAudits?: Array<{
     id: string;
     title: string;

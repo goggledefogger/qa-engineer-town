@@ -160,6 +160,48 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
       return <p className="text-slate-500 text-center py-8">No performance data available for this report.</p>;
     }
 
+    const hasNonPerfectAudits = lighthouseReport?.nonPerfectPerformanceAudits && lighthouseReport.nonPerfectPerformanceAudits.length > 0;
+    const showScoreReasoningBanner =
+      hasPerformanceScore &&
+      lighthouseReport?.scores?.performance! < 100 &&
+      (!rawOpportunities || rawOpportunities.length === 0) &&
+      hasNonPerfectAudits;
+
+    const renderNonPerfectAudits = () => {
+      if (!hasNonPerfectAudits) return null;
+      return (
+        <div className="mt-8 pt-6 border-t border-slate-200">
+          <h3 className="text-xl font-semibold text-slate-800 mb-4 text-center">Other Performance Factors</h3>
+          <ul className="space-y-4 list-none p-0">
+            {lighthouseReport!.nonPerfectPerformanceAudits!.map(audit => (
+              <li key={audit.id} className="p-4 bg-white rounded-lg shadow border border-slate-200">
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-sky-700">{audit.title}</span>
+                  {typeof audit.score === 'number' && (
+                    <span className="text-xs text-slate-500">Score: {(audit.score * 100).toFixed(0)} / 100</span>
+                  )}
+                  {audit.displayValue && (
+                    <span className="text-xs text-slate-500">Value: {audit.displayValue}</span>
+                  )}
+                  {audit.numericValue !== undefined && !audit.displayValue && (
+                    <span className="text-xs text-slate-500">Value: {audit.numericValue}</span>
+                  )}
+                  {audit.explanation && (
+                    <span className="text-xs text-slate-500">{audit.explanation}</span>
+                  )}
+                  <div className="text-sm text-slate-700 mt-1">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {unwrapMarkdown(audit.description)}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    };
+
     return (
       <>
         {hasPerformanceScore && (
@@ -167,8 +209,14 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
             <OverallScoreGauge score={lighthouseReport!.scores!.performance!} categoryName="Performance" />
           </div>
         )}
+        {showScoreReasoningBanner && (
+          <div className="mb-4 px-4 py-2 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
+            Your performance score is not perfect because some metrics or audits are close to, but not at, the optimal range. See details below.
+          </div>
+        )}
         {renderDetailedMetrics()}
         {renderOpportunitiesList()}
+        {renderNonPerfectAudits()}
       </>
     );
   };
