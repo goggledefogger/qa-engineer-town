@@ -179,62 +179,82 @@ const ReportPage: React.FC = () => {
   }
 
   // Heading component for reuse
-  const ReportHeading = () => (
-    <div className="bg-white shadow rounded-lg p-4 md:p-6">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
-        QA Report:
-        {reportData?.url ? (
-          <a
-            href={reportData.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-700 hover:text-blue-800 hover:underline break-all"
-          >
-            {reportData.url}
-          </a>
-        ) : (
-          "Loading URL..."
+  const ReportHeading = () => {
+    // Prefer desktop screenshot, fallback to any available
+    const screenshotUrls = reportData?.playwrightReport?.screenshotUrls || {};
+    const screenshotUrl =
+      screenshotUrls.desktop ||
+      Object.values(screenshotUrls).find((url) => !!url);
+
+    return (
+      <div className="bg-white shadow rounded-lg p-4 md:p-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
+          QA Report:
+          {reportData?.url ? (
+            <a
+              href={reportData.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-700 hover:text-blue-800 hover:underline break-all"
+            >
+              {reportData.url}
+            </a>
+          ) : (
+            "Loading URL..."
+          )}
+        </h1>
+        <p className="text-xs text-slate-500">
+          Report ID:{" "}
+          <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">
+            {reportId}
+          </span>
+        </p>
+        {screenshotUrl && (
+          <img
+            src={screenshotUrl}
+            alt="Website Screenshot"
+            className="max-h-[25vh] w-full object-contain rounded-md shadow border border-slate-200 bg-slate-100 mt-3"
+            loading="lazy"
+          />
         )}
-      </h1>
-      <p className="text-xs text-slate-500">
-        Report ID:{" "}
-        <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">
-          {reportId}
-        </span>
-      </p>
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
-    <ReportPageLayout
-      sidebarContent={
-        <>
-          {/* Show heading above menu on mobile only */}
-          <div className="block md:hidden mb-4">
+    <div className="relative min-h-screen bg-slate-50">
+      <div className="max-w-7xl xl:max-w-screen-xl mx-auto flex flex-col md:flex-row gap-8 pt-2 md:pt-3 px-2 md:px-4 xl:px-6 2xl:px-8">
+        {/* Sidebar/Menu */}
+        <aside className="w-full md:w-64 lg:w-72 flex-shrink-0 mb-4 md:mb-0">
+          <div className="sticky top-0 md:top-0 md:h-screen bg-white shadow-sm rounded-none md:rounded-lg p-4 flex flex-col">
+            {/* Show heading above nav menu only on mobile */}
+            <div className="block md:hidden mb-4">
+              <ReportHeading />
+            </div>
+            <SidebarNav
+              activeSection={activeSection}
+              onSelectSection={setActiveSection}
+              sectionStatuses={sectionStatuses}
+            />
+          </div>
+        </aside>
+        {/* Main Content */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Sticky QA Report header only above main content on desktop */}
+          <div className="hidden md:block sticky top-0 z-30 bg-white shadow-md">
             <ReportHeading />
           </div>
-          <SidebarNav
-            activeSection={activeSection}
-            onSelectSection={setActiveSection}
-            sectionStatuses={sectionStatuses}
-          />
-        </>
-      }
-      mainContent={
-        <div className="space-y-6 font-sans">
-          {/* Show heading in main content on desktop only */}
-          <div className="hidden md:block">
-            <ReportHeading />
-          </div>
-          {reportData &&
-            (reportData.status === "pending" ||
-              reportData.status === "processing") && (
-              <ScanProgressIndicator status={reportData.status} />
-            )}
-          {renderSectionContent()}
+          <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
+            {reportData &&
+              (reportData.status === "pending" ||
+                reportData.status === "processing") && (
+                <ScanProgressIndicator status={reportData.status} />
+              )}
+            {renderSectionContent()}
+          </section>
         </div>
-      }
-    />
+      </div>
+    </div>
   );
 };
 

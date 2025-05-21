@@ -62,7 +62,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, user, loadingAuth, isAd
           </div>
         </div>
       </header>
-      <main className="flex-grow w-full max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-7xl mx-auto pt-1 pb-0 px-4 sm:px-6 lg:px-8 xl:px-2 2xl:px-0">
         {children}
       </main>
       {/* <footer className="bg-white border-t border-slate-200">
