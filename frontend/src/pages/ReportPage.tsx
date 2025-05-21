@@ -119,7 +119,6 @@ const ReportPage: React.FC = () => {
         case 'pending': case 'processing': default: statuses['tech-stack'] = 'LOADING'; break;
       }
     } else { statuses['tech-stack'] = isProcessing ? 'LOADING' : 'PENDING'; }
-    console.log("[ReportPage] Tech Stack Status in sectionStatuses:", statuses['tech-stack']);
 
     return statuses;
   }, [reportData, loading]);

@@ -6,8 +6,6 @@ interface TechStackSectionProps {
 }
 
 const TechStackSection: React.FC<TechStackSectionProps> = ({ techStackData }) => {
-  console.log('[TechStackSection] Received techStackData:', JSON.parse(JSON.stringify(techStackData || {})));
-
   if (!techStackData) {
     return <p className="text-slate-500">Tech stack information is not yet available.</p>;
   }
