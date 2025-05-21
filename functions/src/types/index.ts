@@ -90,6 +90,7 @@ export interface AiUxDesignSuggestionItem {
 
 export interface AiUxDesignSuggestions {
   status: "pending" | "processing" | "completed" | "error" | "skipped";
+  introductionText?: string; // New field
   suggestions?: AiUxDesignSuggestionItem[];
   error?: string;
   modelUsed?: string;

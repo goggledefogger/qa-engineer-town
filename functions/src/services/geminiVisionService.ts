@@ -8,6 +8,41 @@ import {
   ScreenContextType,
 } from "../types";
 
+/**
+ * Utility function to extract content from Markdown code fences,
+ * specifically targeting JSON content.
+ *
+ * If `rawText` is undefined, null, or an empty string, it returns an empty string.
+ * It looks for Markdown code fences: ```json ... ``` or ``` ... ```.
+ * Extracts and trims the content within these fences.
+ * If no fences are detected, the original `rawText` (trimmed) is returned.
+ *
+ * @param rawText The raw string potentially containing Markdown-wrapped JSON.
+ * @returns The unwrapped string, or an empty string if input is null/empty.
+ */
+function unwrapJsonMarkdown(rawText: string | undefined | null): string {
+  if (!rawText) {
+    return "";
+  }
+  // Regex to find ```json ... ``` or ``` ... ``` and capture the content within.
+  // It handles optional 'json' language specifier and surrounding whitespace.
+  // This regex attempts to capture content between fences if they exist,
+  // or the whole string if fences are not strictly matched at start/end.
+  const match = rawText.match(
+    /^\s*`{3}(?:json)?\s*([\s\S]*?)\s*`{3}\s*$/
+  );
+
+  if (match && typeof match[1] === "string") {
+    // If fences are found and content is captured (match[1]), return it trimmed.
+    return match[1].trim();
+  }
+
+  // If no fences are detected (or the regex doesn't match the fenced structure),
+  // return the original text, trimmed, as a fallback.
+  // This also handles cases where the input is just plain JSON string without fences.
+  return rawText.trim();
+}
+
 // Helper function for Gemini AI analysis (UX/Design from screenshot)
 export async function performGeminiAnalysis(
   screenshotUrl: string,
@@ -90,24 +125,78 @@ export async function performGeminiAnalysis(
     const responseText = result.text;
     logger.info("Gemini analysis response received.", { reportId });
 
-    const suggestionsArray = responseText ? responseText.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0 && s !== "---") : [];
-    const parsedSuggestions = suggestionsArray.map((s: string) => ({
-      suggestion: s,
-      reasoning: "",
-      screenContext: analyzedDeviceType
+    if (!responseText) {
+      logger.warn("Gemini analysis returned an empty response.", { reportId });
+      return {
+        status: "error",
+        error: "AI analysis returned an empty response.",
+        suggestions: [],
+        introductionText: "",
+        modelUsed: geminiModelName,
+      };
+    }
+
+    let parsedResponse: any;
+    const unwrappedText = unwrapJsonMarkdown(responseText);
+
+    if (!unwrappedText) { // Check if unwrappedText is empty after potential unwrapping
+      logger.warn("Gemini analysis response is empty after unwrapping.", { reportId, originalResponseText: responseText });
+      return {
+        status: "error",
+        error: "AI analysis returned an empty response after unwrapping.",
+        suggestions: [],
+        introductionText: "",
+        modelUsed: geminiModelName,
+      };
+    }
+
+    try {
+      parsedResponse = JSON.parse(unwrappedText);
+    } catch (parseError: any) {
+      logger.error("Failed to parse LLM response as JSON: " + parseError.message, { reportId, unwrappedText });
+      return {
+        status: "error",
+        error: "Failed to parse LLM response as JSON.",
+        suggestions: [],
+        introductionText: "",
+        modelUsed: geminiModelName,
+      };
+    }
+
+    const introductionText = parsedResponse.introduction || "";
+    const suggestionsFromJson = parsedResponse.suggestions;
+
+    if (!Array.isArray(suggestionsFromJson)) {
+      logger.warn("LLM response JSON does not contain a valid 'suggestions' array.", { reportId, parsedResponse });
+      return {
+        status: "error",
+        error: "LLM response JSON does not contain a valid 'suggestions' array.",
+        suggestions: [],
+        introductionText: introductionText,
+        modelUsed: geminiModelName,
+      };
+    }
+
+    const processedSuggestions = suggestionsFromJson.map((item: any) => ({
+      suggestion: item.suggestion || "No suggestion text provided",
+      reasoning: item.reasoning || "No reasoning provided",
+      screenContext: analyzedDeviceType,
     }));
 
     return {
       status: "completed",
-      suggestions: parsedSuggestions.slice(0, 10),
+      suggestions: processedSuggestions.slice(0, 10), // Keep the limit of 10
+      introductionText: introductionText,
       modelUsed: geminiModelName,
     };
   } catch (aiError: any) {
     logger.error("Error during AI UX/Design analysis: " + aiError.message, { reportId, errorStack: aiError.stack, errorDetails: JSON.stringify(aiError), screenshotUrlProvided: screenshotUrl });
+    // Ensure introductionText is included in error returns as well, matching the expected structure if possible
     return {
       status: "error",
       error: `AI analysis failed: ${aiError.message}`,
       suggestions: [],
+      introductionText: "", // Default empty string for introductionText in case of error
       modelUsed: geminiModelName,
     };
   }
