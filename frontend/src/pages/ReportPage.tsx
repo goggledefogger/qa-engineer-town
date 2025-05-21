@@ -21,6 +21,7 @@ import {
   LlmSummarySection,
   TechStackSection
 } from '../components/report'; // Assuming index.ts handles exports
+import ReportPageLayout from '../components/layout/ReportPageLayout';
 
 const ReportPage: React.FC = () => {
   const { reportId } = useParams<{ reportId: string }>();
@@ -28,6 +29,7 @@ const ReportPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<string>('summary');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const mainContentRef = React.useRef<HTMLDivElement>(null);
 
   // Scroll to top of main content when activeSection changes
@@ -231,35 +233,40 @@ const ReportPage: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-slate-50">
       <div className="max-w-7xl xl:max-w-screen-xl mx-auto flex flex-col md:flex-row gap-8 pt-2 md:pt-3 px-2 md:px-4 xl:px-6 2xl:px-8">
-        {/* Sidebar/Menu */}
-        <aside className="w-full md:w-64 lg:w-72 flex-shrink-0 mb-4 md:mb-0">
-          <div className="sticky top-0 md:top-0 md:h-screen bg-white shadow-sm rounded-none md:rounded-lg p-4 flex flex-col">
-            {/* Show heading above nav menu only on mobile */}
-            <div className="block md:hidden mb-4">
-              <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
+        <ReportPageLayout
+          sidebarCollapsed={sidebarCollapsed}
+          sidebarContent={
+            <div className="flex flex-col h-full">
+              {/* Show heading above nav menu only on mobile */}
+              <div className="block md:hidden mb-4">
+                <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
+              </div>
+              <SidebarNav
+                activeSection={activeSection}
+                onSelectSection={setActiveSection}
+                sectionStatuses={sectionStatuses}
+                collapsed={sidebarCollapsed}
+                onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+              />
             </div>
-            <SidebarNav
-              activeSection={activeSection}
-              onSelectSection={setActiveSection}
-              sectionStatuses={sectionStatuses}
-            />
-          </div>
-        </aside>
-        {/* Main Content */}
-        <div className="flex-1 min-w-0 flex flex-col" ref={mainContentRef}>
-          {/* Sticky QA Report header only above main content on desktop */}
-          <div className="hidden md:block sticky top-0 z-30 bg-white shadow-md">
-            <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
-          </div>
-          <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
-            {reportData &&
-              (reportData.status === "pending" ||
-                reportData.status === "processing") && (
-                <ScanProgressIndicator status={reportData.status} />
-              )}
-            {renderSectionContent()}
-          </section>
-        </div>
+          }
+          mainContent={
+            <div className="flex-1 min-w-0 flex flex-col" ref={mainContentRef}>
+              {/* Sticky QA Report header only above main content on desktop */}
+              <div className="hidden md:block sticky top-0 z-30 bg-white shadow-md">
+                <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
+              </div>
+              <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
+                {reportData &&
+                  (reportData.status === "pending" ||
+                    reportData.status === "processing") && (
+                    <ScanProgressIndicator status={reportData.status} />
+                  )}
+                {renderSectionContent()}
+              </section>
+            </div>
+          }
+        />
       </div>
     </div>
   );

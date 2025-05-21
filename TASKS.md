@@ -4,6 +4,14 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ## Completed Tasks
 
+- [x] Collapsible Sidebar Navigation for Report Sections
+    - [x] Sidebar now supports expand/collapse with icons only in collapsed mode.
+    - [x] Section navigation remains accessible via tooltips when collapsed.
+    - [x] Main content area expands when sidebar is collapsed.
+    - [x] Responsive and accessible for desktop and mobile.
+    - [x] Updated `SidebarNav`, `ReportPageLayout`, and `ReportPage` for new UX.
+    - [x] Added Heroicons for section icons.
+
 - [x] Define Product Requirements (PRD.md)
 - [x] Define Software Requirements (SRS.md)
 - [x] Define User Interface Design (UIDD.md)
@@ -208,6 +216,10 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ### Relevant Files
 
+- `frontend/src/components/navigation/SidebarNav.tsx` - Collapsible sidebar navigation with icons and tooltips. ✅
+- `frontend/src/components/layout/ReportPageLayout.tsx` - Layout updated for sidebar collapsed/expanded width. ✅
+- `frontend/src/pages/ReportPage.tsx` - Manages sidebar state and passes to layout/nav. ✅
+- `frontend/src/@types/heroicons__react-outline.d.ts` - TypeScript module declaration for Heroicons. ✅
 - `frontend/src/components/ui/Card.tsx` - Shared Card component, now fully responsive and standardized across all report sections. ✅
 - `frontend/src/components/report/AiUxDesignSection.tsx` - AI UX & Design Insights section, refactored for responsive design. ✅
 - `frontend/src/components/report/SummarySection.tsx` - Scan summary section, refactored for responsive design. ✅
