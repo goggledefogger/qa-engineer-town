@@ -90,24 +90,65 @@ export async function performGeminiAnalysis(
     const responseText = result.text;
     logger.info("Gemini analysis response received.", { reportId });
 
-    const suggestionsArray = responseText ? responseText.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0 && s !== "---") : [];
-    const parsedSuggestions = suggestionsArray.map((s: string) => ({
-      suggestion: s,
-      reasoning: "",
-      screenContext: analyzedDeviceType
+    if (!responseText) {
+      logger.warn("Gemini analysis returned an empty response.", { reportId });
+      return {
+        status: "error",
+        error: "AI analysis returned an empty response.",
+        suggestions: [],
+        introductionText: "",
+        modelUsed: geminiModelName,
+      };
+    }
+
+    let parsedResponse: any;
+    try {
+      parsedResponse = JSON.parse(responseText);
+    } catch (parseError: any) {
+      logger.error("Failed to parse LLM response as JSON: " + parseError.message, { reportId, responseText });
+      return {
+        status: "error",
+        error: "Failed to parse LLM response as JSON.",
+        suggestions: [],
+        introductionText: "",
+        modelUsed: geminiModelName,
+      };
+    }
+
+    const introductionText = parsedResponse.introduction || "";
+    const suggestionsFromJson = parsedResponse.suggestions;
+
+    if (!Array.isArray(suggestionsFromJson)) {
+      logger.warn("LLM response JSON does not contain a valid 'suggestions' array.", { reportId, parsedResponse });
+      return {
+        status: "error",
+        error: "LLM response JSON does not contain a valid 'suggestions' array.",
+        suggestions: [],
+        introductionText: introductionText,
+        modelUsed: geminiModelName,
+      };
+    }
+
+    const processedSuggestions = suggestionsFromJson.map((item: any) => ({
+      suggestion: item.suggestion || "No suggestion text provided",
+      reasoning: item.reasoning || "No reasoning provided",
+      screenContext: analyzedDeviceType,
     }));
 
     return {
       status: "completed",
-      suggestions: parsedSuggestions.slice(0, 10),
+      suggestions: processedSuggestions.slice(0, 10), // Keep the limit of 10
+      introductionText: introductionText,
       modelUsed: geminiModelName,
     };
   } catch (aiError: any) {
     logger.error("Error during AI UX/Design analysis: " + aiError.message, { reportId, errorStack: aiError.stack, errorDetails: JSON.stringify(aiError), screenshotUrlProvided: screenshotUrl });
+    // Ensure introductionText is included in error returns as well, matching the expected structure if possible
     return {
       status: "error",
       error: `AI analysis failed: ${aiError.message}`,
       suggestions: [],
+      introductionText: "", // Default empty string for introductionText in case of error
       modelUsed: geminiModelName,
     };
   }
