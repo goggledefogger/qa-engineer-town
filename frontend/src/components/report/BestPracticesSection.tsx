@@ -1,9 +1,6 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Card } from '../ui';
 import type { LighthouseReportData, ReportData } from '../../types/reportTypes';
-import { unwrapMarkdown } from '../../utils/textUtils';
 import ReportAuditList from './ReportAuditList';
 
 interface BestPracticesSectionProps {

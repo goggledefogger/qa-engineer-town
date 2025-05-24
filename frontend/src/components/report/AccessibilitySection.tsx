@@ -1,7 +1,5 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Card, OverallScoreGauge, ExpandableList } from '../ui';
+import { Card, OverallScoreGauge } from '../ui';
 import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult, ColorContrastResult, VisualOrderResult } from '../../types/reportTypes';
 
 interface AccessibilityNameAndStateCheckResult {
@@ -26,7 +24,6 @@ interface AccessibilityNameAndStateCheckResult {
   }>;
   error?: string;
 }
-import { unwrapMarkdown } from '../../utils/textUtils';
 import AccessibilityKeyboardCheck from './AccessibilityKeyboardCheck';
 import AccessibilityNameAndStateCheck from './AccessibilityNameAndStateCheck';
 import ColorContrastCheck from './ColorContrastCheck';
