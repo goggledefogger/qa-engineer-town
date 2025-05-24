@@ -148,6 +148,8 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 ## In Progress Tasks
 
 - [x] Implement Tech Stack Detection (Frontend & Backend):
+
+- [x] Refactor Large Report Section Components
     - [x] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
     - [x] Fetch and display detected technologies from `reportData.techStack.detectedTechnologies`.
     - [x] Design UI to present technologies clearly (e.g., cards, list with icons).
@@ -158,6 +160,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] UI and backend support for incremental, per-section updates and loading/progress indicators.
     - [x] Added robust sanitizer for DetectedTechnology to ensure all fields are string/null and never undefined for RTDB compatibility.
     - [x] Fixed backend to prevent undefined/null errors in RTDB updates for tech stack.
+    - [x] Decomposed duplicate UI code for sections with new `ReportAuditList.tsx` component
 
 ## Future Tasks (Initial Prototype - MVP)
 
@@ -248,6 +251,11 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 ### Relevant Files
 
 - `frontend/src/components/navigation/SidebarNav.tsx` - Collapsible sidebar navigation with icons and tooltips. ✅
+- `frontend/src/components/report/AccessibilitySection.tsx` - Large report section, candidate for refactor.
+- `frontend/src/components/report/BestPracticesSection.tsx` - Large report section, candidate for refactor.
+- `frontend/src/components/report/SeoSection.tsx` - Large report section, candidate for refactor.
+- `frontend/src/components/report/PerformanceSection.tsx` - Large report section, candidate for refactor.
+
 - `frontend/src/components/layout/ReportPageLayout.tsx` - Layout updated for sidebar collapsed/expanded width. ✅
 - `frontend/src/pages/ReportPage.tsx` - Manages sidebar state and passes to layout/nav. ✅
 - `frontend/src/@types/heroicons__react-outline.d.ts` - TypeScript module declaration for Heroicons. ✅
