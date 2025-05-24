@@ -189,11 +189,93 @@ const ReportPage: React.FC = () => {
 
   // Heading component for reuse
   const ReportHeading = ({ showScreenshot = true }: { showScreenshot?: boolean }) => {
-    // Prefer desktop screenshot, fallback to any available
     const screenshotUrls = reportData?.playwrightReport?.screenshotUrls || {};
-    const screenshotUrl =
-      screenshotUrls.desktop ||
-      Object.values(screenshotUrls).find((url) => !!url);
+    const screenshots: Array<{ key: string; label: string; url?: string }> = [
+      { key: "desktop", label: "Desktop", url: screenshotUrls.desktop },
+      { key: "tablet", label: "Tablet", url: screenshotUrls.tablet },
+      { key: "mobile", label: "Mobile", url: screenshotUrls.mobile },
+    ].filter(s => !!s.url);
+
+    // SVG device outlines
+    const DeviceFrame = ({
+      type,
+      url,
+    }: {
+      type: "desktop" | "tablet" | "mobile";
+      url: string;
+    }) => {
+      // All device frames: border tightly around image, minimal gap, no extra padding
+      if (type === "desktop") {
+        // 16:9 aspect ratio, slightly larger border
+        return (
+          <svg width="432" height="252" viewBox="0 0 432 252" className="block shrink-0" style={{maxWidth: '100%'}}>
+            <defs>
+              <clipPath id="desktopScreen">
+                <rect x="20" y="20" width="392" height="212" rx="6" />
+              </clipPath>
+            </defs>
+            <rect x="8" y="8" width="416" height="236" rx="16" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3"/>
+            <image
+              href={url}
+              x="20"
+              y="20"
+              width="392"
+              height="212"
+              preserveAspectRatio="xMidYMid meet"
+              clipPath="url(#desktopScreen)"
+              style={{ shapeRendering: "crispEdges" }}
+            />
+            <rect x="196" y="242" width="40" height="6" rx="3" fill="#cbd5e1"/>
+          </svg>
+        );
+      }
+      if (type === "tablet") {
+        // 3:4 aspect ratio, slightly larger border
+        return (
+          <svg width="168" height="224" viewBox="0 0 168 224" className="block shrink-0" style={{maxWidth: '100%'}}>
+            <defs>
+              <clipPath id="tabletScreen">
+                <rect x="14" y="14" width="140" height="196" rx="8" />
+              </clipPath>
+            </defs>
+            <rect x="6" y="6" width="156" height="212" rx="18" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3"/>
+            <image
+              href={url}
+              x="14"
+              y="14"
+              width="140"
+              height="196"
+              preserveAspectRatio="xMidYMid meet"
+              clipPath="url(#tabletScreen)"
+              style={{ shapeRendering: "crispEdges" }}
+            />
+            <circle cx="84" cy="210" r="4" fill="#cbd5e1"/>
+          </svg>
+        );
+      }
+      // mobile: 9:19.5 aspect ratio, slightly larger border
+      return (
+        <svg width="84" height="140" viewBox="0 0 84 140" className="block shrink-0" style={{maxWidth: '100%'}}>
+          <defs>
+            <clipPath id="mobileScreen">
+              <rect x="10" y="10" width="64" height="120" rx="10" />
+            </clipPath>
+          </defs>
+          <rect x="4" y="4" width="76" height="132" rx="14" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3"/>
+          <image
+            href={url}
+            x="10"
+            y="10"
+            width="64"
+            height="120"
+            preserveAspectRatio="xMidYMid meet"
+            clipPath="url(#mobileScreen)"
+            style={{ shapeRendering: "crispEdges" }}
+          />
+          <circle cx="42" cy="130" r="3" fill="#cbd5e1"/>
+        </svg>
+      );
+    };
 
     return (
       <div className="bg-white shadow rounded-lg p-4 md:p-6">
@@ -218,13 +300,26 @@ const ReportPage: React.FC = () => {
             {reportId}
           </span>
         </p>
-        {showScreenshot && screenshotUrl && (
-          <img
-            src={screenshotUrl}
-            alt="Website Screenshot"
-            className="max-h-[25vh] w-full object-contain rounded-md shadow border border-slate-200 bg-slate-100 mt-3"
-            loading="lazy"
-          />
+        {showScreenshot && screenshots.length > 0 && (
+          <div className="flex flex-row items-end justify-center gap-4 mt-6 w-full overflow-x-auto">
+            {screenshots.map(({ key, url }) => (
+              <div
+                key={key}
+                className="shrink-0"
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  padding: 0,
+                  margin: 0,
+                  height: "auto",
+                  background: "none",
+                }}
+              >
+                <DeviceFrame type={key as "desktop" | "tablet" | "mobile"} url={url!} />
+              </div>
+            ))}
+          </div>
         )}
       </div>
     );
