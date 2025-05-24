@@ -188,139 +188,161 @@ const ReportPage: React.FC = () => {
   }
 
   // Heading component for reuse
-  const ReportHeading = ({ showScreenshot = true }: { showScreenshot?: boolean }) => {
+  const ReportHeading = () => (
+    <div className="bg-white shadow rounded-lg p-4 md:p-6">
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
+        QA Report:&nbsp;
+        {reportData?.url ? (
+          <a
+            href={reportData.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-700 hover:text-blue-800 hover:underline break-all"
+          >
+            {reportData.url}
+          </a>
+        ) : (
+          "Loading URL..."
+        )}
+      </h1>
+      <p className="text-xs text-slate-500">
+        Report ID:{" "}
+        <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">
+          {reportId}
+        </span>
+      </p>
+    </div>
+  );
+
+  // SVG device outlines
+  const DeviceFrame = ({
+    type,
+    url,
+  }: {
+    type: "desktop" | "tablet" | "mobile";
+    url: string;
+  }) => {
+    if (type === "desktop") {
+      return (
+        <svg width="432" height="252" viewBox="0 0 432 252" className="block shrink-0" style={{ maxWidth: "100%", height: "100%" }}>
+          <defs>
+            <clipPath id="desktopScreen">
+              <rect x="20" y="20" width="392" height="212" rx="6" />
+            </clipPath>
+          </defs>
+          <rect x="8" y="8" width="416" height="236" rx="16" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" />
+          <image
+            href={url}
+            x="20"
+            y="20"
+            width="392"
+            height="212"
+            preserveAspectRatio="xMidYMid meet"
+            clipPath="url(#desktopScreen)"
+            style={{ shapeRendering: "crispEdges" }}
+          />
+          <rect x="196" y="242" width="40" height="6" rx="3" fill="#cbd5e1" />
+        </svg>
+      );
+    }
+    if (type === "tablet") {
+      return (
+        <svg width="168" height="224" viewBox="0 0 168 224" className="block shrink-0" style={{ maxWidth: "100%", height: "100%" }}>
+          <defs>
+            <clipPath id="tabletScreen">
+              <rect x="14" y="14" width="140" height="196" rx="8" />
+            </clipPath>
+          </defs>
+          <rect x="6" y="6" width="156" height="212" rx="18" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" />
+          <image
+            href={url}
+            x="14"
+            y="14"
+            width="140"
+            height="196"
+            preserveAspectRatio="xMidYMid meet"
+            clipPath="url(#tabletScreen)"
+            style={{ shapeRendering: "crispEdges" }}
+          />
+          <circle cx="84" cy="210" r="4" fill="#cbd5e1" />
+        </svg>
+      );
+    }
+    return (
+      <svg width="84" height="170" viewBox="0 0 84 170" className="block shrink-0" style={{ maxWidth: "100%", height: "100%" }}>
+        <defs>
+          <clipPath id="mobileScreen">
+            <rect x="10" y="14" width="64" height="140" rx="10" />
+          </clipPath>
+        </defs>
+        <rect x="4" y="4" width="76" height="162" rx="14" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" />
+        <image
+          href={url}
+          x="10"
+          y="14"
+          width="64"
+          height="140"
+          preserveAspectRatio="xMidYMid meet"
+          clipPath="url(#mobileScreen)"
+          style={{ shapeRendering: "crispEdges" }}
+        />
+        <circle cx="42" cy="158" r="3" fill="#cbd5e1" />
+      </svg>
+    );
+  };
+
+  // Screenshot row OUTSIDE the Card/header
+  const ScreenshotRow = () => {
     const screenshotUrls = reportData?.playwrightReport?.screenshotUrls || {};
     const screenshots: Array<{ key: string; label: string; url?: string }> = [
-      { key: "desktop", label: "Desktop", url: screenshotUrls.desktop },
       { key: "tablet", label: "Tablet", url: screenshotUrls.tablet },
+      { key: "desktop", label: "Desktop", url: screenshotUrls.desktop },
       { key: "mobile", label: "Mobile", url: screenshotUrls.mobile },
     ].filter(s => !!s.url);
 
-    // SVG device outlines
-    const DeviceFrame = ({
-      type,
-      url,
-    }: {
-      type: "desktop" | "tablet" | "mobile";
-      url: string;
-    }) => {
-      // All device frames: border tightly around image, minimal gap, no extra padding
-      if (type === "desktop") {
-        // 16:9 aspect ratio, slightly larger border
-        return (
-          <svg width="432" height="252" viewBox="0 0 432 252" className="block shrink-0" style={{maxWidth: '100%'}}>
-            <defs>
-              <clipPath id="desktopScreen">
-                <rect x="20" y="20" width="392" height="212" rx="6" />
-              </clipPath>
-            </defs>
-            <rect x="8" y="8" width="416" height="236" rx="16" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3"/>
-            <image
-              href={url}
-              x="20"
-              y="20"
-              width="392"
-              height="212"
-              preserveAspectRatio="xMidYMid meet"
-              clipPath="url(#desktopScreen)"
-              style={{ shapeRendering: "crispEdges" }}
-            />
-            <rect x="196" y="242" width="40" height="6" rx="3" fill="#cbd5e1"/>
-          </svg>
-        );
-      }
-      if (type === "tablet") {
-        // 3:4 aspect ratio, slightly larger border
-        return (
-          <svg width="168" height="224" viewBox="0 0 168 224" className="block shrink-0" style={{maxWidth: '100%'}}>
-            <defs>
-              <clipPath id="tabletScreen">
-                <rect x="14" y="14" width="140" height="196" rx="8" />
-              </clipPath>
-            </defs>
-            <rect x="6" y="6" width="156" height="212" rx="18" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3"/>
-            <image
-              href={url}
-              x="14"
-              y="14"
-              width="140"
-              height="196"
-              preserveAspectRatio="xMidYMid meet"
-              clipPath="url(#tabletScreen)"
-              style={{ shapeRendering: "crispEdges" }}
-            />
-            <circle cx="84" cy="210" r="4" fill="#cbd5e1"/>
-          </svg>
-        );
-      }
-      // mobile: 9:19.5 aspect ratio, slightly larger border
-      return (
-        <svg width="84" height="140" viewBox="0 0 84 140" className="block shrink-0" style={{maxWidth: '100%'}}>
-          <defs>
-            <clipPath id="mobileScreen">
-              <rect x="10" y="10" width="64" height="120" rx="10" />
-            </clipPath>
-          </defs>
-          <rect x="4" y="4" width="76" height="132" rx="14" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3"/>
-          <image
-            href={url}
-            x="10"
-            y="10"
-            width="64"
-            height="120"
-            preserveAspectRatio="xMidYMid meet"
-            clipPath="url(#mobileScreen)"
-            style={{ shapeRendering: "crispEdges" }}
-          />
-          <circle cx="42" cy="130" r="3" fill="#cbd5e1"/>
-        </svg>
-      );
-    };
+    if (!screenshots.length) return null;
 
     return (
-      <div className="bg-white shadow rounded-lg p-4 md:p-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1 leading-tight">
-          QA Report:&nbsp;
-          {reportData?.url ? (
-            <a
-              href={reportData.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-700 hover:text-blue-800 hover:underline break-all"
+      <div
+        className="w-full flex flex-row items-end justify-start gap-0.5 overflow-x-auto"
+        style={{
+          height: "120px",
+          maxHeight: "120px",
+          marginTop: "12px",
+          marginBottom: "12px",
+        }}
+      >
+        {screenshots.map(({ key, url }) => (
+          <div
+            key={key}
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "center",
+              height: "100%",
+              background: "none",
+              padding: 0,
+              margin: 0,
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: "100%",
+                maxWidth:
+                  key === "desktop"
+                    ? "224px"
+                    : key === "tablet"
+                    ? "112px"
+                    : "56px",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
             >
-              {reportData.url}
-            </a>
-          ) : (
-            "Loading URL..."
-          )}
-        </h1>
-        <p className="text-xs text-slate-500">
-          Report ID:{" "}
-          <span className="font-mono bg-slate-200 px-1 py-0.5 rounded">
-            {reportId}
-          </span>
-        </p>
-        {showScreenshot && screenshots.length > 0 && (
-          <div className="flex flex-row items-end justify-center gap-4 mt-6 w-full overflow-x-auto">
-            {screenshots.map(({ key, url }) => (
-              <div
-                key={key}
-                className="shrink-0"
-                style={{
-                  display: "flex",
-                  alignItems: "flex-end",
-                  justifyContent: "center",
-                  padding: 0,
-                  margin: 0,
-                  height: "auto",
-                  background: "none",
-                }}
-              >
-                <DeviceFrame type={key as "desktop" | "tablet" | "mobile"} url={url!} />
-              </div>
-            ))}
+              <DeviceFrame type={key as "desktop" | "tablet" | "mobile"} url={url!} />
+            </div>
           </div>
-        )}
+        ))}
       </div>
     );
   };
@@ -334,7 +356,8 @@ const ReportPage: React.FC = () => {
             <div className="flex flex-col h-full">
               {/* Show heading above nav menu only on mobile */}
               <div className="block md:hidden mb-4">
-                <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
+                <ReportHeading />
+                <ScreenshotRow />
               </div>
               <SidebarNav
                 activeSection={activeSection}
@@ -349,7 +372,8 @@ const ReportPage: React.FC = () => {
             <div className="flex-1 min-w-0 flex flex-col" ref={mainContentRef}>
               {/* Sticky QA Report header only above main content on desktop */}
               <div className="hidden md:block sticky top-0 z-30 bg-white shadow-md">
-                <ReportHeading showScreenshot={activeSection !== 'screenshot'} />
+                <ReportHeading />
+                <ScreenshotRow />
               </div>
               <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
                 {reportData &&
