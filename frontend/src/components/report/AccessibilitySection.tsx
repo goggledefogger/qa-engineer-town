@@ -58,11 +58,6 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
   const isCompleted = reportStatus === 'completed';
   const isFailed = reportStatus === 'failed' || (isCompleted && lighthouseReport?.success === false && !hasExplicitError);
 
-  if (reportStatus === 'completed') {
-    console.log('[AccessibilitySection] COMPLETE state. Full lighthouseReport:', JSON.parse(JSON.stringify(lighthouseReport || {})));
-    console.log('[AccessibilitySection] COMPLETE state. Raw accessibilityIssues:', accessibilityAudits);
-    console.log('[AccessibilitySection] COMPLETE state. LLM explained issues from prop:', llmExplainedAudits);
-  }
 
   const renderContent = () => {
     if (isLoading) {

@@ -130,6 +130,20 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Integrated `ExpandableList` into `frontend/src/components/report/BestPracticesSection.tsx` (for Lighthouse and AI-explained best practices audits).
     - [x] Integrated `ExpandableList` into `frontend/src/components/report/AccessibilitySection.tsx` (for Lighthouse and AI-explained accessibility issues).
     - [x] Documented the "Progressive Disclosure for Lists" pattern in `DESIGN.md`.
+- [x] **Implement UIX feature: Click device screenshot to show full-screen modal:**
+    - [x] Created a reusable `Modal` component (`frontend/src/components/ui/Modal.tsx`).
+    - [x] Exported `Modal` from `frontend/src/components/ui/index.ts`.
+    - [x] Modified `frontend/src/pages/ReportPage.tsx` to:
+        - [x] Import `useState` and `Modal`.
+        - [x] Add state variables for modal visibility and current screenshot URL/title.
+        - [x] Make `DeviceFrame` components clickable to open the modal.
+        - [x] Render the `Modal` component with the selected screenshot, ensuring proper sizing (`max-h-full`, `mx-auto`).
+    - [x] Reverted unnecessary modal-related changes in `frontend/src/components/report/ScreenshotsSection.tsx`.
+- [x] **Implement UIX feature: Collapse/Expand button for Report Header Screenshot Area:**
+    - [x] Added `isScreenshotRowCollapsed` state to `frontend/src/pages/ReportPage.tsx`.
+    - [x] Imported `ChevronUpIcon` and `ChevronDownIcon` to `frontend/src/pages/ReportPage.tsx`.
+    - [x] Moved the collapse/expand button to the bottom of the `ScreenshotRow` component in `frontend/src/pages/ReportPage.tsx`.
+    - [x] Implemented conditional rendering and CSS transitions to collapse/expand the screenshot row based on the new state, reducing whitespace when collapsed.
 
 ## In Progress Tasks
 
@@ -140,7 +154,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [x] Group technologies by category (using `tech.categories`).
     - [x] Display technology name, version (if available), icon (if available or use a default), and link to technology website.
     - [x] Ensure robust error handling and loading states for tech stack section.
-    - [x] Tech stack results update as soon as available, independently of LLM explanations or other sections.
+    [x] Tech stack results update as soon as available, independently of LLM explanations or other sections.
     - [x] UI and backend support for incremental, per-section updates and loading/progress indicators.
     - [x] Added robust sanitizer for DetectedTechnology to ensure all fields are string/null and never undefined for RTDB compatibility.
     - [x] Fixed backend to prevent undefined/null errors in RTDB updates for tech stack.
@@ -247,6 +261,8 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 - `frontend/src/components/report/PerformanceSection.tsx` - Performance section, refactored for responsive design. ✅
 - `frontend/src/components/report/ScreenshotsSection.tsx` - Screenshots section, refactored for responsive design. ✅
 - `frontend/src/components/report/LlmSummarySection.tsx` - LLM-powered summary section, refactored for responsive design. ✅
+- `frontend/src/components/ui/Modal.tsx` - Reusable modal component for displaying full-size screenshots. ✅
+- `frontend/src/pages/ReportPage.tsx` - Contains the main report page logic, including modal state and header screenshot collapse/expand functionality. ✅
 
 - `PRD.md` - Product Requirements Document ✅ (Updated for AI UX/Design)
 - `SRS.md` - Software Requirements Specification ✅ (Updated for AI UX/Design)

@@ -7,4 +7,5 @@ export { default as MetricDisplay } from './MetricDisplay';
 export type { PerformanceCategory } from './MetricDisplay'; // Exporting the type too
 export { default as DetailItem } from './DetailItem';
 export { default as ExpandableList } from './ExpandableList';
+export { default as Modal } from './Modal';
 // Add other UI component exports here

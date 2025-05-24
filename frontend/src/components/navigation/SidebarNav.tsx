@@ -101,7 +101,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
               break;
             case 'PENDING':
             default:
-              statusClasses = isActive ? "text-blue-600 font-semibold" : "text-slate-500 hover:text-blue-600";
+              statusClasses = isActive ? "text-blue-600 font-semibold" : "text-slate-700 hover:text-blue-600";
               break;
           }
 
