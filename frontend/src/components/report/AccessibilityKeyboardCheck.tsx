@@ -6,45 +6,51 @@ interface Props {
   result: AccessibilityKeyboardCheckResult;
 }
 
-const ElementList: React.FC<{ elements: Props["result"]["domOrder"]; label: string; emptyText?: string; className?: string }> = ({
+const ElementList: React.FC<{ elements?: Props["result"]["domOrder"]; label: string; emptyText?: string; className?: string }> = ({
   elements,
   label,
   emptyText = "None",
   className = "",
-}) => (
-  <div className={className}>
-    <strong>{label}</strong>
-    {elements.length === 0 ? (
-      <span className="ml-2 text-green-700">{emptyText}</span>
-    ) : (
-      <ul className="list-disc ml-6 mt-1 text-red-700">
-        {elements.map((el, idx) => (
+}) => {
+  const safeElements = Array.isArray(elements) ? elements : [];
+  return (
+    <div className={className}>
+      <strong>{label}</strong>
+      {safeElements.length === 0 ? (
+        <span className="ml-2 text-green-700">{emptyText}</span>
+      ) : (
+        <ul className="list-disc ml-6 mt-1 text-red-700">
+          {safeElements.map((el, idx) => (
+            <li key={idx}>
+              <code>{el.selector}</code>
+              {el.text && ` — "${el.text.trim().slice(0, 40)}"`}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const OrderList: React.FC<{ elements?: Props["result"]["domOrder"]; label: string }> = ({
+  elements,
+  label,
+}) => {
+  const safeElements = Array.isArray(elements) ? elements : [];
+  return (
+    <details className="mb-2">
+      <summary className="cursor-pointer text-blue-700 underline">{label}</summary>
+      <ol className="list-decimal ml-6 mt-1 text-slate-700">
+        {safeElements.map((el, idx) => (
           <li key={idx}>
             <code>{el.selector}</code>
             {el.text && ` — "${el.text.trim().slice(0, 40)}"`}
           </li>
         ))}
-      </ul>
-    )}
-  </div>
-);
-
-const OrderList: React.FC<{ elements: Props["result"]["domOrder"]; label: string }> = ({
-  elements,
-  label,
-}) => (
-  <details className="mb-2">
-    <summary className="cursor-pointer text-blue-700 underline">{label}</summary>
-    <ol className="list-decimal ml-6 mt-1 text-slate-700">
-      {elements.map((el, idx) => (
-        <li key={idx}>
-          <code>{el.selector}</code>
-          {el.text && ` — "${el.text.trim().slice(0, 40)}"`}
-        </li>
-      ))}
-    </ol>
-  </details>
-);
+      </ol>
+    </details>
+  );
+};
 
 const AccessibilityKeyboardCheck: React.FC<Props> = ({ result }) => (
   <div className="mt-8 pt-6 border-t border-slate-200">
