@@ -232,7 +232,7 @@ const ReportPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-50">
-      <div className="max-w-7xl xl:max-w-screen-xl mx-auto flex flex-col md:flex-row gap-8 pt-2 md:pt-3 px-2 md:px-4 xl:px-6 2xl:px-8">
+      <div className="w-full mx-auto flex flex-col md:flex-row gap-8 pt-2 md:pt-3 px-2 md:px-4 xl:px-6 2xl:px-8">
         <ReportPageLayout
           sidebarCollapsed={sidebarCollapsed}
           sidebarContent={

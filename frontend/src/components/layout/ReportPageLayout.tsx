@@ -12,7 +12,7 @@ const ReportPageLayout: React.FC<ReportPageLayoutProps> = ({
   sidebarCollapsed = false,
 }) => {
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full">
+    <div className="flex flex-col md:flex-row gap-6 h-full w-full">
       <aside
         className={`w-full flex-shrink-0 transition-all duration-200
           ${sidebarCollapsed ? "md:w-16 lg:w-20" : "md:w-64 lg:w-72"}
