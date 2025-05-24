@@ -3,7 +3,7 @@ import * as logger from "firebase-functions/logger";
 // @ts-ignore: No types for playwright-aws-lambda
 // import * as playwright from "playwright-aws-lambda"; // No longer launching browser here
 import { Page } from "playwright-core"; // Added import
-import { ScreenshotUrls, PlaywrightReport, AccessibilityKeyboardCheckResult } from "../types";
+import { ScreenshotUrls, PlaywrightReport, AccessibilityKeyboardCheckResult, ColorContrastResult, ContrastIssue, VisualOrderResult, VisualOrderIssue } from "../types";
 
 // Helper function for Playwright scan
 export async function performPlaywrightScan(page: Page, urlToScan: string, reportId: string): Promise<PlaywrightReport> {
@@ -110,12 +110,229 @@ export async function performPlaywrightScan(page: Page, urlToScan: string, repor
 }
 
 /**
- * Perform keyboard accessibility checks:
- * - Collects all interactive elements in DOM order.
- * - Simulates Tab navigation to record focus order.
- * - Identifies elements not reachable by Tab.
- * - Compares DOM order to focus order.
+ * Checks interactive elements for accessible name and ARIA state attributes.
  */
+export async function performAccessibilityNameAndStateChecks(page: Page): Promise<{
+  elementsMissingName: Array<{
+    selector: string;
+    tag: string;
+    id: string | null;
+    className: string | null;
+    role: string | null;
+    type: string | null;
+    text: string;
+  }>;
+  elementsMissingState: Array<{
+    selector: string;
+    tag: string;
+    id: string | null;
+    className: string | null;
+    role: string | null;
+    type: string | null;
+    text: string;
+    missingStates: string[];
+  }>;
+  error?: string;
+}> {
+  try {
+    return await page.evaluate(() => {
+      function getAccessibleName(el: Element): string | null {
+        // Try aria-label, aria-labelledby, alt, label, innerText, value
+        if (el.hasAttribute('aria-label')) return el.getAttribute('aria-label');
+        if (el.hasAttribute('aria-labelledby')) {
+          const ids = el.getAttribute('aria-labelledby')?.split(' ') || [];
+          return ids.map(id => {
+            const ref = document.getElementById(id);
+            return ref ? ref.innerText : '';
+          }).join(' ').trim() || null;
+        }
+        if ((el as HTMLImageElement).alt) return (el as HTMLImageElement).alt;
+        const labels = (el as HTMLInputElement).labels;
+        if (labels && labels.length > 0)
+          return Array.from(labels).map(l => l.innerText).join(' ');
+        if ((el as HTMLElement).innerText) return (el as HTMLElement).innerText;
+        if ((el as HTMLInputElement).value) return (el as HTMLInputElement).value;
+        return null;
+      }
+      function getRole(el: Element): string | null {
+        return el.getAttribute('role') || null;
+      }
+      function getType(el: Element): string | null {
+        return (el as HTMLInputElement).type || null;
+      }
+      const interactiveSelectors = [
+        'a[href]:not([tabindex="-1"]):not([disabled])',
+        'button:not([tabindex="-1"]):not([disabled])',
+        'input:not([type="hidden"]):not([tabindex="-1"]):not([disabled])',
+        'select:not([tabindex="-1"]):not([disabled])',
+        'textarea:not([tabindex="-1"]):not([disabled])',
+        '[tabindex]:not([tabindex="-1"]):not([disabled])'
+      ];
+      const elements = Array.from(document.querySelectorAll(interactiveSelectors.join(',')));
+      const elementsMissingName = [];
+      const elementsMissingState = [];
+      const stateAttrs = ['aria-pressed', 'aria-expanded', 'aria-checked', 'aria-selected', 'aria-disabled'];
+      for (const el of elements) {
+        const accessibleName = getAccessibleName(el);
+        if (!accessibleName || accessibleName.trim().length === 0) {
+          elementsMissingName.push({
+            selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+            tag: el.tagName.toLowerCase(),
+            id: el.id || null,
+            className: el.className || null,
+            role: getRole(el),
+            type: getType(el),
+            text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
+          });
+        }
+        // Check for missing state attributes if role/button/input
+        const missingStates = stateAttrs.filter(attr => !el.hasAttribute(attr));
+        if (
+          ['button', 'input', 'a', 'select', 'textarea'].includes(el.tagName.toLowerCase()) ||
+          getRole(el)
+        ) {
+          if (missingStates.length > 0) {
+            elementsMissingState.push({
+              selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+              tag: el.tagName.toLowerCase(),
+              id: el.id || null,
+              className: el.className || null,
+              role: getRole(el),
+              type: getType(el),
+              text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
+              missingStates,
+            });
+          }
+        }
+      }
+      return { elementsMissingName, elementsMissingState };
+    });
+  } catch (error: any) {
+    return { elementsMissingName: [], elementsMissingState: [], error: error.message || String(error) };
+  }
+}
+
+/**
+ * Performs color contrast checks on text elements.
+ */
+export async function performColorContrastCheck(page: Page): Promise<ColorContrastResult> {
+  try {
+    return await page.evaluate(() => {
+      // Helper to convert sRGB to linear RGB
+      function sRGBtoLinear(c: number): number {
+        c = c / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      }
+
+      // Helper to calculate luminance
+      function getLuminance(r: number, g: number, b: number): number {
+        return 0.2126 * sRGBtoLinear(r) + 0.7152 * sRGBtoLinear(g) + 0.0722 * sRGBtoLinear(b);
+      }
+
+      // Helper to parse CSS color strings (rgb, rgba, hex, named colors)
+      function parseColor(color: string): { r: number; g: number; b: number; a: number } | null {
+        const ctx = document.createElement('canvas').getContext('2d');
+        if (!ctx) return null;
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 1, 1);
+        const data = ctx.getImageData(0, 0, 1, 1).data;
+        return { r: data[0], g: data[1], b: data[2], a: data[3] / 255 };
+      }
+
+      // Helper to get the effective background color, considering transparency
+      function getEffectiveBackgroundColor(element: Element): { r: number; g: number; b: number; a: number } | null {
+        let currentElement: Element | null = element;
+        let bgColor: { r: number; g: number; b: number; a: number } | null = null;
+
+        while (currentElement && currentElement !== document.documentElement) {
+          const style = window.getComputedStyle(currentElement);
+          const currentBgColor = parseColor(style.backgroundColor);
+
+          if (currentBgColor && currentBgColor.a === 1) { // Opaque background found
+            bgColor = currentBgColor;
+            break;
+          } else if (currentBgColor && currentBgColor.a < 1) { // Semi-transparent, blend with parent
+            // This is a simplified blending. For full accuracy, one would need to
+            // recursively blend with all parent backgrounds. For this check,
+            // we prioritize finding an opaque background.
+            // If no opaque background is found, we'll default to white.
+            if (!bgColor) { // If this is the first semi-transparent layer
+              bgColor = currentBgColor;
+            } else { // Blend current semi-transparent with previously found background
+              // Simplified alpha blending: C_final = C_fg * alpha + C_bg * (1 - alpha)
+              const alpha = currentBgColor.a;
+              bgColor = {
+                r: Math.round(currentBgColor.r * alpha + bgColor.r * (1 - alpha)),
+                g: Math.round(currentBgColor.g * alpha + bgColor.g * (1 - alpha)),
+                b: Math.round(currentBgColor.b * alpha + bgColor.b * (1 - alpha)),
+                a: 1 // Treat as opaque after blending
+              };
+            }
+          }
+          currentElement = currentElement.parentElement;
+        }
+
+        // Default to white if no opaque background found up the tree
+        return bgColor || { r: 255, g: 255, b: 255, a: 1 };
+      }
+
+      // Helper to calculate contrast ratio
+      function getContrastRatio(color1: { r: number; g: number; b: number }, color2: { r: number; g: number; b: number }): number {
+        const lum1 = getLuminance(color1.r, color1.g, color1.b);
+        const lum2 = getLuminance(color2.r, color2.g, color2.b);
+        const lighter = Math.max(lum1, lum2);
+        const darker = Math.min(lum1, lum2);
+        return (lighter + 0.05) / (darker + 0.05);
+      }
+
+      const textElements = Array.from(document.querySelectorAll(
+        'p, span, a, h1, h2, h3, h4, h5, h6, li, td, th, label, input[type="text"], input[type="email"], input[type="password"], input[type="search"], textarea, button'
+      )).filter(el => {
+        const style = window.getComputedStyle(el);
+        // Filter out hidden elements or elements with no text content
+        return style.display !== 'none' && style.visibility !== 'hidden' && el.textContent && el.textContent.trim().length > 0;
+      });
+
+      const issues: ContrastIssue[] = [];
+
+      for (const el of textElements) {
+        const style = window.getComputedStyle(el);
+        const textColor = parseColor(style.color);
+        const backgroundColor = getEffectiveBackgroundColor(el);
+
+        if (!textColor || !backgroundColor) continue; // Skip if colors can't be parsed
+
+        const contrastRatio = getContrastRatio(textColor, backgroundColor);
+        const fontSizePx = parseFloat(style.fontSize);
+        const fontWeight = parseFloat(style.fontWeight);
+
+        // WCAG 2.1 AA requirements:
+        // Normal text: 4.5:1
+        // Large text (18pt / 24px or 14pt bold / 18.66px bold): 3:1
+        const isLargeText = fontSizePx >= 24 || (fontSizePx >= 18.66 && fontWeight >= 700);
+        const expectedRatio = isLargeText ? 3 : 4.5;
+
+        if (contrastRatio < expectedRatio) {
+          issues.push({
+            selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+            textSnippet: el.textContent!.trim().substring(0, 100),
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            textColor: style.color,
+            backgroundColor: `rgb(${backgroundColor.r}, ${backgroundColor.g}, ${backgroundColor.b})`, // Store as RGB for consistency
+            contrastRatio: parseFloat(contrastRatio.toFixed(2)),
+            expectedRatio: expectedRatio,
+            status: 'fail',
+          });
+        }
+      }
+      return { issues };
+    });
+  } catch (error: any) {
+    return { issues: [], error: error.message || String(error) };
+  }
+}
+
 export async function performAccessibilityKeyboardChecks(page: Page): Promise<AccessibilityKeyboardCheckResult> {
   try {
     // 1. Get all interactive elements in DOM order
@@ -216,5 +433,90 @@ export async function performAccessibilityKeyboardChecks(page: Page): Promise<Ac
       tabOrderMatchesDomOrder: false,
       error: error.message || String(error),
     };
+  }
+}
+
+export async function performVisualOrderCheck(page: Page): Promise<VisualOrderResult> {
+  try {
+    return await page.evaluate(() => {
+      // Helper to get bounding box and calculate center
+      function getElementPosition(el: Element) {
+        const rect = el.getBoundingClientRect();
+        return {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          centerX: rect.x + rect.width / 2,
+          centerY: rect.y + rect.height / 2,
+        };
+      }
+
+      // Get all visible elements that might contain text or be interactive
+      const elements = Array.from(document.querySelectorAll(
+        'p, span, a, h1, h2, h3, h4, h5, h6, li, td, th, label, input, select, textarea, button, div:not([aria-hidden="true"])'
+      )).filter(el => {
+        const style = window.getComputedStyle(el);
+        // Filter out hidden elements, or elements with no meaningful content/size
+        return style.display !== 'none' && style.visibility !== 'hidden' &&
+               el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 &&
+               (el.textContent && el.textContent.trim().length > 0 || el.children.length > 0 || el.tagName === 'IMG' || el.tagName === 'BUTTON' || el.tagName === 'INPUT');
+      });
+
+      const elementsWithPositions = elements.map((el, index) => ({
+        element: el,
+        domIndex: index,
+        position: getElementPosition(el),
+        selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+        textSnippet: (el.textContent || '').trim().substring(0, 100),
+      }));
+
+      // Sort elements by visual position (top-to-bottom, then left-to-right)
+      const visuallySortedElements = [...elementsWithPositions].sort((a, b) => {
+        // Primary sort by Y-coordinate (top to bottom)
+        if (a.position.centerY !== b.position.centerY) {
+          return a.position.centerY - b.position.centerY;
+        }
+        // Secondary sort by X-coordinate (left to right) for elements on the same line
+        return a.position.centerX - b.position.centerX;
+      });
+
+      const issues: VisualOrderIssue[] = [];
+      const domOrderMatchesVisualOrder = elementsWithPositions.every((el, index) => {
+        // Check if the element at this DOM index is the same as the element at this visual index
+        // This is a simplified check. A more robust check would compare the relative order of all pairs.
+        return el.selector === visuallySortedElements[index].selector;
+      });
+
+      if (!domOrderMatchesVisualOrder) {
+        // If the simple check fails, find specific discrepancies
+        for (let i = 0; i < elementsWithPositions.length; i++) {
+          const domEl = elementsWithPositions[i];
+          const visualEl = visuallySortedElements[i];
+
+          if (domEl.selector !== visualEl.selector) {
+            // Find the actual visual index of the DOM element
+            const actualVisualIndex = visuallySortedElements.findIndex(e => e.selector === domEl.selector);
+            issues.push({
+              element: {
+                selector: domEl.selector,
+                tag: domEl.element.tagName.toLowerCase(),
+                textSnippet: domEl.textSnippet,
+              },
+              domIndex: domEl.domIndex,
+              visualIndex: actualVisualIndex,
+              reason: `Element appears visually at position ${actualVisualIndex + 1} but is at DOM position ${domEl.domIndex + 1}.`,
+            });
+          }
+        }
+      }
+
+      return {
+        issues: issues,
+        domOrderMatchesVisualOrder: issues.length === 0, // If issues exist, order does not match
+      };
+    });
+  } catch (error: any) {
+    return { issues: [], domOrderMatchesVisualOrder: false, error: error.message || String(error) };
   }
 }

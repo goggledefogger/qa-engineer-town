@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Card } from '../ui';
+import { Card, ExpandableList } from '../ui';
 import type { LighthouseReportData, ReportData } from '../../types/reportTypes';
 import { unwrapMarkdown } from '../../utils/textUtils';
 
@@ -47,8 +47,9 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
             <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
               Lighthouse Best Practices Audits
             </h3>
-            <ul className="space-y-3 sm:space-y-4 list-none p-0">
-              {bpAudits.map((audit: any) => (
+            <ExpandableList
+              items={bpAudits}
+              renderItem={(audit: any) => (
                 <li
                   key={audit.id}
                   className="p-3 sm:p-4 bg-slate-50 rounded-md sm:rounded-lg shadow border border-slate-200"
@@ -64,8 +65,11 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
                     </div>
                   )}
                 </li>
-              ))}
-            </ul>
+              )}
+              emptyMessage="No Lighthouse best practices audits found."
+              initialVisibleCount={5}
+              itemKey={(item: any) => item.id}
+            />
           </div>
         )}
         {/* Show LLM explanations if available, with pending/error states */}
@@ -74,8 +78,9 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
             <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
               AI-Explained Best Practices Audits
             </h3>
-            <ul className="space-y-3 sm:space-y-4 list-none p-0">
-              {llmExplainedAudits.map((item: any) => (
+            <ExpandableList
+              items={llmExplainedAudits}
+              renderItem={(item: any) => (
                 <li
                   key={item.id}
                   className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
@@ -101,8 +106,11 @@ const BestPracticesSection: React.FC<BestPracticesSectionProps> = ({ lighthouseR
                     </p>
                   )}
                 </li>
-              ))}
-            </ul>
+              )}
+              emptyMessage="No AI-explained best practices audits found."
+              initialVisibleCount={5}
+              itemKey={(item: any) => item.id}
+            />
           </div>
         )}
       </>

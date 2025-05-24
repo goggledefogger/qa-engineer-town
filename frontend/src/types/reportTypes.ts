@@ -158,6 +158,63 @@ export interface AccessibilityKeyboardCheckResult {
   error?: string;
 }
 
+export interface AccessibilityNameAndStateCheckResult {
+  elementsMissingName: Array<{
+    selector: string;
+    tag: string;
+    id: string | null;
+    className: string | null;
+    role: string | null;
+    type: string | null;
+    text: string;
+  }>;
+  elementsMissingState: Array<{
+    selector: string;
+    tag: string;
+    id: string | null;
+    className: string | null;
+    role: string | null;
+    type: string | null;
+    text: string;
+    missingStates: string[];
+  }>;
+  error?: string;
+}
+
+export interface ContrastIssue {
+  selector: string; // Simplified selector
+  textSnippet: string; // First ~100 chars of text
+  fontSize: string;
+  fontWeight: string;
+  textColor: string;
+  backgroundColor: string;
+  contrastRatio: number;
+  expectedRatio: number; // 4.5 or 3
+  status: 'fail' | 'pass'; // Though we'd only return fails
+}
+
+export interface ColorContrastResult {
+  issues: ContrastIssue[];
+  error?: string;
+}
+
+export interface VisualOrderIssue {
+  element: {
+    selector: string;
+    tag: string;
+    textSnippet: string;
+  };
+  domIndex: number;
+  visualIndex: number;
+  reason: string; // e.g., "Visual order deviates from DOM order"
+}
+
+export interface VisualOrderResult {
+  issues: VisualOrderIssue[];
+  domOrderMatchesVisualOrder: boolean;
+  error?: string;
+}
+
 export interface ReportData {
   id: string;
   url: string;
@@ -170,6 +227,9 @@ export interface ReportData {
   llmReportSummary?: LLMReportSummary;
   techStack?: TechStackData;
   accessibilityKeyboardCheck?: AccessibilityKeyboardCheckResult;
+  accessibilityNameAndStateCheck?: AccessibilityNameAndStateCheckResult; // Add new check result
+  colorContrastCheck?: ColorContrastResult; // Add new check result
+  visualOrderCheck?: VisualOrderResult; // Add new check result
   errorMessage?: string; // For top-level report errors
   completedAt?: number;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Card, OverallScoreGauge, MetricDisplay } from '../ui';
+import { Card, OverallScoreGauge, MetricDisplay, ExpandableList } from '../ui';
 import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/reportTypes';
 import { lighthouseMetricDetails } from '../../types/reportTypes';
 import type { PerformanceCategory } from '../ui/MetricDisplay';
@@ -93,67 +93,76 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
       return null; // No items, and not explicitly "no opportunities found" state
     }
 
+    const renderOpportunityItem = (item: LLMExplainedAuditItem & {
+      rawDescription?: string;
+      overallSavingsMs?: number;
+      overallSavingsBytes?: number;
+    }) => {
+      const explanationText =
+        item.status === "completed" && item.llmExplanation
+          ? item.llmExplanation
+          : item.rawDescription;
+      const showPendingMessage = item.status === "pending";
+      const showError = item.status === "error" && item.error;
+
+      return (
+        <li
+          className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
+        >
+          <h5 className="font-semibold text-sky-700 mb-1 sm:mb-2 text-base sm:text-lg">
+            {item.title}
+          </h5>
+          {item.overallSavingsMs !== undefined && (
+            <p className="text-xs text-slate-500 mb-1.5">
+              Est. savings:{" "}
+              <span className="font-medium">
+                {Math.round(item.overallSavingsMs).toLocaleString()} ms
+              </span>
+            </p>
+          )}
+          {item.overallSavingsBytes !== undefined &&
+            !(item.overallSavingsMs && item.overallSavingsMs > 0) && (
+              <p className="text-xs text-slate-500 mb-1.5">
+                Est. savings:{" "}
+                <span className="font-medium">
+                  {(item.overallSavingsBytes / 1024).toFixed(1)} KiB
+                </span>
+              </p>
+            )}
+
+          {explanationText && (
+            <div className="text-sm sm:text-base text-slate-700 prose prose-sm sm:prose-base max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {unwrapMarkdown(explanationText)}
+              </ReactMarkdown>
+            </div>
+          )}
+          {showPendingMessage && (
+            <p className="text-xs text-slate-400 mt-2 italic">
+              AI-powered explanation & advice pending...
+            </p>
+          )}
+          {showError && (
+            <p className="text-xs text-red-500 mt-1">
+              AI explanation error: {item.error}
+            </p>
+          )}
+        </li>
+      );
+    };
+
     return (
       <div className="mt-8 pt-6 border-t border-slate-200">
         <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
           Performance Opportunities & AI Advice
         </h3>
-        <ul className="space-y-3 sm:space-y-4 list-none p-0">
-          {items.map((item) => {
-            const explanationText =
-              item.status === "completed" && item.llmExplanation
-                ? item.llmExplanation
-                : item.rawDescription;
-            const showPendingMessage = item.status === "pending";
-            const showError = item.status === "error" && item.error;
-
-            return (
-              <li
-                key={item.id}
-                className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
-              >
-                <h5 className="font-semibold text-sky-700 mb-1 sm:mb-2 text-base sm:text-lg">
-                  {item.title}
-                </h5>
-                {item.overallSavingsMs !== undefined && (
-                  <p className="text-xs text-slate-500 mb-1.5">
-                    Est. savings:{" "}
-                    <span className="font-medium">
-                      {Math.round(item.overallSavingsMs).toLocaleString()} ms
-                    </span>
-                  </p>
-                )}
-                {item.overallSavingsBytes !== undefined &&
-                  !(item.overallSavingsMs && item.overallSavingsMs > 0) && (
-                    <p className="text-xs text-slate-500 mb-1.5">
-                      Est. savings:{" "}
-                      <span className="font-medium">
-                        {(item.overallSavingsBytes / 1024).toFixed(1)} KiB
-                      </span>
-                    </p>
-                  )}
-
-                {explanationText && (
-                  <div className="text-sm sm:text-base text-slate-700 prose prose-sm sm:prose-base max-w-none prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-headings:my-2 prose-headings:font-medium prose-h3:text-base prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-code:text-xs prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:font-mono">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {unwrapMarkdown(explanationText)}
-                    </ReactMarkdown>
-                  </div>
-                )}
-                {showPendingMessage && (
-                  <p className="text-xs text-slate-400 mt-2 italic">
-                    AI-powered explanation & advice pending...
-                  </p>
-                )}
-                {showError && (
-                  <p className="text-xs text-red-500 mt-1">
-                    AI explanation error: {item.error}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <ExpandableList
+          items={items}
+          renderItem={renderOpportunityItem}
+          emptyMessage="No specific performance opportunities found by Lighthouse."
+          initialVisibleCount={5}
+          itemKey={(item: LLMExplainedAuditItem) => item.id}
+        />
       </div>
     );
   };
@@ -196,50 +205,70 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
 
     const renderNonPerfectAudits = () => {
       if (!hasNonPerfectAudits) return null;
+
+      const renderAuditItem = (audit: {
+        id: string;
+        title: string;
+        score?: number | null;
+        displayValue?: string;
+        numericValue?: number;
+        explanation?: string;
+        description: string;
+      }, _idx: number) => (
+        <li className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-sky-700 text-base sm:text-lg">
+              {audit.title}
+            </span>
+            {typeof audit.score === "number" && (
+              <span className="text-xs text-slate-500">
+                Score: {(audit.score * 100).toFixed(0)} / 100
+              </span>
+            )}
+            {audit.displayValue && (
+              <span className="text-xs text-slate-500">
+                Value: {audit.displayValue}
+              </span>
+            )}
+            {audit.numericValue !== undefined && !audit.displayValue && (
+              <span className="text-xs text-slate-500">
+                Value: {audit.numericValue}
+              </span>
+            )}
+            {audit.explanation && (
+              <span className="text-xs text-slate-500">
+                {audit.explanation}
+              </span>
+            )}
+            <div className="text-sm sm:text-base text-slate-700 mt-1">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {unwrapMarkdown(audit.description)}
+              </ReactMarkdown>
+            </div>
+          </div>
+        </li>
+      );
+
       return (
         <div className="mt-8 pt-6 border-t border-slate-200">
           <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
             Other Performance Factors
           </h3>
-          <ul className="space-y-3 sm:space-y-4 list-none p-0">
-            {lighthouseReport!.nonPerfectPerformanceAudits!.map((audit) => (
-              <li
-                key={audit.id}
-                className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-sky-700 text-base sm:text-lg">
-                    {audit.title}
-                  </span>
-                  {typeof audit.score === "number" && (
-                    <span className="text-xs text-slate-500">
-                      Score: {(audit.score * 100).toFixed(0)} / 100
-                    </span>
-                  )}
-                  {audit.displayValue && (
-                    <span className="text-xs text-slate-500">
-                      Value: {audit.displayValue}
-                    </span>
-                  )}
-                  {audit.numericValue !== undefined && !audit.displayValue && (
-                    <span className="text-xs text-slate-500">
-                      Value: {audit.numericValue}
-                    </span>
-                  )}
-                  {audit.explanation && (
-                    <span className="text-xs text-slate-500">
-                      {audit.explanation}
-                    </span>
-                  )}
-                  <div className="text-sm sm:text-base text-slate-700 mt-1">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {unwrapMarkdown(audit.description)}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <ExpandableList
+            items={lighthouseReport!.nonPerfectPerformanceAudits!}
+            renderItem={renderAuditItem}
+            emptyMessage="No other performance factors to show."
+            initialVisibleCount={5}
+            itemKey={(item: {
+              id: string;
+              title: string;
+              score?: number | null;
+              displayValue?: string;
+              numericValue?: number;
+              explanation?: string;
+              description: string;
+            }) => item.id}
+          />
         </div>
       );
     };

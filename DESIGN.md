@@ -52,13 +52,24 @@ This document outlines the user interface design for the AI QA Engineer Assistan
     *   Displayed on the Report Page while data is being fetched or processed (e.g., "Generating AI Design Suggestions...").
 *   **Error Display:** Clear, user-friendly messages for API errors, invalid URLs, or if a report cannot be found/generated.
 
+## UI/UX Patterns
+
+### Progressive Disclosure for Lists
+
+To prevent overwhelming users with long lists of issues or data points, especially in sections like Accessibility, Performance, SEO, and Best Practices, a "Progressive Disclosure" pattern is implemented.
+
+*   **Default View:** Initially, only a limited number of items (e.g., 5-10) from a list are displayed.
+*   **"Show More" Button:** If the total number of items exceeds the initial visible count, a prominent "Show More" button is displayed. Clicking this button expands the list to reveal all remaining items. The button text updates to indicate the number of hidden items.
+*   **"Show Less" Button:** Once expanded, the "Show More" button transforms into a "Show Less" button, allowing users to collapse the list back to its initial state.
+*   **Consistency:** This pattern is applied consistently across all report sections where long lists of findings, opportunities, or audits are presented.
+
 ## Interaction Patterns
 
 *   **Scan Initiation:** User enters a URL on the landing page and clicks "Analyze." Application navigates to the report page, showing a loading state.
 *   **Report Navigation:** User clicks on sidebar/tab items to switch between different report sections. The main content area updates instantly without a full page reload.
 *   **Data Display:**
     *   Scores are displayed clearly, often with visual aids (e.g., color-coding: green for good, red for poor).
-    *   Lists of issues are easy to scan.
+    *   Lists of issues are easy to scan, now enhanced with progressive disclosure.
     *   AI UX suggestions are presented in a digestible format.
 *   **Incremental Loading (Desirable):** As different parts of the analysis complete (e.g., screenshot ready, then Lighthouse scores, then AI UX analysis), the report page updates to show available data, rather than waiting for everything to finish. The UI should indicate which sections are still loading.
 *   **Tooltips/Information Icons:** Used for technical terms or metrics to provide users with more context on demand.

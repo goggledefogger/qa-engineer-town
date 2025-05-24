@@ -92,7 +92,11 @@ export async function performLighthouseScan(urlToScan: string, reportId: string,
           .sort((a: any, b: any) => (b.overallSavingsMs || 0) - (a.overallSavingsMs || 0))
           .slice(0, 3);
       } else {
-        logger.warn("Lighthouse global auditRefs are missing/not an array or audits object is missing.", { reportId });
+        logger.warn("Lighthouse global auditRefs are missing/not an array or audits object is missing.", {
+          reportId,
+          globalAuditRefs: psJson.lighthouseResult.auditRefs,
+          auditsObject: psJson.lighthouseResult.audits,
+        });
         reportData.performanceOpportunities = [];
       }
 

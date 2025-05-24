@@ -11,6 +11,23 @@ export interface PlaywrightReport {
   error?: string;
 }
 
+export interface ContrastIssue {
+  selector: string; // Simplified selector
+  textSnippet: string; // First ~100 chars of text
+  fontSize: string;
+  fontWeight: string;
+  textColor: string;
+  backgroundColor: string;
+  contrastRatio: number;
+  expectedRatio: number; // 4.5 or 3
+  status: 'fail' | 'pass'; // Though we'd only return fails
+}
+
+export interface ColorContrastResult {
+  issues: ContrastIssue[];
+  error?: string;
+}
+
 export interface LighthouseReportData {
   success: boolean;
   error?: string;
@@ -112,6 +129,8 @@ export interface ReportData {
   aiUxDesignSuggestions?: AiUxDesignSuggestions;
   llmReportSummary?: LLMReportSummary;
   techStack?: TechStackData;
+  colorContrastCheck?: ColorContrastResult; // Add new check result
+  visualOrderCheck?: VisualOrderResult; // Add new check result
   createdAt: number;
   updatedAt: number;
   error?: string;
@@ -167,5 +186,22 @@ export interface AccessibilityKeyboardCheckResult {
     className: string | null;
   }>;
   tabOrderMatchesDomOrder: boolean;
+  error?: string;
+}
+
+export interface VisualOrderIssue {
+  element: {
+    selector: string;
+    tag: string;
+    textSnippet: string;
+  };
+  domIndex: number;
+  visualIndex: number;
+  reason: string; // e.g., "Visual order deviates from DOM order"
+}
+
+export interface VisualOrderResult {
+  issues: VisualOrderIssue[];
+  domOrderMatchesVisualOrder: boolean;
   error?: string;
 }

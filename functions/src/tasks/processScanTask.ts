@@ -9,8 +9,16 @@ import {
   AiUxDesignSuggestions,
   ScreenshotUrls,
   ScreenContextType,
+  // ColorContrastResult, // Removed unused import
+  // VisualOrderResult, // Removed unused import
 } from "../types/index";
-import { performPlaywrightScan, performAccessibilityKeyboardChecks } from "../services/playwrightService";
+import {
+  performPlaywrightScan,
+  performAccessibilityKeyboardChecks,
+  performAccessibilityNameAndStateChecks,
+  performColorContrastCheck, // Import new function
+  performVisualOrderCheck, // Import new function
+} from "../services/playwrightService";
 import { performLighthouseScan } from "../services/lighthouseService";
 import { performGeminiAnalysis } from "../services/geminiVisionService";
 import {
@@ -63,6 +71,24 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       const accessibilityKeyboardCheck = await performAccessibilityKeyboardChecks(page);
       await reportRef.child("accessibilityKeyboardCheck").set(accessibilityKeyboardCheck);
       logger.info("Accessibility keyboard check results saved.", { reportId });
+
+      // --- Accessibility Name and State Check ---
+      logger.info("Starting accessibility name and state check...", { reportId });
+      const accessibilityNameAndStateCheck = await performAccessibilityNameAndStateChecks(page);
+      await reportRef.child("accessibilityNameAndStateCheck").set(accessibilityNameAndStateCheck);
+      logger.info("Accessibility name and state check results saved.", { reportId });
+
+      // --- Color Contrast Check ---
+      logger.info("Starting color contrast check...", { reportId });
+      const colorContrastCheck = await performColorContrastCheck(page);
+      await reportRef.child("colorContrastCheck").set(colorContrastCheck);
+      logger.info("Color contrast check results saved.", { reportId });
+
+      // --- Visual Order Check ---
+      logger.info("Starting visual order check...", { reportId });
+      const visualOrderCheck = await performVisualOrderCheck(page);
+      await reportRef.child("visualOrderCheck").set(visualOrderCheck);
+      logger.info("Visual order check results saved.", { reportId });
 
       logger.info("Starting parallel Lighthouse, Gemini AI, and Tech Stack scans...", { reportId });
       const lighthousePromise = performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY);
@@ -127,6 +153,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         lighthousePromise,
         geminiPromise,
         techStackPromise,
+        // colorContrastPromise, // Already awaited above for sequential execution
       ]);
 
       const lighthouseData = results[0].status === "fulfilled" && results[0].value && typeof results[0].value.success === "boolean"

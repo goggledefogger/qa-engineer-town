@@ -86,7 +86,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
           switch (status) {
             case 'LOADING':
               statusClasses = "text-slate-400 italic";
-              statusTextSuffix = " (loading...)";
+              statusTextSuffix = " (...)";
               break;
             case 'ERROR':
               statusClasses = "text-red-500";

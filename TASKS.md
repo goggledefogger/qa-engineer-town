@@ -104,24 +104,34 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
   - [x] Improved mobile and desktop spacing, margins, and alignment for all report sections
   - [x] Fixed Report heading and navigation stacking on mobile
 
-## In Progress Tasks
+## Completed Tasks
 
-- [ ] **AI-Assisted Playwright for User Flow Testing & Interactive Suggestions:**
-    - [ ] Research AI-assisted browser control libraries/frameworks compatible with Playwright/Node.js (e.g., exploring options that can intelligently interact with web elements).
-    - [ ] Define a set of common key user flows to test automatically (e.g., login, registration, product search, add to cart, checkout process).
-    - [ ] Integrate the chosen AI-assisted library to drive Playwright through these defined user flows.
-    - [ ] Develop logic to capture interaction issues, gather data on task completion success/failure, and identify elements контекст for screen-specific interactivity suggestions.
-    - [ ] Explore how AI can provide feedback on the ease of use and intuitiveness of these flows, especially on different screen contexts (e.g., mobile navigation).
-    - [ ] Update RTDB and frontend reporting to include findings from these interactive user flow tests and any AI-generated interactivity suggestions.
-
-- [x] **Automate Manual Accessibility Checks (Keyboard Focusability & Tab Order):**
+- [x] **Automate Manual Accessibility Checks (Keyboard Focusability, Accessible Name & State, Color Contrast, Visual Order):**
     - [x] Implement Playwright logic to collect interactive elements in DOM order.
     - [x] Simulate Tab navigation to record focus order.
     - [x] Identify elements not reachable by Tab.
     - [x] Compare DOM order to focus order and store results in RTDB.
     - [x] Display results in frontend Accessibility section.
+    - [x] Implement Playwright logic to check accessible names and ARIA states.
+    - [x] Display accessible name and ARIA state check results in frontend Accessibility section.
+    - [x] Implement Playwright logic to check color contrast for text elements.
+    - [x] Display color contrast check results in frontend Accessibility section.
+    - [x] Implement Playwright logic to check visual order vs. DOM order.
+    - [x] Display visual order check results in frontend Accessibility section.
+- [x] **Implement Progressive Disclosure for Long Lists in Report UI:**
+    - [x] Created a reusable `ExpandableList` component (`frontend/src/components/ui/ExpandableList.tsx`).
+    - [x] Exported `ExpandableList` from `frontend/src/components/ui/index.ts`.
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/AccessibilityKeyboardCheck.tsx`.
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/AccessibilityNameAndStateCheck.tsx`.
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/ColorContrastCheck.tsx`.
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/VisualOrderCheck.tsx`.
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/PerformanceSection.tsx` (for performance opportunities and non-perfect audits).
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/SeoSection.tsx` (for Lighthouse and AI-explained SEO audits).
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/BestPracticesSection.tsx` (for Lighthouse and AI-explained best practices audits).
+    - [x] Integrated `ExpandableList` into `frontend/src/components/report/AccessibilitySection.tsx` (for Lighthouse and AI-explained accessibility issues).
+    - [x] Documented the "Progressive Disclosure for Lists" pattern in `DESIGN.md`.
 
-## Completed Tasks
+## In Progress Tasks
 
 - [x] Implement Tech Stack Detection (Frontend & Backend):
     - [x] Create a new section/tab in the frontend `ReportPage` (e.g., `TechStackSection.tsx`) to display the tech stack information.
@@ -158,7 +168,7 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Develop frontend UI components to display AI-generated advice within relevant report sections (e.g., Accessibility, Performance).
     - [ ] Design data structures in RTDB for storing and retrieving AI-generated remediation advice.
     - [ ] (Long-Term) Explore and implement an interactive chat-like interface for users to ask follow-up questions about report findings and AI suggestions.
-- [ ] **NEW: Automate Manual Accessibility Checks (from PageSpeed Insights / Lighthouse):**
+- [ ] **Automate Manual Accessibility Checks (from PageSpeed Insights / Lighthouse):**
     - [ ] Interactive controls are keyboard focusable (Playwright)
     - [ ] Interactive elements indicate their purpose and state (Playwright + AI for complex cases)
     - [ ] The page has a logical tab order (Playwright)

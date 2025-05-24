@@ -6,4 +6,5 @@ export { default as OverallScoreGauge } from './OverallScoreGauge';
 export { default as MetricDisplay } from './MetricDisplay';
 export type { PerformanceCategory } from './MetricDisplay'; // Exporting the type too
 export { default as DetailItem } from './DetailItem';
+export { default as ExpandableList } from './ExpandableList';
 // Add other UI component exports here

@@ -1,21 +1,53 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult } from '../../types/reportTypes';
+import { Card, OverallScoreGauge, ExpandableList } from '../ui';
+import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult, ColorContrastResult, VisualOrderResult } from '../../types/reportTypes';
+
+interface AccessibilityNameAndStateCheckResult {
+  elementsMissingName: Array<{
+    selector: string;
+    tag: string;
+    id: string | null;
+    className: string | null;
+    role: string | null;
+    type: string | null;
+    text: string;
+  }>;
+  elementsMissingState: Array<{
+    selector: string;
+    tag: string;
+    id: string | null;
+    className: string | null;
+    role: string | null;
+    type: string | null;
+    text: string;
+    missingStates: string[];
+  }>;
+  error?: string;
+}
 import { unwrapMarkdown } from '../../utils/textUtils';
 import AccessibilityKeyboardCheck from './AccessibilityKeyboardCheck';
+import AccessibilityNameAndStateCheck from './AccessibilityNameAndStateCheck';
+import ColorContrastCheck from './ColorContrastCheck';
+import VisualOrderCheck from './VisualOrderCheck';
 
 interface AccessibilitySectionProps {
   lighthouseReport?: LighthouseReportData;
   reportStatus?: ReportData['status'];
   accessibilityKeyboardCheck?: AccessibilityKeyboardCheckResult;
+  accessibilityNameAndStateCheck?: AccessibilityNameAndStateCheckResult;
+  colorContrastCheck?: ColorContrastResult; // Add new prop
+  visualOrderCheck?: VisualOrderResult; // Add new prop
 }
 
 const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
   lighthouseReport,
   reportStatus,
   accessibilityKeyboardCheck,
+  accessibilityNameAndStateCheck,
+  colorContrastCheck,
+  visualOrderCheck, // Destructure new prop
 }) => {
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
   const accessibilityAudits = lighthouseReport?.accessibilityIssues;
@@ -60,8 +92,9 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
             <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
               Lighthouse Accessibility Issues
             </h3>
-            <ul className="space-y-3 sm:space-y-4 list-none p-0">
-              {accessibilityAudits.map((issue) => (
+            <ExpandableList
+              items={accessibilityAudits}
+              renderItem={(issue: any) => (
                 <li
                   key={issue.id}
                   className="p-3 sm:p-4 bg-slate-50 rounded-md sm:rounded-lg shadow border border-slate-200"
@@ -75,8 +108,11 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
                     </ReactMarkdown>
                   </div>
                 </li>
-              ))}
-            </ul>
+              )}
+              emptyMessage="No Lighthouse accessibility issues found."
+              initialVisibleCount={5}
+              itemKey={(item: any) => item.id}
+            />
           </div>
         )}
         {/* Show LLM explanations if available, with pending/error states */}
@@ -85,8 +121,9 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
             <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
               AI-Explained Accessibility Issues
             </h3>
-            <ul className="space-y-3 sm:space-y-4 list-none p-0">
-              {llmExplainedAudits.map((item) => (
+            <ExpandableList
+              items={llmExplainedAudits}
+              renderItem={(item: any) => (
                 <li
                   key={item.id}
                   className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
@@ -112,13 +149,28 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
                     </p>
                   )}
                 </li>
-              ))}
-            </ul>
+              )}
+              emptyMessage="No AI-explained accessibility issues found."
+              initialVisibleCount={5}
+              itemKey={(item: any) => item.id}
+            />
           </div>
         )}
         {/* Keyboard Accessibility Checks */}
         {accessibilityKeyboardCheck && (
           <AccessibilityKeyboardCheck result={accessibilityKeyboardCheck} />
+        )}
+        {/* Name and State Accessibility Checks */}
+        {accessibilityNameAndStateCheck && (
+          <AccessibilityNameAndStateCheck result={accessibilityNameAndStateCheck} />
+        )}
+        {/* Color Contrast Checks */}
+        {colorContrastCheck && (
+          <ColorContrastCheck result={colorContrastCheck} />
+        )}
+        {/* Visual Order Checks */}
+        {visualOrderCheck && (
+          <VisualOrderCheck result={visualOrderCheck} />
         )}
       </>
     );

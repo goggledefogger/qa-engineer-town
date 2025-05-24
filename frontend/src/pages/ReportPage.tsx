@@ -148,6 +148,9 @@ const ReportPage: React.FC = () => {
           lighthouseReport={reportData.lighthouseReport}
           reportStatus={reportData.status}
           accessibilityKeyboardCheck={reportData.accessibilityKeyboardCheck}
+          accessibilityNameAndStateCheck={reportData.accessibilityNameAndStateCheck}
+          colorContrastCheck={reportData.colorContrastCheck}
+          visualOrderCheck={reportData.visualOrderCheck}
         />;
       case 'seo':
         return <SeoSection lighthouseReport={reportData.lighthouseReport} reportStatus={reportData.status} />;
