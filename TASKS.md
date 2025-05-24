@@ -114,6 +114,13 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
     - [ ] Explore how AI can provide feedback on the ease of use and intuitiveness of these flows, especially on different screen contexts (e.g., mobile navigation).
     - [ ] Update RTDB and frontend reporting to include findings from these interactive user flow tests and any AI-generated interactivity suggestions.
 
+- [x] **Automate Manual Accessibility Checks (Keyboard Focusability & Tab Order):**
+    - [x] Implement Playwright logic to collect interactive elements in DOM order.
+    - [x] Simulate Tab navigation to record focus order.
+    - [x] Identify elements not reachable by Tab.
+    - [x] Compare DOM order to focus order and store results in RTDB.
+    - [x] Display results in frontend Accessibility section.
+
 ## Completed Tasks
 
 - [x] Implement Tech Stack Detection (Frontend & Backend):

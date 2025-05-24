@@ -2,15 +2,21 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData } from '../../types/reportTypes';
+import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult } from '../../types/reportTypes';
 import { unwrapMarkdown } from '../../utils/textUtils';
+import AccessibilityKeyboardCheck from './AccessibilityKeyboardCheck';
 
 interface AccessibilitySectionProps {
   lighthouseReport?: LighthouseReportData;
   reportStatus?: ReportData['status'];
+  accessibilityKeyboardCheck?: AccessibilityKeyboardCheckResult;
 }
 
-const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseReport, reportStatus }) => {
+const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
+  lighthouseReport,
+  reportStatus,
+  accessibilityKeyboardCheck,
+}) => {
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
   const accessibilityAudits = lighthouseReport?.accessibilityIssues;
   const llmExplainedAudits = lighthouseReport?.llmExplainedAccessibilityIssues;
@@ -109,6 +115,10 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({ lighthouseR
               ))}
             </ul>
           </div>
+        )}
+        {/* Keyboard Accessibility Checks */}
+        {accessibilityKeyboardCheck && (
+          <AccessibilityKeyboardCheck result={accessibilityKeyboardCheck} />
         )}
       </>
     );

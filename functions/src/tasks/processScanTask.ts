@@ -10,7 +10,7 @@ import {
   ScreenshotUrls,
   ScreenContextType,
 } from "../types/index";
-import { performPlaywrightScan } from "../services/playwrightService";
+import { performPlaywrightScan, performAccessibilityKeyboardChecks } from "../services/playwrightService";
 import { performLighthouseScan } from "../services/lighthouseService";
 import { performGeminiAnalysis } from "../services/geminiVisionService";
 import {
@@ -57,6 +57,12 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       logger.info("Playwright scan completed. Success: " + playwrightReport.success, { reportId });
       await reportRef.child("playwrightReport").update(playwrightReport);
       logger.info("Report updated with Playwright results.", { reportId });
+
+      // --- Accessibility Keyboard Check ---
+      logger.info("Starting accessibility keyboard check...", { reportId });
+      const accessibilityKeyboardCheck = await performAccessibilityKeyboardChecks(page);
+      await reportRef.child("accessibilityKeyboardCheck").set(accessibilityKeyboardCheck);
+      logger.info("Accessibility keyboard check results saved.", { reportId });
 
       logger.info("Starting parallel Lighthouse, Gemini AI, and Tech Stack scans...", { reportId });
       const lighthousePromise = performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY);

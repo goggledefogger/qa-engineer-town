@@ -144,7 +144,11 @@ const ReportPage: React.FC = () => {
       case 'performance':
         return <PerformanceSection lighthouseReport={reportData.lighthouseReport} reportStatus={reportData.status} />;
       case 'accessibility':
-        return <AccessibilitySection lighthouseReport={reportData.lighthouseReport} reportStatus={reportData.status} />;
+        return <AccessibilitySection
+          lighthouseReport={reportData.lighthouseReport}
+          reportStatus={reportData.status}
+          accessibilityKeyboardCheck={reportData.accessibilityKeyboardCheck}
+        />;
       case 'seo':
         return <SeoSection lighthouseReport={reportData.lighthouseReport} reportStatus={reportData.status} />;
       case 'best-practices':
