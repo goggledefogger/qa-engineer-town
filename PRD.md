@@ -32,7 +32,7 @@ This application is designed for freelance QA engineers who work with clients ow
     *   Generate a simple, interactive web-based report.
     *   Display the extracted Lighthouse scores and key performance metrics clearly.
     *   Display major accessibility violations identified.
-    *   Show the screenshot taken.
+    *   Show the screenshot taken. **Clicking on a device screenshot in the header opens a full-screen modal view.**
     *   **NEW:** Display AI-generated UX and design insights in a dedicated section of the report.
 *   **Technology (Initial):**
     *   Frontend: React, TypeScript, Tailwind CSS
@@ -57,6 +57,7 @@ This application is designed for freelance QA engineers who work with clients ow
 *   A prominent "Start Scan" or "Analyze" button.
 *   A loading/progress indicator while the scan is running.
 *   A dedicated view to display the interactive report, clearly sectioned for Performance, Accessibility, Screenshot, **NEW:** and AI UX & Design Insights.
+*   The row of device screenshots in the report header can be collapsed and expanded.
 *   (Future) Options for configuring scan depth or specific tests.
 *   (Future) History of previous scans/reports.
 

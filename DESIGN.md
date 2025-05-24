@@ -33,7 +33,7 @@ This document outlines the user interface design for the AI QA Engineer Assistan
     *   Visual indication of the currently active section.
 *   **Report Sections (Report Page - Main Content Area):**
     *   **Summary:** Key overall scores (Performance, Accessibility, etc.), a count of critical issues, and perhaps a small version of the screenshot.
-    *   **Screenshot:** Full-size, clear display of the captured website screenshot.
+    *   **Screenshot:** Full-size, clear display of the captured website screenshot. **Clicking on a device screenshot in the header opens a full-screen modal view of that screenshot.**
     *   **Metrics Sections (Performance, Accessibility, SEO, Best Practices):**
         *   Display of the primary score for the category (e.g., Performance score: 85/100).
         *   Lists or cards detailing specific audit results, findings, and recommendations.
@@ -71,6 +71,7 @@ To prevent overwhelming users with long lists of issues or data points, especial
     *   Scores are displayed clearly, often with visual aids (e.g., color-coding: green for good, red for poor).
     *   Lists of issues are easy to scan, now enhanced with progressive disclosure.
     *   AI UX suggestions are presented in a digestible format.
+*   **Collapsible Header Screenshot Area:** The row of device screenshots in the report header can be collapsed and expanded via a dedicated button, reducing vertical space when not actively viewing the screenshots.
 *   **Incremental Loading (Desirable):** As different parts of the analysis complete (e.g., screenshot ready, then Lighthouse scores, then AI UX analysis), the report page updates to show available data, rather than waiting for everything to finish. The UI should indicate which sections are still loading.
 *   **Tooltips/Information Icons:** Used for technical terms or metrics to provide users with more context on demand.
 
