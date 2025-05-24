@@ -132,6 +132,32 @@ export interface TechStackData {
   detectedTechnologies?: DetectedTechnology[];
 }
 
+export interface AccessibilityKeyboardCheckResult {
+  domOrder: Array<{
+    selector: string;
+    tag: string;
+    text: string;
+    id?: string;
+    className?: string;
+  }>;
+  focusOrder: Array<{
+    selector: string;
+    tag: string;
+    text: string;
+    id?: string;
+    className?: string;
+  }>;
+  notReachableByTab: Array<{
+    selector: string;
+    tag: string;
+    text: string;
+    id?: string;
+    className?: string;
+  }>;
+  tabOrderMatchesDomOrder: boolean;
+  error?: string;
+}
+
 export interface ReportData {
   id: string;
   url: string;
@@ -143,6 +169,7 @@ export interface ReportData {
   aiUxDesignSuggestions?: AiUxDesignSuggestions;
   llmReportSummary?: LLMReportSummary;
   techStack?: TechStackData;
+  accessibilityKeyboardCheck?: AccessibilityKeyboardCheckResult;
   errorMessage?: string; // For top-level report errors
   completedAt?: number;
 }

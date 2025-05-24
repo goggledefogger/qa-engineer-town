@@ -143,3 +143,29 @@ export interface TechStackData {
 export enum ScreenContext {
   // ... existing code ...
 }
+
+export interface AccessibilityKeyboardCheckResult {
+  domOrder: Array<{
+    selector: string;
+    tag: string;
+    text: string;
+    id?: string;
+    className?: string;
+  }>;
+  focusOrder: Array<{
+    selector: string;
+    tag: string;
+    text: string;
+    id?: string;
+    className?: string;
+  }>;
+  notReachableByTab: Array<{
+    selector: string;
+    tag: string;
+    text: string;
+    id?: string;
+    className?: string;
+  }>;
+  tabOrderMatchesDomOrder: boolean;
+  error?: string;
+}

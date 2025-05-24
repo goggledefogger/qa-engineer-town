@@ -3,7 +3,7 @@ import * as logger from "firebase-functions/logger";
 // @ts-ignore: No types for playwright-aws-lambda
 // import * as playwright from "playwright-aws-lambda"; // No longer launching browser here
 import { Page } from "playwright-core"; // Added import
-import { ScreenshotUrls, PlaywrightReport } from "../types";
+import { ScreenshotUrls, PlaywrightReport, AccessibilityKeyboardCheckResult } from "../types";
 
 // Helper function for Playwright scan
 export async function performPlaywrightScan(page: Page, urlToScan: string, reportId: string): Promise<PlaywrightReport> {
@@ -106,5 +106,115 @@ export async function performPlaywrightScan(page: Page, urlToScan: string, repor
     //   await browser.close();
     // }
     logger.info("Playwright scan operations finished for this service.", {reportId});
+  }
+}
+
+/**
+ * Perform keyboard accessibility checks:
+ * - Collects all interactive elements in DOM order.
+ * - Simulates Tab navigation to record focus order.
+ * - Identifies elements not reachable by Tab.
+ * - Compares DOM order to focus order.
+ */
+export async function performAccessibilityKeyboardChecks(page: Page): Promise<AccessibilityKeyboardCheckResult> {
+  try {
+    // 1. Get all interactive elements in DOM order
+    const domOrder = await page.evaluate(() => {
+      const interactiveSelectors = [
+        'a[href]:not([tabindex="-1"]):not([disabled])',
+        'button:not([tabindex="-1"]):not([disabled])',
+        'input:not([type="hidden"]):not([tabindex="-1"]):not([disabled])',
+        'select:not([tabindex="-1"]):not([disabled])',
+        'textarea:not([tabindex="-1"]):not([disabled])',
+        '[tabindex]:not([tabindex="-1"]):not([disabled])'
+      ];
+      const elements = Array.from(document.querySelectorAll(interactiveSelectors.join(',')));
+      return elements.map(el => ({
+        selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+        tag: el.tagName.toLowerCase(),
+        text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
+        id: el.id || undefined,
+        className: el.className || undefined,
+      }));
+    });
+
+    // 2. Simulate Tab navigation to record focus order
+    const focusOrder = await page.evaluate(async () => {
+      function isVisible(el: Element) {
+        const style = window.getComputedStyle(el);
+        return style && style.visibility !== 'hidden' && style.display !== 'none';
+      }
+      const focusables = Array.from(document.querySelectorAll(
+        'a[href]:not([tabindex="-1"]):not([disabled]),' +
+        'button:not([tabindex="-1"]):not([disabled]),' +
+        'input:not([type="hidden"]):not([tabindex="-1"]):not([disabled]),' +
+        'select:not([tabindex="-1"]):not([disabled]),' +
+        'textarea:not([tabindex="-1"]):not([disabled]),' +
+        '[tabindex]:not([tabindex="-1"]):not([disabled])'
+      )).filter(isVisible);
+
+      const visited: Element[] = [];
+      // Focus the body to start
+      (document.body as HTMLElement).focus();
+      for (let i = 0; i < focusables.length + 10; i++) {
+        // Press Tab
+        const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+        document.dispatchEvent(event);
+        // Try to move focus
+        let found = false;
+        for (const el of focusables) {
+          if (el === document.activeElement && !visited.includes(el)) {
+            visited.push(el);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          // Try to manually focus next
+          for (const el of focusables) {
+            if (!visited.includes(el)) {
+              (el as HTMLElement).focus();
+              if (el === document.activeElement) {
+                visited.push(el);
+                break;
+              }
+            }
+          }
+        }
+        if (visited.length === focusables.length) break;
+      }
+      return visited.map(el => ({
+        selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+        tag: el.tagName.toLowerCase(),
+        text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
+        id: el.id || undefined,
+        className: el.className || undefined,
+      }));
+    });
+
+    // 3. Identify elements not reachable by Tab
+    const notReachableByTab = domOrder.filter(
+      domEl => !focusOrder.some(focusEl => focusEl.selector === domEl.selector)
+    );
+
+    // 4. Compare DOM order to focus order
+    const domSelectors = domOrder.map(el => el.selector);
+    const focusSelectors = focusOrder.map(el => el.selector);
+    const tabOrderMatchesDomOrder = JSON.stringify(domSelectors) === JSON.stringify(focusSelectors);
+
+    return {
+      domOrder,
+      focusOrder,
+      notReachableByTab,
+      tabOrderMatchesDomOrder,
+    };
+  } catch (error: any) {
+    return {
+      domOrder: [],
+      focusOrder: [],
+      notReachableByTab: [],
+      tabOrderMatchesDomOrder: false,
+      error: error.message || String(error),
+    };
   }
 }
