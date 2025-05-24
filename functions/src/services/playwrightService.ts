@@ -133,8 +133,8 @@ export async function performAccessibilityKeyboardChecks(page: Page): Promise<Ac
         selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
         tag: el.tagName.toLowerCase(),
         text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
-        id: el.id || undefined,
-        className: el.className || undefined,
+        id: el.id || null,
+        className: el.className || null,
       }));
     });
 
@@ -187,8 +187,8 @@ export async function performAccessibilityKeyboardChecks(page: Page): Promise<Ac
         selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
         tag: el.tagName.toLowerCase(),
         text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
-        id: el.id || undefined,
-        className: el.className || undefined,
+        id: el.id || null,
+        className: el.className || null,
       }));
     });
 

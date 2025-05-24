@@ -149,22 +149,22 @@ export interface AccessibilityKeyboardCheckResult {
     selector: string;
     tag: string;
     text: string;
-    id?: string;
-    className?: string;
+    id: string | null;
+    className: string | null;
   }>;
   focusOrder: Array<{
     selector: string;
     tag: string;
     text: string;
-    id?: string;
-    className?: string;
+    id: string | null;
+    className: string | null;
   }>;
   notReachableByTab: Array<{
     selector: string;
     tag: string;
     text: string;
-    id?: string;
-    className?: string;
+    id: string | null;
+    className: string | null;
   }>;
   tabOrderMatchesDomOrder: boolean;
   error?: string;
