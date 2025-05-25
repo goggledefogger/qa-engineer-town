@@ -1,14 +1,15 @@
 import React from "react";
-import ExpandableList from "../ui/ExpandableList"; // Import the new component
-import { HighlightableImage } from "../ui"; // Import HighlightableImage
-import type { AccessibilityNameAndStateCheckResult as NameAndStateCheckResultType, ScreenshotUrls, MissingNameElement, MissingStateElement } from "../../types/reportTypes"; // Import ScreenshotUrls and specific result type
+import ExpandableList from "../ui/ExpandableList";
+// HighlightableImage import removed
+import { useHighlight } from "../../contexts";
+import type { AccessibilityNameAndStateCheckResult as NameAndStateCheckResultType, ScreenshotUrls, MissingNameElement, MissingStateElement } from "../../types/reportTypes";
 
-interface AccessibilityNameAndStateProps { // New props interface
+interface AccessibilityNameAndStateProps {
   result: NameAndStateCheckResultType;
-  screenshotUrls?: ScreenshotUrls; // Added prop
+  screenshotUrls?: ScreenshotUrls;
 }
 
-interface NameAndStateCheckResult { // This local interface is kept for now, assuming it's a subset or slightly different
+interface NameAndStateCheckResult {
   elementsMissingName: Array<{
     selector: string;
     tag: string;
@@ -31,7 +32,9 @@ interface NameAndStateCheckResult { // This local interface is kept for now, ass
   error?: string;
 }
 
-const AccessibilityNameAndStateCheck: React.FC<AccessibilityNameAndStateProps> = ({ result, screenshotUrls }) => { // Use new props and destructure screenshotUrls
+const AccessibilityNameAndStateCheck: React.FC<AccessibilityNameAndStateProps> = ({ result, screenshotUrls }) => {
+  const { setActiveHighlight } = useHighlight();
+
   if (result.error) {
     return (
       <div className="mt-8 pt-6 border-t border-red-200">
@@ -47,66 +50,72 @@ const AccessibilityNameAndStateCheck: React.FC<AccessibilityNameAndStateProps> =
   const elementsMissingState = result.elementsMissingState || [];
 
   const renderMissingNameItem = (el: MissingNameElement, idx: number) => {
-    const hasHighlight = screenshotUrls?.desktop && el.boundingBox;
+    // const hasScreenshotAndBoundingBox = screenshotUrls?.desktop && el.boundingBox; // No longer needed here
+
+    const handleMouseEnter = () => {
+      if (el.boundingBox) {
+        setActiveHighlight(el.boundingBox);
+      }
+    };
+    const handleMouseLeave = () => setActiveHighlight(null);
+
     return (
       <li key={`${el.tag}-${el.id || idx}`} className="bg-slate-50 rounded p-3 border border-slate-200 mb-2">
-        <div>
-          <div className="font-medium text-slate-700">
-            <span className="font-mono text-sm bg-slate-200 px-1 rounded">{el.tag}</span>
-            {el.id && <span className="font-mono text-sm text-purple-700">#{el.id}</span>}
-            {el.text && <span className="ml-2 text-slate-600 italic">"{el.text.substring(0, 100)}{el.text.length > 100 ? '...' : ''}"</span>}
+        <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className="cursor-default p-2 hover:bg-slate-100 transition-colors duration-150 rounded"
+        >
+          <div>
+            <div className="font-medium text-slate-700">
+              <span className="font-mono text-sm bg-slate-200 px-1 rounded">{el.tag}</span>
+              {el.id && <span className="font-mono text-sm text-purple-700">#{el.id}</span>}
+              {el.text && <span className="ml-2 text-slate-600 italic">"{el.text.substring(0, 100)}{el.text.length > 100 ? '...' : ''}"</span>}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">
+              {el.role && <span className="mr-2">Role: <code className="bg-slate-100 px-0.5 rounded">{el.role}</code></span>}
+              {el.type && <span>Type: <code className="bg-slate-100 px-0.5 rounded">{el.type}</code></span>}
+            </div>
           </div>
-          <div className="text-xs text-slate-500 mt-1">
-            {el.role && <span className="mr-2">Role: <code className="bg-slate-100 px-0.5 rounded">{el.role}</code></span>}
-            {el.type && <span>Type: <code className="bg-slate-100 px-0.5 rounded">{el.type}</code></span>}
-          </div>
+          {/* Inline HighlightableImage removed */}
         </div>
-        {hasHighlight && (
-          <div className="mt-2 border-t border-slate-200 pt-2">
-            <HighlightableImage
-              src={screenshotUrls.desktop!}
-              highlights={[el.boundingBox!]} // el.boundingBox is checked by hasHighlight
-              alt={`Highlight for element ${el.selector || el.tag}`}
-              containerClassName="max-w-full sm:max-w-md mx-auto rounded overflow-hidden shadow-md"
-              imageClassName="w-full h-auto"
-              highlightClassName="absolute border-2 border-yellow-400 bg-yellow-400 bg-opacity-30"
-            />
-          </div>
-        )}
       </li>
     );
   };
 
   const renderMissingStateItem = (el: MissingStateElement, idx: number) => {
-    const hasHighlight = screenshotUrls?.desktop && el.boundingBox;
+    // const hasScreenshotAndBoundingBox = screenshotUrls?.desktop && el.boundingBox; // No longer needed here
+
+    const handleMouseEnter = () => {
+      if (el.boundingBox) {
+        setActiveHighlight(el.boundingBox);
+      }
+    };
+    const handleMouseLeave = () => setActiveHighlight(null);
+
     return (
       <li key={`${el.tag}-${el.id || idx}-state`} className="bg-slate-50 rounded p-3 border border-slate-200 mb-2">
-        <div>
-          <div className="font-medium text-slate-700">
-            <span className="font-mono text-sm bg-slate-200 px-1 rounded">{el.tag}</span>
-            {el.id && <span className="font-mono text-sm text-purple-700">#{el.id}</span>}
-            {el.text && <span className="ml-2 text-slate-600 italic">"{el.text.substring(0,100)}{el.text.length > 100 ? '...' : ''}"</span>}
+        <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className="cursor-default p-2 hover:bg-slate-100 transition-colors duration-150 rounded"
+        >
+          <div>
+            <div className="font-medium text-slate-700">
+              <span className="font-mono text-sm bg-slate-200 px-1 rounded">{el.tag}</span>
+              {el.id && <span className="font-mono text-sm text-purple-700">#{el.id}</span>}
+              {el.text && <span className="ml-2 text-slate-600 italic">"{el.text.substring(0,100)}{el.text.length > 100 ? '...' : ''}"</span>}
+            </div>
+            <div className="text-xs text-slate-500 mt-1 mb-1">
+              {el.role && <span className="mr-2">Role: <code className="bg-slate-100 px-0.5 rounded">{el.role}</code></span>}
+              {el.type && <span>Type: <code className="bg-slate-100 px-0.5 rounded">{el.type}</code></span>}
+            </div>
+            <div className="text-sm text-red-600">
+              Missing attributes: <span className="font-semibold">{el.missingStates.join(", ")}</span>
+            </div>
           </div>
-          <div className="text-xs text-slate-500 mt-1 mb-1">
-            {el.role && <span className="mr-2">Role: <code className="bg-slate-100 px-0.5 rounded">{el.role}</code></span>}
-            {el.type && <span>Type: <code className="bg-slate-100 px-0.5 rounded">{el.type}</code></span>}
-          </div>
-          <div className="text-sm text-red-600">
-            Missing attributes: <span className="font-semibold">{el.missingStates.join(", ")}</span>
-          </div>
+          {/* Inline HighlightableImage removed */}
         </div>
-        {hasHighlight && (
-          <div className="mt-2 border-t border-slate-200 pt-2">
-            <HighlightableImage
-              src={screenshotUrls.desktop!}
-              highlights={[el.boundingBox!]} // el.boundingBox is checked by hasHighlight
-              alt={`Highlight for element ${el.selector || el.tag}`}
-              containerClassName="max-w-full sm:max-w-md mx-auto rounded overflow-hidden shadow-md"
-              imageClassName="w-full h-auto"
-              highlightClassName="absolute border-2 border-yellow-400 bg-yellow-400 bg-opacity-30"
-            />
-          </div>
-        )}
       </li>
     );
   };

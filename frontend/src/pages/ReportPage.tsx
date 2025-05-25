@@ -4,11 +4,12 @@ import { useParams } from 'react-router-dom';
 import { db } from '../firebaseConfig';
 import { ref, onValue, off } from "firebase/database";
 import SidebarNav, { type SectionStatuses } from '../components/navigation/SidebarNav';
-import { Card, ScanProgressIndicator, Modal } from '../components/ui'; // OverallScoreGauge, MetricDisplay are used in section components
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { Card, ScanProgressIndicator, HighlightableImage } from '../components/ui'; // Modal removed, HighlightableImage added
+// ChevronUpIcon, ChevronDownIcon might be removed if ScreenshotRow is fully gone
 
 import type { ReportData } from '../types/reportTypes';
 // lighthouseMetricDetails is now in PerformanceSection.tsx
+import { HighlightProvider, useHighlight } from '../contexts'; // Import context and provider
 
 // Import the new section components
 import {
@@ -31,30 +32,17 @@ const ReportPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<string>('summary');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [isScreenshotRowCollapsed, setIsScreenshotRowCollapsed] = useState<boolean>(false); // New state for screenshot row
+  // Removed isScreenshotRowCollapsed, isModalOpen, currentScreenshotUrl, currentScreenshotTitle
   const mainContentRef = React.useRef<HTMLDivElement>(null);
 
-  // State for modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentScreenshotUrl, setCurrentScreenshotUrl] = useState('');
-  const [currentScreenshotTitle, setCurrentScreenshotTitle] = useState('');
-
-  const handleImageClick = (url: string, device: string) => {
-    setCurrentScreenshotUrl(url);
-    setCurrentScreenshotTitle(`${device} View`);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setCurrentScreenshotUrl('');
-    setCurrentScreenshotTitle('');
-  };
+  // Removed handleImageClick, handleCloseModal
 
   // Scroll to top of main content when activeSection changes
   React.useEffect(() => {
     if (mainContentRef.current) {
-      mainContentRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
+      // Adjust scrolling behavior if necessary, or remove if layout changes make it redundant
+      // For now, let's assume it might still be useful for section navigation within the left column.
+      mainContentRef.current.scrollTop = 0; // Simple scroll to top
     }
   }, [activeSection]);
 
@@ -243,204 +231,84 @@ const ReportPage: React.FC = () => {
     </div>
   );
 
-  // SVG device outlines
-  const DeviceFrame = ({
-    type,
-    url,
-  }: {
-    type: "desktop" | "tablet" | "mobile";
-    url: string;
-  }) => {
-    const handleClick = () => {
-      handleImageClick(url, type);
-    };
+  // Removed DeviceFrame and ScreenshotRow component definitions
 
-    if (type === "desktop") {
-      return (
-        <svg width="432" height="252" viewBox="0 0 432 252" className="block shrink-0 cursor-pointer" style={{ maxWidth: "100%", height: "100%" }} onClick={handleClick}>
-          <defs>
-            <clipPath id="desktopScreen">
-              <rect x="20" y="20" width="392" height="212" rx="6" />
-            </clipPath>
-          </defs>
-          <rect x="8" y="8" width="416" height="236" rx="16" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" />
-          <image
-            href={url}
-            x="20"
-            y="20"
-            width="392"
-            height="212"
-            preserveAspectRatio="xMidYMid meet"
-            clipPath="url(#desktopScreen)"
-            style={{ shapeRendering: "crispEdges" }}
-          />
-          <rect x="196" y="242" width="40" height="6" rx="3" fill="#cbd5e1" />
-        </svg>
-      );
+  // This component will now consume the context
+  const highlightContext = useHighlight();
+
+  useEffect(() => {
+    if (reportData?.playwrightReport?.screenshotUrls) {
+      highlightContext.setReportScreenshotUrls(reportData.playwrightReport.screenshotUrls);
+      // Set desktop as default active screenshot initially
+      if (reportData.playwrightReport.screenshotUrls.desktop) {
+        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.desktop);
+      } else if (reportData.playwrightReport.screenshotUrls.tablet) { // Fallback
+        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.tablet);
+      } else if (reportData.playwrightReport.screenshotUrls.mobile) { // Fallback
+        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.mobile);
+      }
     }
-    if (type === "tablet") {
-      return (
-        <svg width="168" height="224" viewBox="0 0 168 224" className="block shrink-0 cursor-pointer" style={{ maxWidth: "100%", height: "100%" }} onClick={handleClick}>
-          <defs>
-            <clipPath id="tabletScreen">
-              <rect x="14" y="14" width="140" height="196" rx="8" />
-            </clipPath>
-          </defs>
-          <rect x="6" y="6" width="156" height="212" rx="18" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" />
-          <image
-            href={url}
-            x="14"
-            y="14"
-            width="140"
-            height="196"
-            preserveAspectRatio="xMidYMid meet"
-            clipPath="url(#tabletScreen)"
-            style={{ shapeRendering: "crispEdges" }}
-          />
-          <circle cx="84" cy="210" r="4" fill="#cbd5e1" />
-        </svg>
-      );
-    }
-    return (
-      <svg width="84" height="170" viewBox="0 0 84 170" className="block shrink-0 cursor-pointer" style={{ maxWidth: "100%", height: "100%" }} onClick={handleClick}>
-        <defs>
-          <clipPath id="mobileScreen">
-            <rect x="10" y="14" width="64" height="140" rx="10" />
-          </clipPath>
-        </defs>
-        <rect x="4" y="4" width="76" height="162" rx="14" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="3" />
-        <image
-          href={url}
-          x="10"
-          y="14"
-          width="64"
-          height="140"
-          preserveAspectRatio="xMidYMid meet"
-          clipPath="url(#mobileScreen)"
-          style={{ shapeRendering: "crispEdges" }}
-        />
-        <circle cx="42" cy="158" r="3" fill="#cbd5e1" />
-      </svg>
-    );
-  };
+  }, [reportData, highlightContext.setReportScreenshotUrls, highlightContext.setActiveScreenshotUrl]);
 
-  // Screenshot row OUTSIDE the Card/header
-  const ScreenshotRow = () => {
-    const screenshotUrls = reportData?.playwrightReport?.screenshotUrls || {};
-    const screenshots: Array<{ key: string; label: string; url?: string }> = [
-      { key: "tablet", label: "Tablet", url: screenshotUrls.tablet },
-      { key: "desktop", label: "Desktop", url: screenshotUrls.desktop },
-      { key: "mobile", label: "Mobile", url: screenshotUrls.mobile },
-    ].filter(s => !!s.url);
-
-    if (!screenshots.length) return null;
-
-    return (
-      <div className={`relative ${isScreenshotRowCollapsed ? "pb-0" : "pb-3"}`}> {/* Conditional padding for the whole row */}
-        <div className="flex items-center justify-end"> {/* Removed mb-2 and py-3 */}
-        </div>
-        <div
-          className={`w-full flex flex-row items-end justify-start gap-0.5 overflow-x-auto transition-all duration-300 ease-in-out ${
-            isScreenshotRowCollapsed ? "max-h-0 opacity-0" : "max-h-[120px] opacity-100"
-          }`}
-          style={{
-            height: isScreenshotRowCollapsed ? "0px" : "120px", // Explicit height for transition
-          }}
-        >
-          {screenshots.map(({ key, url }) => (
-            <div
-              key={key}
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                justifyContent: "center",
-                height: "100%",
-                background: "none",
-                padding: 0,
-                margin: 0,
-              }}
-            >
-              <div
-                style={{
-                  height: "100%",
-                  width: "100%",
-                  maxWidth:
-                    key === "desktop"
-                      ? "224px"
-                      : key === "tablet"
-                      ? "112px"
-                      : "56px",
-                  display: "flex",
-                  alignItems: "flex-end",
-                }}
-              >
-                <DeviceFrame type={key as "desktop" | "tablet" | "mobile"} url={url!} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className={`flex justify-center transition-all duration-300 ease-in-out ${isScreenshotRowCollapsed ? "mt-0" : ""}`}> {/* Reverted to simpler classes */}
-          <button
-            onClick={() => setIsScreenshotRowCollapsed(!isScreenshotRowCollapsed)}
-            className="p-1 rounded-full hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" /* Reverted to simpler classes */
-            aria-label={isScreenshotRowCollapsed ? "Expand screenshots" : "Collapse screenshots"}
-          >
-            {isScreenshotRowCollapsed ? (
-              <ChevronDownIcon className="h-5 w-5 text-slate-600" />
-            ) : (
-              <ChevronUpIcon className="h-5 w-5 text-slate-600" />
-            )}
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   return (
-    <div className="relative min-h-screen bg-slate-50">
-      <div className="w-full mx-auto flex flex-col md:flex-row gap-8 pt-2 md:pt-3 px-2 md:px-4 xl:px-6 2xl:px-8">
-        <ReportPageLayout
-          sidebarCollapsed={sidebarCollapsed}
-          sidebarContent={
-            <div className="flex flex-col h-full">
-              {/* Show heading above nav menu only on mobile */}
-              <div className={`block md:hidden ${isScreenshotRowCollapsed ? "mb-0" : "mb-4"}`}>
-                <ReportHeading />
-                <ScreenshotRow />
+    // The main flex container is now wrapped by HighlightProvider in ReportPageWithContext
+    <>
+      {/* Left Column: Report Details (scrollable on md+) */}
+      <div className="w-full md:w-3/5 lg:w-2/3 xl:w-3/4 md:h-screen md:overflow-y-auto">
+        <div className="mx-auto px-2 md:px-4 xl:px-6 2xl:px-8 py-2 md:py-3"> {/* Added padding here */}
+          <ReportPageLayout
+            sidebarCollapsed={sidebarCollapsed}
+            sidebarContent={
+              <div className="flex flex-col h-full">
+                {/* Mobile heading - simplified */}
+                <div className="block md:hidden mb-4">
+                  <ReportHeading />
+                </div>
+                <SidebarNav
+                  activeSection={activeSection}
+                  onSelectSection={setActiveSection}
+                  sectionStatuses={sectionStatuses}
+                  collapsed={sidebarCollapsed}
+                  onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+                />
               </div>
-              <SidebarNav
-                activeSection={activeSection}
-                onSelectSection={setActiveSection}
-                sectionStatuses={sectionStatuses}
-                collapsed={sidebarCollapsed}
-                onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
-              />
-            </div>
-          }
-          mainContent={
-            <div className="flex-1 min-w-0 flex flex-col" ref={mainContentRef}>
-              {/* Sticky QA Report header only above main content on desktop */}
-              <div className={`hidden md:block sticky top-0 z-30 bg-white shadow-md ${isScreenshotRowCollapsed ? "pb-0" : ""}`}>
-                <ReportHeading />
-                <ScreenshotRow />
+            }
+            mainContent={
+              <div className="flex-1 min-w-0 flex flex-col" ref={mainContentRef}>
+                {/* Desktop heading - now part of scrollable content */}
+                <div className="hidden md:block bg-white rounded-lg shadow mb-4"> {/* Added shadow and mb */}
+                  <ReportHeading />
+                </div>
+                <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
+                  {reportData &&
+                    (reportData.status === "pending" ||
+                      reportData.status === "processing") && (
+                      <ScanProgressIndicator status={reportData.status} />
+                    )}
+                  {renderSectionContent()}
+                </section>
               </div>
-              <section className="flex-grow min-w-0 space-y-6 font-sans pb-12">
-                {reportData &&
-                  (reportData.status === "pending" ||
-                    reportData.status === "processing") && (
-                    <ScanProgressIndicator status={reportData.status} />
-                  )}
-                {renderSectionContent()}
-              </section>
-            </div>
-          }
-        />
+            }
+          />
+        </div>
       </div>
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={currentScreenshotTitle}>
-        {currentScreenshotUrl && (
-          <img src={currentScreenshotUrl} alt={currentScreenshotTitle} className="max-w-full max-h-full object-contain mx-auto" />
-        )}
-      </Modal>
+
+      {/* Right Column: Persistent Screenshot Viewer (sticky on md+) */}
+      {highlightContext.activeScreenshotUrl && (
+         <div className="w-full md:w-2/5 lg:w-1/3 xl:w-1/4 md:h-screen md:sticky md:top-0 bg-slate-100 shadow-lg md:shadow-none md:bg-transparent order-first md:order-last">
+          <div className="p-1 sm:p-2 md:p-4 h-full flex items-center justify-center">
+            <HighlightableImage
+              src={highlightContext.activeScreenshotUrl}
+              highlights={highlightContext.activeHighlight ? [highlightContext.activeHighlight] : []}
+              alt="Page View with Highlights" // More generic alt
+              containerClassName="w-full h-full flex items-center justify-center"
+              imageClassName="max-w-full max-h-full object-contain rounded shadow-lg"
+            />
+          </div>
+        </div>
+      )}
+      {/* Removed Modal related to ScreenshotRow */}
     </div>
   );
 };

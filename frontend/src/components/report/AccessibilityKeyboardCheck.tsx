@@ -1,37 +1,44 @@
 // Component to display keyboard accessibility check results
 import React from "react";
-import type { AccessibilityKeyboardCheckResult, ScreenshotUrls } from "../../types/reportTypes"; // Added ScreenshotUrls
-import ExpandableList from "../ui/ExpandableList"; // Import the new component
-import { HighlightableImage } from "../ui"; // Import HighlightableImage
+import type { AccessibilityKeyboardCheckResult, ScreenshotUrls, KeyboardCheckElement } from "../../types/reportTypes";
+import ExpandableList from "../ui/ExpandableList";
+// HighlightableImage import removed as it's no longer used directly in this component
+import { useHighlight } from "../../contexts";
 
-interface AccessibilityKeyboardCheckProps { // Renamed Props to be more specific
+interface AccessibilityKeyboardCheckProps {
   result: AccessibilityKeyboardCheckResult;
-  screenshotUrls?: ScreenshotUrls; // Added prop
+  screenshotUrls?: ScreenshotUrls; // Kept for potential future use or if hasScreenshotAndBoundingBox logic is retained for other purposes
 }
 
-const AccessibilityKeyboardCheck: React.FC<AccessibilityKeyboardCheckProps> = ({ result, screenshotUrls }) => { // Added screenshotUrls to destructuring
-  const renderElementItem = (el: any, idx: number) => {
-    // el is expected to be of type KeyboardCheckElement, which has boundingBox
-    const hasHighlight = screenshotUrls?.desktop && el.boundingBox;
+const AccessibilityKeyboardCheck: React.FC<AccessibilityKeyboardCheckProps> = ({ result, screenshotUrls }) => {
+  const { setActiveHighlight } = useHighlight();
+
+  const renderElementItem = (el: KeyboardCheckElement, idx: number) => {
+    // const hasScreenshotAndBoundingBox = screenshotUrls?.desktop && el.boundingBox; // This variable is no longer needed for rendering inline image
+
+    const handleMouseEnter = () => {
+      if (el.boundingBox) {
+        setActiveHighlight(el.boundingBox);
+      }
+    };
+
+    const handleMouseLeave = () => {
+      setActiveHighlight(null);
+    };
 
     return (
       <li key={idx} className="bg-slate-50 rounded p-3 border border-slate-200 mb-2">
-        <div>
-          <span className="font-mono text-xs text-slate-700">{el.selector}</span>
-          {el.text && <span className="ml-2 text-slate-600">"{el.text.trim().slice(0, 40)}{el.text.trim().length > 40 ? '...' : ''}"</span>}
-        </div>
-        {hasHighlight && (
-          <div className="mt-2 border-t border-slate-200 pt-2">
-            <HighlightableImage
-              src={screenshotUrls.desktop!}
-              highlights={[el.boundingBox]}
-              alt={`Highlight for element ${el.selector}`}
-              containerClassName="max-w-full sm:max-w-md mx-auto rounded overflow-hidden shadow-md"
-              imageClassName="w-full h-auto"
-              highlightClassName="absolute border-2 border-yellow-400 bg-yellow-400 bg-opacity-30"
-            />
+        <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className="cursor-default p-2 hover:bg-slate-100 transition-colors duration-150 rounded" 
+        >
+          <div>
+            <span className="font-mono text-xs text-slate-700">{el.selector}</span>
+            {el.text && <span className="ml-2 text-slate-600">"{el.text.trim().slice(0, 40)}{el.text.trim().length > 40 ? '...' : ''}"</span>}
           </div>
-        )}
+          {/* Inline HighlightableImage and its wrapper div removed */}
+        </div>
       </li>
     );
   };
