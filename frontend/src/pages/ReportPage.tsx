@@ -309,8 +309,17 @@ const ReportPage: React.FC = () => {
         </div>
       )}
       {/* Removed Modal related to ScreenshotRow */}
-    </div>
+    </>
   );
 };
 
-export default ReportPage;
+// Create a new component that wraps ReportPage with the provider
+const ReportPageWithContext: React.FC = () => (
+  <HighlightProvider>
+    <div className="flex flex-col-reverse md:flex-row min-h-screen bg-slate-50">
+      <ReportPage />
+    </div>
+  </HighlightProvider>
+);
+
+export default ReportPageWithContext; // Export the wrapped component
