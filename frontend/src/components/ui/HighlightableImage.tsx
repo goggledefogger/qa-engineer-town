@@ -28,14 +28,20 @@ const HighlightableImage: React.FC<HighlightableImageProps> = ({
   originalWidth: propOriginalWidth,
   originalHeight: propOriginalHeight,
 }) => {
+  // Log received highlights prop
+  console.log('[HighlightableImage] Received highlights prop:', highlights);
+
   const imageRef = useRef<HTMLImageElement>(null);
   const [displayedDimensions, setDisplayedDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const defaultHighlightStyle = 'absolute border border-red-500 bg-red-500 bg-opacity-30';
 
-  // Use provided original dimensions or temporary defaults for testing
-  const originalWidth = propOriginalWidth ?? 1280; // Default for testing
-  const originalHeight = propOriginalHeight ?? 720; // Default for testing
+  // Use provided original dimensions or updated temporary defaults
+  const defaultOriginalWidth = 1920;
+  const defaultOriginalHeight = 1080;
+  const originalWidth = propOriginalWidth ?? defaultOriginalWidth;
+  const originalHeight = propOriginalHeight ?? defaultOriginalHeight;
+
 
   const handleImageLoad = () => {
     if (imageRef.current) {
@@ -57,17 +63,28 @@ const HighlightableImage: React.FC<HighlightableImageProps> = ({
 
 
   const scaledHighlights = useMemo(() => {
+    // Logging inside useMemo, before return
+    console.log('[HighlightableImage] Props: originalWidth:', propOriginalWidth, 'originalHeight:', propOriginalHeight);
+    console.log('[HighlightableImage] State: displayedDimensions:', displayedDimensions);
+
+    let calculatedHighlights = highlights || []; // Default to original or empty array
+
     if (
-      originalWidth &&
-      originalHeight &&
+      originalWidth && // This will use the defaulted value if prop is undefined
+      originalHeight && // This will use the defaulted value if prop is undefined
       displayedDimensions &&
       displayedDimensions.width > 0 &&
       displayedDimensions.height > 0
     ) {
-      const scaleX = displayedDimensions.width / originalWidth;
-      const scaleY = displayedDimensions.height / originalHeight;
+      // Use the actual originalWidth and originalHeight being used for calculation (which includes defaults)
+      const currentOriginalWidth = originalWidth;
+      const currentOriginalHeight = originalHeight;
 
-      return highlights.map(box => ({
+      const scaleX = displayedDimensions.width / currentOriginalWidth;
+      const scaleY = displayedDimensions.height / currentOriginalHeight;
+      console.log('[HighlightableImage] Calculated scales: scaleX:', scaleX, 'scaleY:', scaleY);
+
+      calculatedHighlights = highlights.map(box => ({
         ...box,
         x: box.x * scaleX,
         y: box.y * scaleY,
@@ -75,9 +92,14 @@ const HighlightableImage: React.FC<HighlightableImageProps> = ({
         height: box.height * scaleY,
       }));
     }
-    // If not all conditions met for scaling, return highlights as is (or empty array if highlights is undefined)
-    return highlights || [];
-  }, [highlights, originalWidth, originalHeight, displayedDimensions]);
+
+    if (calculatedHighlights && calculatedHighlights.length > 0) {
+      console.log('[HighlightableImage] First scaledHighlight:', calculatedHighlights[0]);
+    } else {
+      console.log('[HighlightableImage] No scaled highlights to display or highlights prop is empty.');
+    }
+    return calculatedHighlights;
+  }, [highlights, propOriginalWidth, propOriginalHeight, displayedDimensions, originalWidth, originalHeight]); // Added originalWidth, originalHeight to dependency array as they are now derived outside useMemo but used inside
 
   return (
     <div className={`relative ${containerClassName}`}>

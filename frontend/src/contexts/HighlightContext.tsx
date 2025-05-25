@@ -32,15 +32,21 @@ interface HighlightProviderProps {
 }
 
 export const HighlightProvider: React.FC<HighlightProviderProps> = ({ children }) => {
-  const [activeHighlight, setActiveHighlight] = useState<BoundingBox | null>(null);
+  const [activeHighlight, _setActiveHighlight] = useState<BoundingBox | null>(null); // Renamed original setter
   const [activeScreenshotUrl, setActiveScreenshotUrl] = useState<string | null>(null);
   const [reportScreenshotUrls, setReportScreenshotUrls] = useState<ScreenshotUrls | null>(null);
+
+  // Wrapped setActiveHighlight to include console logging
+  const setActiveHighlight = (boundingBox: BoundingBox | null) => {
+    console.log('[HighlightContext] setActiveHighlight called with:', boundingBox);
+    _setActiveHighlight(boundingBox);
+  };
 
   return (
     <HighlightContext.Provider
       value={{
         activeHighlight,
-        setActiveHighlight,
+        setActiveHighlight, // Pass the wrapped function
         activeScreenshotUrl,
         setActiveScreenshotUrl,
         reportScreenshotUrls,

@@ -38,6 +38,9 @@ const ReportPage: React.FC = () => {
   // Moved useHighlight and its related useEffect to the top level
   const highlightContext = useHighlight();
 
+  // Log consumed activeHighlight
+  console.log('[ReportPage Viewer] Consumed activeHighlight:', highlightContext.activeHighlight);
+
   useEffect(() => {
     if (reportData?.playwrightReport?.screenshotUrls) {
       highlightContext.setReportScreenshotUrls(reportData.playwrightReport.screenshotUrls);
@@ -304,6 +307,8 @@ const ReportPage: React.FC = () => {
               src={highlightContext.activeScreenshotUrl}
               highlights={highlightContext.activeHighlight ? [highlightContext.activeHighlight] : []}
               alt="Page View with Highlights" // More generic alt
+              originalWidth={1920} // Added default original width
+              originalHeight={1080} // Added default original height
               containerClassName="w-full h-full flex items-center justify-center"
               imageClassName="max-w-full max-h-full object-contain rounded shadow-lg"
             />
