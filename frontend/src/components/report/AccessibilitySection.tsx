@@ -1,42 +1,28 @@
 import React from 'react';
 import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult, ColorContrastResult, VisualOrderResult } from '../../types/reportTypes';
-
-interface AccessibilityNameAndStateCheckResult {
-  elementsMissingName: Array<{
-    selector: string;
-    tag: string;
-    id: string | null;
-    className: string | null;
-    role: string | null;
-    type: string | null;
-    text: string;
-  }>;
-  elementsMissingState: Array<{
-    selector: string;
-    tag: string;
-    id: string | null;
-    className: string | null;
-    role: string | null;
-    type: string | null;
-    text: string;
-    missingStates: string[];
-  }>;
-  error?: string;
-}
+import type {
+  LighthouseReportData,
+  ReportData,
+  AccessibilityKeyboardCheckResult,
+  ColorContrastResult,
+  VisualOrderResult,
+  AccessibilityNameAndStateCheckResult
+} from '../../types/reportTypes';
 import AccessibilityKeyboardCheck from './AccessibilityKeyboardCheck';
 import AccessibilityNameAndStateCheck from './AccessibilityNameAndStateCheck';
 import ColorContrastCheck from './ColorContrastCheck';
 import VisualOrderCheck from './VisualOrderCheck';
 import ReportAuditList from './ReportAuditList';
+import ScreenshotWithOverlay from './ScreenshotWithOverlay';
 
 interface AccessibilitySectionProps {
   lighthouseReport?: LighthouseReportData;
   reportStatus?: ReportData['status'];
   accessibilityKeyboardCheck?: AccessibilityKeyboardCheckResult;
   accessibilityNameAndStateCheck?: AccessibilityNameAndStateCheckResult;
-  colorContrastCheck?: ColorContrastResult; // Add new prop
-  visualOrderCheck?: VisualOrderResult; // Add new prop
+  colorContrastCheck?: ColorContrastResult;
+  visualOrderCheck?: VisualOrderResult;
+  onHighlight?: (type: "name" | "state", idx: number | null) => void;
 }
 
 const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
@@ -45,7 +31,8 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
   accessibilityKeyboardCheck,
   accessibilityNameAndStateCheck,
   colorContrastCheck,
-  visualOrderCheck, // Destructure new prop
+  visualOrderCheck,
+  onHighlight,
 }) => {
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
   const accessibilityAudits = lighthouseReport?.accessibilityIssues;
@@ -56,6 +43,9 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
   const isCompleted = reportStatus === 'completed';
   const isFailed = reportStatus === 'failed' || (isCompleted && lighthouseReport?.success === false && !hasExplicitError);
 
+
+  const [highlightType, setHighlightType] = React.useState<"name" | "state" | null>(null);
+  const [highlightIdx, setHighlightIdx] = React.useState<number | null>(null);
 
   const renderContent = () => {
     if (isLoading) {
@@ -71,8 +61,24 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
       return <p className="text-slate-500">No accessibility data available for this report.</p>;
     }
 
+    // Get the highlighted bounding box, if any
+    let highlightedBox: import('../../types/reportTypes').BoundingBox | undefined;
+    if (highlightType && highlightIdx !== null && accessibilityNameAndStateCheck) {
+      if (highlightType === "name") {
+        highlightedBox = accessibilityNameAndStateCheck.elementsMissingName?.[highlightIdx]?.boundingBox;
+      } else if (highlightType === "state") {
+        highlightedBox = accessibilityNameAndStateCheck.elementsMissingState?.[highlightIdx]?.boundingBox;
+      }
+    }
+
     return (
       <>
+        {/* Screenshot with overlay for accessibility findings */}
+        <ScreenshotWithOverlay
+          screenshotUrl={lighthouseReport?.screenshotUrls?.desktop}
+          boundingBoxes={highlightedBox ? [highlightedBox] : []}
+        />
+
         {typeof accessibilityScore === 'number' && (
           <div className="flex flex-col items-center mb-8">
             <OverallScoreGauge score={accessibilityScore} categoryName="Accessibility" />
@@ -108,7 +114,13 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
         )}
         {/* Name and State Accessibility Checks */}
         {accessibilityNameAndStateCheck && (
-          <AccessibilityNameAndStateCheck result={accessibilityNameAndStateCheck} />
+          <AccessibilityNameAndStateCheck
+            result={accessibilityNameAndStateCheck}
+            onHighlight={onHighlight ?? ((type, idx) => {
+              setHighlightType(type);
+              setHighlightIdx(idx);
+            })}
+          />
         )}
         {/* Color Contrast Checks */}
         {colorContrastCheck && (

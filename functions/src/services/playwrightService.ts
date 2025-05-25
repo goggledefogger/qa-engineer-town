@@ -175,6 +175,7 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
       for (const el of elements) {
         const accessibleName = getAccessibleName(el);
         if (!accessibleName || accessibleName.trim().length === 0) {
+          const rect = el.getBoundingClientRect();
           elementsMissingName.push({
             selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
             tag: el.tagName.toLowerCase(),
@@ -183,6 +184,12 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
             role: getRole(el),
             type: getType(el),
             text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
+            boundingBox: {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height
+            }
           });
         }
         // Check for missing state attributes if role/button/input
@@ -192,6 +199,7 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
           getRole(el)
         ) {
           if (missingStates.length > 0) {
+            const rect = el.getBoundingClientRect();
             elementsMissingState.push({
               selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
               tag: el.tagName.toLowerCase(),
@@ -201,6 +209,12 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
               type: getType(el),
               text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
               missingStates,
+              boundingBox: {
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height
+              }
             });
           }
         }
@@ -313,6 +327,7 @@ export async function performColorContrastCheck(page: Page): Promise<ColorContra
         const expectedRatio = isLargeText ? 3 : 4.5;
 
         if (contrastRatio < expectedRatio) {
+          const rect = el.getBoundingClientRect();
           issues.push({
             selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
             textSnippet: el.textContent!.trim().substring(0, 100),
@@ -323,6 +338,12 @@ export async function performColorContrastCheck(page: Page): Promise<ColorContra
             contrastRatio: parseFloat(contrastRatio.toFixed(2)),
             expectedRatio: expectedRatio,
             status: 'fail',
+            boundingBox: {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height
+            }
           });
         }
       }

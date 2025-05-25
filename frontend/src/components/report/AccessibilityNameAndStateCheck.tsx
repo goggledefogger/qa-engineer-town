@@ -24,7 +24,12 @@ interface NameAndStateCheckResult {
   error?: string;
 }
 
-const AccessibilityNameAndStateCheck: React.FC<{ result: NameAndStateCheckResult }> = ({ result }) => {
+interface AccessibilityNameAndStateCheckProps {
+  result: NameAndStateCheckResult;
+  onHighlight?: (type: "name" | "state", idx: number | null) => void;
+}
+
+const AccessibilityNameAndStateCheck: React.FC<AccessibilityNameAndStateCheckProps> = ({ result, onHighlight }) => {
   if (result.error) {
     return (
       <div className="mt-8 pt-6 border-t border-red-200">
@@ -40,7 +45,15 @@ const AccessibilityNameAndStateCheck: React.FC<{ result: NameAndStateCheckResult
   const elementsMissingState = result.elementsMissingState || [];
 
   const renderMissingNameItem = (el: any, idx: number) => (
-    <li key={`${el.tag}-${el.id || idx}`} className="bg-slate-50 rounded p-3 border border-slate-200">
+    <li
+      key={`${el.tag}-${el.id || idx}`}
+      className="bg-slate-50 rounded p-3 border border-slate-200"
+      onMouseEnter={() => onHighlight?.("name", idx)}
+      onMouseLeave={() => onHighlight?.("name", null)}
+      tabIndex={0}
+      onFocus={() => onHighlight?.("name", idx)}
+      onBlur={() => onHighlight?.("name", null)}
+    >
       <div className="font-medium text-slate-700">
         <span className="font-mono text-sm bg-slate-200 px-1 rounded">{el.tag}</span>
         {el.id && <span className="font-mono text-sm text-purple-700">#{el.id}</span>}
@@ -54,7 +67,15 @@ const AccessibilityNameAndStateCheck: React.FC<{ result: NameAndStateCheckResult
   );
 
   const renderMissingStateItem = (el: any, idx: number) => (
-    <li key={`${el.tag}-${el.id || idx}-state`} className="bg-slate-50 rounded p-3 border border-slate-200">
+    <li
+      key={`${el.tag}-${el.id || idx}-state`}
+      className="bg-slate-50 rounded p-3 border border-slate-200"
+      onMouseEnter={() => onHighlight?.("state", idx)}
+      onMouseLeave={() => onHighlight?.("state", null)}
+      tabIndex={0}
+      onFocus={() => onHighlight?.("state", idx)}
+      onBlur={() => onHighlight?.("state", null)}
+    >
       <div className="font-medium text-slate-700">
         <span className="font-mono text-sm bg-slate-200 px-1 rounded">{el.tag}</span>
         {el.id && <span className="font-mono text-sm text-purple-700">#{el.id}</span>}

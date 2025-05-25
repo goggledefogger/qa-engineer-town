@@ -11,6 +11,13 @@ export interface PlaywrightReport {
   error?: string;
 }
 
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ContrastIssue {
   selector: string; // Simplified selector
   textSnippet: string; // First ~100 chars of text
@@ -21,6 +28,7 @@ export interface ContrastIssue {
   contrastRatio: number;
   expectedRatio: number; // 4.5 or 3
   status: 'fail' | 'pass'; // Though we'd only return fails
+  boundingBox?: BoundingBox;
 }
 
 export interface ColorContrastResult {

@@ -10,6 +10,8 @@ import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import type { ReportData } from '../types/reportTypes';
 // lighthouseMetricDetails is now in PerformanceSection.tsx
 
+import ScreenshotWithOverlay from '../components/report/ScreenshotWithOverlay';
+
 // Import the new section components
 import {
   SummarySection,
@@ -33,6 +35,10 @@ const ReportPage: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [isScreenshotRowCollapsed, setIsScreenshotRowCollapsed] = useState<boolean>(false); // New state for screenshot row
   const mainContentRef = React.useRef<HTMLDivElement>(null);
+
+  // Highlight state for accessibility bounding box
+  const [highlightType, setHighlightType] = useState<"name" | "state" | null>(null);
+  const [highlightIdx, setHighlightIdx] = useState<number | null>(null);
 
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -170,6 +176,10 @@ const ReportPage: React.FC = () => {
           accessibilityNameAndStateCheck={reportData.accessibilityNameAndStateCheck}
           colorContrastCheck={reportData.colorContrastCheck}
           visualOrderCheck={reportData.visualOrderCheck}
+          onHighlight={(type, idx) => {
+            setHighlightType(type);
+            setHighlightIdx(idx);
+          }}
         />;
       case 'seo':
         return <SeoSection lighthouseReport={reportData.lighthouseReport} reportStatus={reportData.status} />;
@@ -321,6 +331,17 @@ const ReportPage: React.FC = () => {
     );
   };
 
+  // Compute highlighted bounding box for desktop screenshot
+  let highlightedBox: import('../types/reportTypes').BoundingBox | undefined;
+  const accCheck = reportData?.accessibilityNameAndStateCheck;
+  if (highlightType && highlightIdx !== null && accCheck) {
+    if (highlightType === "name") {
+      highlightedBox = accCheck.elementsMissingName?.[highlightIdx]?.boundingBox;
+    } else if (highlightType === "state") {
+      highlightedBox = accCheck.elementsMissingState?.[highlightIdx]?.boundingBox;
+    }
+  }
+
   // Screenshot row OUTSIDE the Card/header
   const ScreenshotRow = () => {
     const screenshotUrls = reportData?.playwrightReport?.screenshotUrls || {};
@@ -332,16 +353,17 @@ const ReportPage: React.FC = () => {
 
     if (!screenshots.length) return null;
 
+    // Only overlay on desktop screenshot
+    const desktopUrl = screenshotUrls.desktop;
     return (
-      <div className={`relative ${isScreenshotRowCollapsed ? "pb-0" : "pb-3"}`}> {/* Conditional padding for the whole row */}
-        <div className="flex items-center justify-end"> {/* Removed mb-2 and py-3 */}
-        </div>
+      <div className={`relative ${isScreenshotRowCollapsed ? "pb-0" : "pb-3"}`}>
+        <div className="flex items-center justify-end"></div>
         <div
           className={`w-full flex flex-row items-end justify-start gap-0.5 overflow-x-auto transition-all duration-300 ease-in-out ${
             isScreenshotRowCollapsed ? "max-h-0 opacity-0" : "max-h-[120px] opacity-100"
           }`}
           style={{
-            height: isScreenshotRowCollapsed ? "0px" : "120px", // Explicit height for transition
+            height: isScreenshotRowCollapsed ? "0px" : "120px",
           }}
         >
           {screenshots.map(({ key, url }) => (
@@ -355,6 +377,7 @@ const ReportPage: React.FC = () => {
                 background: "none",
                 padding: 0,
                 margin: 0,
+                position: "relative",
               }}
             >
               <div
@@ -369,17 +392,33 @@ const ReportPage: React.FC = () => {
                       : "56px",
                   display: "flex",
                   alignItems: "flex-end",
+                  position: "relative",
                 }}
               >
                 <DeviceFrame type={key as "desktop" | "tablet" | "mobile"} url={url!} />
+                {key === "desktop" && highlightedBox && (
+                  <div style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                  }}>
+                    <ScreenshotWithOverlay
+                      screenshotUrl={desktopUrl}
+                      boundingBoxes={[highlightedBox]}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
-        <div className={`flex justify-center transition-all duration-300 ease-in-out ${isScreenshotRowCollapsed ? "mt-0" : ""}`}> {/* Reverted to simpler classes */}
+        <div className={`flex justify-center transition-all duration-300 ease-in-out ${isScreenshotRowCollapsed ? "mt-0" : ""}`}>
           <button
             onClick={() => setIsScreenshotRowCollapsed(!isScreenshotRowCollapsed)}
-            className="p-1 rounded-full hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" /* Reverted to simpler classes */
+            className="p-1 rounded-full hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label={isScreenshotRowCollapsed ? "Expand screenshots" : "Collapse screenshots"}
           >
             {isScreenshotRowCollapsed ? (

@@ -35,6 +35,7 @@ export interface LighthousePerformanceAudit {
 
 export interface LighthouseReportData {
   success: boolean;
+  screenshotUrls?: ScreenshotUrls;
   error?: string;
   scores?: {
     performance?: number;
@@ -167,6 +168,7 @@ export interface AccessibilityNameAndStateCheckResult {
     role: string | null;
     type: string | null;
     text: string;
+    boundingBox?: BoundingBox;
   }>;
   elementsMissingState: Array<{
     selector: string;
@@ -177,8 +179,16 @@ export interface AccessibilityNameAndStateCheckResult {
     type: string | null;
     text: string;
     missingStates: string[];
+    boundingBox?: BoundingBox;
   }>;
   error?: string;
+}
+
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface ContrastIssue {
@@ -191,6 +201,7 @@ export interface ContrastIssue {
   contrastRatio: number;
   expectedRatio: number; // 4.5 or 3
   status: 'fail' | 'pass'; // Though we'd only return fails
+  boundingBox?: BoundingBox;
 }
 
 export interface ColorContrastResult {

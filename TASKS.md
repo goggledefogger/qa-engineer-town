@@ -4,6 +4,13 @@ Tracking tasks for building the initial prototype of the AI QA Engineer Assistan
 
 ## Completed Tasks
 
+- [x] Visualize accessibility findings with bounding boxes on the screenshot in the frontend accessibility section
+    - [x] Backend: Added boundingBox data to accessibility findings.
+    - [x] Synced types in frontend and backend.
+    - [x] Created ScreenshotWithOverlay component to render bounding boxes.
+    - [x] Integrated overlay into AccessibilitySection.
+    - [x] Updated TASKS.md to reflect completion.
+
 - [x] Collapsible Sidebar Navigation for Report Sections
     - [x] Sidebar now supports expand/collapse with icons only in collapsed mode.
     - [x] Section navigation remains accessible via tooltips when collapsed.
