@@ -35,6 +35,24 @@ const ReportPage: React.FC = () => {
   // Removed isScreenshotRowCollapsed, isModalOpen, currentScreenshotUrl, currentScreenshotTitle
   const mainContentRef = React.useRef<HTMLDivElement>(null);
 
+  // Moved useHighlight and its related useEffect to the top level
+  const highlightContext = useHighlight();
+
+  useEffect(() => {
+    if (reportData?.playwrightReport?.screenshotUrls) {
+      highlightContext.setReportScreenshotUrls(reportData.playwrightReport.screenshotUrls);
+      // Set desktop as default active screenshot initially
+      if (reportData.playwrightReport.screenshotUrls.desktop) {
+        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.desktop);
+      } else if (reportData.playwrightReport.screenshotUrls.tablet) { // Fallback
+        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.tablet);
+      } else if (reportData.playwrightReport.screenshotUrls.mobile) { // Fallback
+        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.mobile);
+      }
+    }
+  }, [reportData, highlightContext.setReportScreenshotUrls, highlightContext.setActiveScreenshotUrl]);
+
+
   // Removed handleImageClick, handleCloseModal
 
   // Scroll to top of main content when activeSection changes
@@ -233,23 +251,7 @@ const ReportPage: React.FC = () => {
 
   // Removed DeviceFrame and ScreenshotRow component definitions
 
-  // This component will now consume the context
-  const highlightContext = useHighlight();
-
-  useEffect(() => {
-    if (reportData?.playwrightReport?.screenshotUrls) {
-      highlightContext.setReportScreenshotUrls(reportData.playwrightReport.screenshotUrls);
-      // Set desktop as default active screenshot initially
-      if (reportData.playwrightReport.screenshotUrls.desktop) {
-        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.desktop);
-      } else if (reportData.playwrightReport.screenshotUrls.tablet) { // Fallback
-        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.tablet);
-      } else if (reportData.playwrightReport.screenshotUrls.mobile) { // Fallback
-        highlightContext.setActiveScreenshotUrl(reportData.playwrightReport.screenshotUrls.mobile);
-      }
-    }
-  }, [reportData, highlightContext.setReportScreenshotUrls, highlightContext.setActiveScreenshotUrl]);
-
+  // useHighlight() and its useEffect were moved to the top of the component.
 
   return (
     // The main flex container is now wrapped by HighlightProvider in ReportPageWithContext
