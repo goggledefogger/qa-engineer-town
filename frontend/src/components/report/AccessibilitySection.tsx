@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, OverallScoreGauge } from '../ui';
-import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult, ColorContrastResult, VisualOrderResult } from '../../types/reportTypes';
+import type { LighthouseReportData, ReportData, AccessibilityKeyboardCheckResult, ColorContrastResult, VisualOrderResult, ScreenshotUrls } from '../../types/reportTypes';
 
 interface AccessibilityNameAndStateCheckResult {
   elementsMissingName: Array<{
@@ -35,8 +35,9 @@ interface AccessibilitySectionProps {
   reportStatus?: ReportData['status'];
   accessibilityKeyboardCheck?: AccessibilityKeyboardCheckResult;
   accessibilityNameAndStateCheck?: AccessibilityNameAndStateCheckResult;
-  colorContrastCheck?: ColorContrastResult; // Add new prop
-  visualOrderCheck?: VisualOrderResult; // Add new prop
+  colorContrastCheck?: ColorContrastResult;
+  visualOrderCheck?: VisualOrderResult;
+  screenshotUrls?: ScreenshotUrls; // Added prop
 }
 
 const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
@@ -45,7 +46,8 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
   accessibilityKeyboardCheck,
   accessibilityNameAndStateCheck,
   colorContrastCheck,
-  visualOrderCheck, // Destructure new prop
+  visualOrderCheck,
+  screenshotUrls, // Destructure new prop
 }) => {
   const accessibilityScore = lighthouseReport?.scores?.accessibility;
   const accessibilityAudits = lighthouseReport?.accessibilityIssues;
@@ -104,19 +106,19 @@ const AccessibilitySection: React.FC<AccessibilitySectionProps> = ({
         />
         {/* Keyboard Accessibility Checks */}
         {accessibilityKeyboardCheck && (
-          <AccessibilityKeyboardCheck result={accessibilityKeyboardCheck} />
+          <AccessibilityKeyboardCheck result={accessibilityKeyboardCheck} screenshotUrls={screenshotUrls} />
         )}
         {/* Name and State Accessibility Checks */}
         {accessibilityNameAndStateCheck && (
-          <AccessibilityNameAndStateCheck result={accessibilityNameAndStateCheck} />
+          <AccessibilityNameAndStateCheck result={accessibilityNameAndStateCheck} screenshotUrls={screenshotUrls} />
         )}
         {/* Color Contrast Checks */}
         {colorContrastCheck && (
-          <ColorContrastCheck result={colorContrastCheck} />
+          <ColorContrastCheck result={colorContrastCheck} screenshotUrls={screenshotUrls} />
         )}
         {/* Visual Order Checks */}
         {visualOrderCheck && (
-          <VisualOrderCheck result={visualOrderCheck} />
+          <VisualOrderCheck result={visualOrderCheck} screenshotUrls={screenshotUrls} />
         )}
       </>
     );

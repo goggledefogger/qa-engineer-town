@@ -121,6 +121,7 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
     role: string | null;
     type: string | null;
     text: string;
+    boundingBox?: { x: number; y: number; width: number; height: number };
   }>;
   elementsMissingState: Array<{
     selector: string;
@@ -131,6 +132,7 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
     type: string | null;
     text: string;
     missingStates: string[];
+    boundingBox?: { x: number; y: number; width: number; height: number };
   }>;
   error?: string;
 }> {
@@ -160,6 +162,17 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
       function getType(el: Element): string | null {
         return (el as HTMLInputElement).type || null;
       }
+      function getBoundingBox(el: Element): { x: number; y: number; width: number; height: number } | undefined {
+        try {
+          const rect = el.getBoundingClientRect();
+          if (rect) {
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+          }
+        } catch (e) {
+          // Element might not be visible or attached
+        }
+        return undefined;
+      }
       const interactiveSelectors = [
         'a[href]:not([tabindex="-1"]):not([disabled])',
         'button:not([tabindex="-1"]):not([disabled])',
@@ -183,6 +196,7 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
             role: getRole(el),
             type: getType(el),
             text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
+            boundingBox: getBoundingBox(el),
           });
         }
         // Check for missing state attributes if role/button/input
@@ -201,6 +215,7 @@ export async function performAccessibilityNameAndStateChecks(page: Page): Promis
               type: getType(el),
               text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
               missingStates,
+              boundingBox: getBoundingBox(el),
             });
           }
         }
@@ -285,6 +300,18 @@ export async function performColorContrastCheck(page: Page): Promise<ColorContra
         return (lighter + 0.05) / (darker + 0.05);
       }
 
+      function getBoundingBox(el: Element): { x: number; y: number; width: number; height: number } | undefined {
+        try {
+          const rect = el.getBoundingClientRect();
+          if (rect) {
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+          }
+        } catch (e) {
+          // Element might not be visible or attached
+        }
+        return undefined;
+      }
+
       const textElements = Array.from(document.querySelectorAll(
         'p, span, a, h1, h2, h3, h4, h5, h6, li, td, th, label, input[type="text"], input[type="email"], input[type="password"], input[type="search"], textarea, button'
       )).filter(el => {
@@ -323,6 +350,7 @@ export async function performColorContrastCheck(page: Page): Promise<ColorContra
             contrastRatio: parseFloat(contrastRatio.toFixed(2)),
             expectedRatio: expectedRatio,
             status: 'fail',
+            boundingBox: getBoundingBox(el),
           });
         }
       }
@@ -345,6 +373,17 @@ export async function performAccessibilityKeyboardChecks(page: Page): Promise<Ac
         'textarea:not([tabindex="-1"]):not([disabled])',
         '[tabindex]:not([tabindex="-1"]):not([disabled])'
       ];
+      function getBoundingBox(el: Element): { x: number; y: number; width: number; height: number } | undefined {
+        try {
+          const rect = el.getBoundingClientRect();
+          if (rect) {
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+          }
+        } catch (e) {
+          // Element might not be visible or attached
+        }
+        return undefined;
+      }
       const elements = Array.from(document.querySelectorAll(interactiveSelectors.join(',')));
       return elements.map(el => ({
         selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
@@ -352,11 +391,23 @@ export async function performAccessibilityKeyboardChecks(page: Page): Promise<Ac
         text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
         id: el.id || null,
         className: el.className || null,
+        boundingBox: getBoundingBox(el),
       }));
     });
 
     // 2. Simulate Tab navigation to record focus order
     const focusOrder = await page.evaluate(async () => {
+      function getBoundingBox(el: Element): { x: number; y: number; width: number; height: number } | undefined {
+        try {
+          const rect = el.getBoundingClientRect();
+          if (rect) {
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+          }
+        } catch (e) {
+          // Element might not be visible or attached
+        }
+        return undefined;
+      }
       function isVisible(el: Element) {
         const style = window.getComputedStyle(el);
         return style && style.visibility !== 'hidden' && style.display !== 'none';
@@ -406,6 +457,7 @@ export async function performAccessibilityKeyboardChecks(page: Page): Promise<Ac
         text: (el as HTMLElement).innerText || (el as HTMLInputElement).value || '',
         id: el.id || null,
         className: el.className || null,
+        boundingBox: getBoundingBox(el),
       }));
     });
 
@@ -441,7 +493,7 @@ export async function performVisualOrderCheck(page: Page): Promise<VisualOrderRe
     return await page.evaluate(() => {
       // Helper to get bounding box and calculate center
       function getElementPosition(el: Element) {
-        const rect = el.getBoundingClientRect();
+        const rect = el.getBoundingClientRect(); // This can throw if element is detached
         return {
           x: rect.x,
           y: rect.y,
@@ -452,24 +504,46 @@ export async function performVisualOrderCheck(page: Page): Promise<VisualOrderRe
         };
       }
 
+      function getBoundingBoxSafe(el: Element): { x: number; y: number; width: number; height: number } | undefined {
+        try {
+          const rect = el.getBoundingClientRect();
+          if (rect) {
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+          }
+        } catch (e) {
+          // Element might not be visible or attached, or other error
+        }
+        return undefined;
+      }
+
       // Get all visible elements that might contain text or be interactive
       const elements = Array.from(document.querySelectorAll(
         'p, span, a, h1, h2, h3, h4, h5, h6, li, td, th, label, input, select, textarea, button, div:not([aria-hidden="true"])'
       )).filter(el => {
         const style = window.getComputedStyle(el);
         // Filter out hidden elements, or elements with no meaningful content/size
+        const rect = el.getBoundingClientRect(); // Check rect first
         return style.display !== 'none' && style.visibility !== 'hidden' &&
-               el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 &&
+               rect.width > 0 && rect.height > 0 &&
                (el.textContent && el.textContent.trim().length > 0 || el.children.length > 0 || el.tagName === 'IMG' || el.tagName === 'BUTTON' || el.tagName === 'INPUT');
       });
 
-      const elementsWithPositions = elements.map((el, index) => ({
-        element: el,
-        domIndex: index,
-        position: getElementPosition(el),
-        selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
-        textSnippet: (el.textContent || '').trim().substring(0, 100),
-      }));
+      const elementsWithPositions = elements.map((el, index) => {
+        let position;
+        try {
+          position = getElementPosition(el);
+        } catch (e) {
+          // Fallback if getElementPosition fails (e.g. element detached during processing)
+          position = { x: 0, y: 0, width: 0, height: 0, centerX: 0, centerY: 0 };
+        }
+        return {
+          element: el,
+          domIndex: index,
+          position: position, // This already contains x, y, width, height
+          selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${el.className.toString().replace(/\s+/g, '.')}` : ''),
+          textSnippet: (el.textContent || '').trim().substring(0, 100),
+        };
+      });
 
       // Sort elements by visual position (top-to-bottom, then left-to-right)
       const visuallySortedElements = [...elementsWithPositions].sort((a, b) => {
@@ -502,6 +576,7 @@ export async function performVisualOrderCheck(page: Page): Promise<VisualOrderRe
                 selector: domEl.selector,
                 tag: domEl.element.tagName.toLowerCase(),
                 textSnippet: domEl.textSnippet,
+                boundingBox: getBoundingBoxSafe(domEl.element), // Add boundingBox here
               },
               domIndex: domEl.domIndex,
               visualIndex: actualVisualIndex,

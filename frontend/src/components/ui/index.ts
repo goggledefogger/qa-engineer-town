@@ -8,4 +8,5 @@ export type { PerformanceCategory } from './MetricDisplay'; // Exporting the typ
 export { default as DetailItem } from './DetailItem';
 export { default as ExpandableList } from './ExpandableList';
 export { default as Modal } from './Modal';
+export { default as HighlightableImage } from './HighlightableImage'; // Added export
 // Add other UI component exports here

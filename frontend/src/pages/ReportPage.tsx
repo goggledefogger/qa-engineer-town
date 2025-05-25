@@ -166,10 +166,13 @@ const ReportPage: React.FC = () => {
         return <AccessibilitySection
           lighthouseReport={reportData.lighthouseReport}
           reportStatus={reportData.status}
+          lighthouseReport={reportData.lighthouseReport}
+          reportStatus={reportData.status}
           accessibilityKeyboardCheck={reportData.accessibilityKeyboardCheck}
           accessibilityNameAndStateCheck={reportData.accessibilityNameAndStateCheck}
           colorContrastCheck={reportData.colorContrastCheck}
           visualOrderCheck={reportData.visualOrderCheck}
+          screenshotUrls={reportData?.playwrightReport?.screenshotUrls} // Added prop
         />;
       case 'seo':
         return <SeoSection lighthouseReport={reportData.lighthouseReport} reportStatus={reportData.status} />;

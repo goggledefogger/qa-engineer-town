@@ -1,19 +1,40 @@
 // Component to display keyboard accessibility check results
 import React from "react";
-import type { AccessibilityKeyboardCheckResult } from "../../types/reportTypes";
+import type { AccessibilityKeyboardCheckResult, ScreenshotUrls } from "../../types/reportTypes"; // Added ScreenshotUrls
 import ExpandableList from "../ui/ExpandableList"; // Import the new component
+import { HighlightableImage } from "../ui"; // Import HighlightableImage
 
-interface Props {
+interface AccessibilityKeyboardCheckProps { // Renamed Props to be more specific
   result: AccessibilityKeyboardCheckResult;
+  screenshotUrls?: ScreenshotUrls; // Added prop
 }
 
-const AccessibilityKeyboardCheck: React.FC<Props> = ({ result }) => {
-  const renderElementItem = (el: any, idx: number) => (
-    <li key={idx} className="bg-slate-50 rounded p-2 border border-slate-200">
-      <span className="font-mono text-xs text-slate-700">{el.selector}</span>
-      {el.text && <span className="ml-2 text-slate-600">"{el.text.trim().slice(0, 40)}{el.text.trim().length > 40 ? '...' : ''}"</span>}
-    </li>
-  );
+const AccessibilityKeyboardCheck: React.FC<AccessibilityKeyboardCheckProps> = ({ result, screenshotUrls }) => { // Added screenshotUrls to destructuring
+  const renderElementItem = (el: any, idx: number) => {
+    // el is expected to be of type KeyboardCheckElement, which has boundingBox
+    const hasHighlight = screenshotUrls?.desktop && el.boundingBox;
+
+    return (
+      <li key={idx} className="bg-slate-50 rounded p-3 border border-slate-200 mb-2">
+        <div>
+          <span className="font-mono text-xs text-slate-700">{el.selector}</span>
+          {el.text && <span className="ml-2 text-slate-600">"{el.text.trim().slice(0, 40)}{el.text.trim().length > 40 ? '...' : ''}"</span>}
+        </div>
+        {hasHighlight && (
+          <div className="mt-2 border-t border-slate-200 pt-2">
+            <HighlightableImage
+              src={screenshotUrls.desktop!}
+              highlights={[el.boundingBox]}
+              alt={`Highlight for element ${el.selector}`}
+              containerClassName="max-w-full sm:max-w-md mx-auto rounded overflow-hidden shadow-md"
+              imageClassName="w-full h-auto"
+              highlightClassName="absolute border-2 border-yellow-400 bg-yellow-400 bg-opacity-30"
+            />
+          </div>
+        )}
+      </li>
+    );
+  };
 
   return (
     <div className="mt-8 pt-6 border-t border-slate-200">

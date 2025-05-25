@@ -21,6 +21,7 @@ export interface ContrastIssue {
   contrastRatio: number;
   expectedRatio: number; // 4.5 or 3
   status: 'fail' | 'pass'; // Though we'd only return fails
+  boundingBox?: BoundingBox;
 }
 
 export interface ColorContrastResult {
@@ -129,8 +130,9 @@ export interface ReportData {
   aiUxDesignSuggestions?: AiUxDesignSuggestions;
   llmReportSummary?: LLMReportSummary;
   techStack?: TechStackData;
-  colorContrastCheck?: ColorContrastResult; // Add new check result
-  visualOrderCheck?: VisualOrderResult; // Add new check result
+  colorContrastCheck?: ColorContrastResult;
+  visualOrderCheck?: VisualOrderResult;
+  accessibilityNameAndStateCheck?: AccessibilityNameAndStateCheckResult; // Added for the new check
   createdAt: number;
   updatedAt: number;
   error?: string;
@@ -163,38 +165,71 @@ export enum ScreenContext {
   // ... existing code ...
 }
 
+// Common BoundingBox type
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// For AccessibilityKeyboardCheckResult
+export interface KeyboardCheckElement {
+  selector: string;
+  tag: string;
+  text: string;
+  id: string | null;
+  className: string | null;
+  boundingBox?: BoundingBox;
+}
+
 export interface AccessibilityKeyboardCheckResult {
-  domOrder: Array<{
-    selector: string;
-    tag: string;
-    text: string;
-    id: string | null;
-    className: string | null;
-  }>;
-  focusOrder: Array<{
-    selector: string;
-    tag: string;
-    text: string;
-    id: string | null;
-    className: string | null;
-  }>;
-  notReachableByTab: Array<{
-    selector: string;
-    tag: string;
-    text: string;
-    id: string | null;
-    className: string | null;
-  }>;
+  domOrder: KeyboardCheckElement[];
+  focusOrder: KeyboardCheckElement[];
+  notReachableByTab: KeyboardCheckElement[];
   tabOrderMatchesDomOrder: boolean;
   error?: string;
 }
 
+// For Accessibility Name and State Checks
+export interface MissingNameElement {
+  selector: string;
+  tag: string;
+  id: string | null;
+  className: string | null;
+  role: string | null;
+  type: string | null;
+  text: string;
+  boundingBox?: BoundingBox;
+}
+
+export interface MissingStateElement {
+  selector: string;
+  tag: string;
+  id: string | null;
+  className: string | null;
+  role: string | null;
+  type: string | null;
+  text: string;
+  missingStates: string[];
+  boundingBox?: BoundingBox;
+}
+
+export interface AccessibilityNameAndStateCheckResult {
+  elementsMissingName: MissingNameElement[];
+  elementsMissingState: MissingStateElement[];
+  error?: string;
+}
+
+
+export interface VisualOrderIssueElement {
+  selector: string;
+  tag: string;
+  textSnippet: string;
+  boundingBox?: BoundingBox;
+}
 export interface VisualOrderIssue {
-  element: {
-    selector: string;
-    tag: string;
-    textSnippet: string;
-  };
+  element: VisualOrderIssueElement;
   domIndex: number;
   visualIndex: number;
   reason: string; // e.g., "Visual order deviates from DOM order"
