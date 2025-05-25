@@ -42,7 +42,7 @@ const ColorContrastCheck: React.FC<ColorContrastCheckProps> = ({ result, screens
 
     const handleMouseEnter = () => {
       if (issue.boundingBox) {
-        console.log('[ColorContrastCheck] MouseEnter - issue.boundingBox:', issue.boundingBox);
+        // console.log('[ColorContrastCheck] MouseEnter - issue.boundingBox:', issue.boundingBox); // Removed
         setActiveHighlight(issue.boundingBox);
       }
     };

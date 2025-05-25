@@ -38,8 +38,8 @@ const ReportPage: React.FC = () => {
   // Moved useHighlight and its related useEffect to the top level
   const highlightContext = useHighlight();
 
-  // Log consumed activeHighlight
-  console.log('[ReportPage Viewer] Consumed activeHighlight:', highlightContext.activeHighlight);
+  // Removed console.log for [ReportPage Viewer]
+  // console.log('[ReportPage Viewer] Consumed activeHighlight:', highlightContext.activeHighlight);
 
   useEffect(() => {
     if (reportData?.playwrightReport?.screenshotUrls) {

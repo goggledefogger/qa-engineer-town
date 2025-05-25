@@ -36,9 +36,9 @@ export const HighlightProvider: React.FC<HighlightProviderProps> = ({ children }
   const [activeScreenshotUrl, setActiveScreenshotUrl] = useState<string | null>(null);
   const [reportScreenshotUrls, setReportScreenshotUrls] = useState<ScreenshotUrls | null>(null);
 
-  // Wrapped setActiveHighlight to include console logging
+  // Wrapped setActiveHighlight to include console logging (now removed)
   const setActiveHighlight = (boundingBox: BoundingBox | null) => {
-    console.log('[HighlightContext] setActiveHighlight called with:', boundingBox);
+    // console.log('[HighlightContext] setActiveHighlight called with:', boundingBox); // Removed
     _setActiveHighlight(boundingBox);
   };
 

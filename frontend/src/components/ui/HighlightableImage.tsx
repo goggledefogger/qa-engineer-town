@@ -28,99 +28,67 @@ const HighlightableImage: React.FC<HighlightableImageProps> = ({
   originalWidth: propOriginalWidth,
   originalHeight: propOriginalHeight,
 }) => {
-  // Log received highlights prop
-  console.log('[HighlightableImage] Received highlights prop:', highlights);
-
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [displayedDimensions, setDisplayedDimensions] = useState<{ width: number; height: number } | null>(null);
+  // imageRef, displayedDimensions state, handleImageLoad, and useEffect are removed.
 
   const defaultHighlightStyle = 'absolute border border-red-500 bg-red-500 bg-opacity-30';
 
   // Use provided original dimensions or updated temporary defaults
   const defaultOriginalWidth = 1920;
   const defaultOriginalHeight = 1080;
-  const originalWidth = propOriginalWidth ?? defaultOriginalWidth;
-  const originalHeight = propOriginalHeight ?? defaultOriginalHeight;
+  const currentOriginalWidth = propOriginalWidth ?? defaultOriginalWidth;
+  const currentOriginalHeight = propOriginalHeight ?? defaultOriginalHeight;
 
-
-  const handleImageLoad = () => {
-    if (imageRef.current) {
-      setDisplayedDimensions({
-        width: imageRef.current.clientWidth,
-        height: imageRef.current.clientHeight,
-      });
-    }
-  };
-
-  // Recalculate displayed dimensions if src changes, which might reload the image
-  useEffect(() => {
-    if (imageRef.current && imageRef.current.complete) { // If image is already loaded (e.g. from cache)
-        handleImageLoad();
-    }
-    // Reset dimensions if src changes, to handle cases where new image might not load or has different dimensions
-    setDisplayedDimensions(null); 
-  }, [src]);
-
-
-  const scaledHighlights = useMemo(() => {
-    // Logging inside useMemo, before return
-    console.log('[HighlightableImage] Props: originalWidth:', propOriginalWidth, 'originalHeight:', propOriginalHeight);
-    console.log('[HighlightableImage] State: displayedDimensions:', displayedDimensions);
-
-    let calculatedHighlights = highlights || []; // Default to original or empty array
-
-    if (
-      originalWidth && // This will use the defaulted value if prop is undefined
-      originalHeight && // This will use the defaulted value if prop is undefined
-      displayedDimensions &&
-      displayedDimensions.width > 0 &&
-      displayedDimensions.height > 0
-    ) {
-      // Use the actual originalWidth and originalHeight being used for calculation (which includes defaults)
-      const currentOriginalWidth = originalWidth;
-      const currentOriginalHeight = originalHeight;
-
-      const scaleX = displayedDimensions.width / currentOriginalWidth;
-      const scaleY = displayedDimensions.height / currentOriginalHeight;
-      console.log('[HighlightableImage] Calculated scales: scaleX:', scaleX, 'scaleY:', scaleY);
-
-      calculatedHighlights = highlights.map(box => ({
-        ...box,
-        x: box.x * scaleX,
-        y: box.y * scaleY,
-        width: box.width * scaleX,
-        height: box.height * scaleY,
-      }));
+  const processedHighlights = useMemo(() => {
+    if (!highlights || highlights.length === 0) {
+      return [];
     }
 
-    if (calculatedHighlights && calculatedHighlights.length > 0) {
-      console.log('[HighlightableImage] First scaledHighlight:', calculatedHighlights[0]);
-    } else {
-      console.log('[HighlightableImage] No scaled highlights to display or highlights prop is empty.');
+    if (currentOriginalWidth <= 0 || currentOriginalHeight <= 0) {
+      // console.warn still useful for developers if this edge case is hit
+      console.warn('[HighlightableImage] Invalid originalWidth or originalHeight. Cannot calculate percentage-based highlights. Original W:', currentOriginalWidth, 'H:', currentOriginalHeight);
+      return [];
     }
+
+    const calculatedHighlights = highlights.map((box, index) => {
+      const leftPercent = (box.x / currentOriginalWidth) * 100;
+      const topPercent = (box.y / currentOriginalHeight) * 100;
+      const widthPercent = (box.width / currentOriginalWidth) * 100;
+      const heightPercent = (box.height / currentOriginalHeight) * 100;
+
+      return {
+        key: `highlight-${index}-${box.x}-${box.y}`, // More unique key
+        left: leftPercent,
+        top: topPercent,
+        width: widthPercent,
+        height: heightPercent,
+        originalBoundingBox: box, // Keep original for debugging or other purposes
+      };
+    });
     return calculatedHighlights;
-  }, [highlights, propOriginalWidth, propOriginalHeight, displayedDimensions, originalWidth, originalHeight]); // Added originalWidth, originalHeight to dependency array as they are now derived outside useMemo but used inside
+  }, [highlights, currentOriginalWidth, currentOriginalHeight]);
 
   return (
-    <div className={`relative ${containerClassName}`}>
+    // Ensure container has overflow:hidden if not already applied by containerClassName
+    <div className={`relative overflow-hidden ${containerClassName}`}>
       <img
-        ref={imageRef}
+        // ref={imageRef} // No longer needed
         src={src}
         alt={alt}
-        className={imageClassName}
-        onLoad={handleImageLoad}
+        className={imageClassName} // This should include w-full, h-full, object-contain
+        // onLoad={handleImageLoad} // No longer needed for this scaling method
       />
-      {scaledHighlights.map((box, index) => (
+      {processedHighlights.map((processedBox) => (
         <div
-          key={index}
+          key={processedBox.key}
           className={highlightClassName || defaultHighlightStyle}
           style={{
-            top: `${box.y}px`,
-            left: `${box.x}px`,
-            width: `${box.width}px`,
-            height: `${box.height}px`,
+            position: 'absolute', // Explicitly set position absolute
+            left: `${processedBox.left}%`,
+            top: `${processedBox.top}%`,
+            width: `${processedBox.width}%`,
+            height: `${processedBox.height}%`,
           }}
-          aria-hidden="true" // Decorative, so hide from screen readers
+          aria-hidden="true"
         />
       ))}
     </div>
