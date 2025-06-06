@@ -194,6 +194,7 @@ export async function generateLighthouseItemExplanations(
         llmExplainedPerformanceOpportunities: [],
         llmExplainedSeoAudits: [],
         llmExplainedBestPracticesAudits: [],
+          llmExplainedNonPerfectPerformanceAudits: [],
     });
   }
   const updatedReport = { ...lighthouseReport };
@@ -228,6 +229,15 @@ export async function generateLighthouseItemExplanations(
   logger.info("Generating LLM explanations for Best Practices items...", { reportId });
   updatedReport.llmExplainedBestPracticesAudits = await processItems(updatedReport.bestPracticesAudits, "best-practice");
 
+    logger.info("Generating LLM explanations for Non-Perfect Performance Audits...", { reportId });
+    // Note: updatedReport.nonPerfectPerformanceAudits is of type LighthousePerformanceAudit[]
+    // LighthousePerformanceAudit has id, title, description. It does not have overallSavingsMs/Bytes.
+    // The getExplanationForLighthouseItem function will handle missing savings by using "some resources".
+    updatedReport.llmExplainedNonPerfectPerformanceAudits = await processItems(
+      updatedReport.nonPerfectPerformanceAudits, // Pass the array of non-perfect performance audits
+      "performance", // Reuse the "performance" itemType and its associated prompt
+    );
+
   // Log the final updatedReport before returning
   logger.info("[LLM Item Explanation] Final updated Lighthouse report with explanations:",
     {
@@ -236,6 +246,7 @@ export async function generateLighthouseItemExplanations(
       llmExplainedPerformanceOpportunitiesCount: updatedReport.llmExplainedPerformanceOpportunities?.length,
       llmExplainedSeoAuditsCount: updatedReport.llmExplainedSeoAudits?.length,
       llmExplainedBestPracticesAuditsCount: updatedReport.llmExplainedBestPracticesAudits?.length,
+        llmExplainedNonPerfectPerformanceAuditsCount: updatedReport.llmExplainedNonPerfectPerformanceAudits?.length,
       // Optionally log a snippet of the data if it's not too large
       // exampleIssue: updatedReport.llmExplainedAccessibilityIssues?.[0],
       // exampleOpportunity: updatedReport.llmExplainedPerformanceOpportunities?.[0]

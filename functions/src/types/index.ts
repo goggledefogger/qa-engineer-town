@@ -87,6 +87,7 @@ export interface LighthouseReportData {
   llmExplainedSeoAudits?: Array<LLMExplainedAuditItem>;
   llmExplainedBestPracticesAudits?: Array<LLMExplainedAuditItem>;
   llmExplainedPerformanceOpportunities?: Array<LLMExplainedAuditItem>;
+  llmExplainedNonPerfectPerformanceAudits?: Array<LLMExplainedAuditItem>;
 }
 
 export interface LLMExplainedAuditItem {
