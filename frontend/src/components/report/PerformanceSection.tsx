@@ -66,12 +66,16 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
             overallSavingsBytes: rawOpp.overallSavingsBytes,
           });
         } else {
+          const fallbackExplanation = rawOpp.description && rawOpp.description.trim() !== ""
+            ? rawOpp.description
+            : "Further details for this item are not available."; // Or a similar placeholder
+
           items.push({
             id: rawOpp.id,
             title: rawOpp.title,
-            llmExplanation: rawOpp.description,
+            llmExplanation: fallbackExplanation, // Use the new fallback
             status: reportStatus === 'processing' || reportStatus === 'pending' ? 'pending' : 'completed',
-            rawDescription: rawOpp.description,
+            rawDescription: rawOpp.description, // Keep rawDescription as is, even if empty
             overallSavingsMs: rawOpp.overallSavingsMs,
             overallSavingsBytes: rawOpp.overallSavingsBytes,
           });
