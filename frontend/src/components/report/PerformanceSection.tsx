@@ -66,12 +66,16 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
             overallSavingsBytes: rawOpp.overallSavingsBytes,
           });
         } else {
+          const fallbackExplanation = rawOpp.description && rawOpp.description.trim() !== ""
+            ? rawOpp.description
+            : "Further details for this item are not available."; // Or a similar placeholder
+
           items.push({
             id: rawOpp.id,
             title: rawOpp.title,
-            llmExplanation: rawOpp.description,
+            llmExplanation: fallbackExplanation, // Use the new fallback
             status: reportStatus === 'processing' || reportStatus === 'pending' ? 'pending' : 'completed',
-            rawDescription: rawOpp.description,
+            rawDescription: rawOpp.description, // Keep rawDescription as is, even if empty
             overallSavingsMs: rawOpp.overallSavingsMs,
             overallSavingsBytes: rawOpp.overallSavingsBytes,
           });
@@ -147,70 +151,79 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
       hasNonPerfectAudits;
 
     const renderNonPerfectAudits = () => {
-      if (!hasNonPerfectAudits) return null;
+      const rawNonPerfectPerformanceAudits = lighthouseReport?.nonPerfectPerformanceAudits;
+      const llmExplainedNonPerfectPerformanceAudits = lighthouseReport?.llmExplainedNonPerfectPerformanceAudits;
 
-      const renderAuditItem = (audit: {
-        id: string;
-        title: string;
-        score?: number | null;
+      if (!rawNonPerfectPerformanceAudits || rawNonPerfectPerformanceAudits.length === 0) {
+        // This case should ideally be caught by hasNonPerfectAudits, but good for robustness
+        if (reportStatus === 'completed') {
+          return <p className="text-slate-600 text-center py-4">No other performance factors were identified by Lighthouse.</p>;
+        }
+        return null;
+      }
+
+      const items: Array<LLMExplainedAuditItem & {
+        rawDescription: string;
         displayValue?: string;
         numericValue?: number;
-        explanation?: string;
-        description: string;
-      }, _idx: number) => (
-        <li className="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200">
-          <div className="flex flex-col gap-1">
-            <span className="font-semibold text-sky-700 text-base sm:text-lg">
-              {audit.title}
-            </span>
-            {typeof audit.score === "number" && (
-              <span className="text-xs text-slate-500">
-                Score: {(audit.score * 100).toFixed(0)} / 100
-              </span>
-            )}
-            {audit.displayValue && (
-              <span className="text-xs text-slate-500">
-                Value: {audit.displayValue}
-              </span>
-            )}
-            {audit.numericValue !== undefined && !audit.displayValue && (
-              <span className="text-xs text-slate-500">
-                Value: {audit.numericValue}
-              </span>
-            )}
-            {audit.explanation && (
-              <span className="text-xs text-slate-500">
-                {audit.explanation}
-              </span>
-            )}
-            <div className="text-sm sm:text-base text-slate-700 mt-1">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {unwrapMarkdown(audit.description)}
-              </ReactMarkdown>
-            </div>
-          </div>
-        </li>
-      );
+        score?: number | null;
+      }> = [];
+
+      rawNonPerfectPerformanceAudits.forEach(rawAudit => {
+        const llmAudit = llmExplainedNonPerfectPerformanceAudits?.find(la => la.id === rawAudit.id);
+        if (llmAudit) {
+          items.push({
+            ...llmAudit, // id, title, llmExplanation, status, error
+            rawDescription: rawAudit.description, // Ensure rawDescription is present
+            displayValue: rawAudit.displayValue,
+            numericValue: rawAudit.numericValue,
+            score: rawAudit.score,
+          });
+        } else {
+          items.push({
+            id: rawAudit.id,
+            title: rawAudit.title,
+            llmExplanation: rawAudit.description, // Fallback LLM explanation
+            rawDescription: rawAudit.description,
+            status: reportStatus === 'processing' || reportStatus === 'pending' ? 'pending' : 'completed',
+            displayValue: rawAudit.displayValue,
+            numericValue: rawAudit.numericValue,
+            score: rawAudit.score,
+          });
+        }
+      });
+
+      if (items.length === 0) {
+        // This might happen if filtering/processing results in an empty list, though unlikely with current logic
+        return null;
+      }
+
+      const mappedItems = items.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.rawDescription, // This is for the main content of the audit item
+        llmExplanation: item.llmExplanation,
+        status: item.status === "pending" || item.status === "error" ? item.status : undefined,
+        error: item.error,
+        // Include score and displayValue for potential display within ReportAuditList if customized
+        score: item.score,
+        displayValue: item.displayValue,
+        numericValue: item.numericValue,
+      }));
 
       return (
         <div className="mt-8 pt-6 border-t border-slate-200">
           <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-3 sm:mb-4 text-center">
             Other Performance Factors
           </h3>
-          <ExpandableList
-            items={lighthouseReport!.nonPerfectPerformanceAudits!}
-            renderItem={renderAuditItem}
-            emptyMessage="No other performance factors to show."
+          <ReportAuditList
+            items={mappedItems}
+            title="" // Main section title is above
+            explanationField="llmExplanation"
+            emptyMessage="No other performance factors available to explain."
             initialVisibleCount={5}
-            itemKey={(item: {
-              id: string;
-              title: string;
-              score?: number | null;
-              displayValue?: string;
-              numericValue?: number;
-              explanation?: string;
-              description: string;
-            }) => item.id}
+            itemClassName="p-3 sm:p-4 bg-white rounded-md sm:rounded-lg shadow border border-slate-200"
+            showStatus={true}
           />
         </div>
       );

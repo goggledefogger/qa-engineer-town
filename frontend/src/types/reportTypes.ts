@@ -83,6 +83,7 @@ export interface LighthouseReportData {
   llmExplainedSeoAudits?: Array<LLMExplainedAuditItem>;
   llmExplainedBestPracticesAudits?: Array<LLMExplainedAuditItem>;
   llmExplainedPerformanceOpportunities?: Array<LLMExplainedAuditItem>;
+  llmExplainedNonPerfectPerformanceAudits?: Array<LLMExplainedAuditItem>;
 }
 
 export type ScreenContextType = 'desktop' | 'tablet' | 'mobile' | 'general';
