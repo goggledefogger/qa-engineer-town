@@ -1,11 +1,8 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Card, OverallScoreGauge, MetricDisplay, ExpandableList } from '../ui';
+import { Card, OverallScoreGauge, MetricDisplay } from '../ui';
 import type { LighthouseReportData, ReportData, LLMExplainedAuditItem } from '../../types/reportTypes';
 import { lighthouseMetricDetails } from '../../types/reportTypes';
 import type { PerformanceCategory } from '../ui/MetricDisplay';
-import { unwrapMarkdown } from '../../utils/textUtils';
 import ReportAuditList from './ReportAuditList';
 
 interface PerformanceSectionProps {
@@ -74,7 +71,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
             id: rawOpp.id,
             title: rawOpp.title,
             llmExplanation: fallbackExplanation, // Use the new fallback
-            status: reportStatus === 'processing' || reportStatus === 'pending' ? 'pending' : 'completed',
+            status: (reportStatus === 'processing' || reportStatus === 'pending') ? 'pending' : 'completed',
             rawDescription: rawOpp.description, // Keep rawDescription as is, even if empty
             overallSavingsMs: rawOpp.overallSavingsMs,
             overallSavingsBytes: rawOpp.overallSavingsBytes,
@@ -180,12 +177,16 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
             score: rawAudit.score,
           });
         } else {
+          // Determine status based on report status
+          const auditStatus: LLMExplainedAuditItem['status'] =
+            (reportStatus === 'processing' || reportStatus === 'pending') ? 'pending' : 'completed';
+
           items.push({
             id: rawAudit.id,
             title: rawAudit.title,
             llmExplanation: rawAudit.description, // Fallback LLM explanation
             rawDescription: rawAudit.description,
-            status: reportStatus === 'processing' || reportStatus === 'pending' ? 'pending' : 'completed',
+            status: auditStatus,
             displayValue: rawAudit.displayValue,
             numericValue: rawAudit.numericValue,
             score: rawAudit.score,

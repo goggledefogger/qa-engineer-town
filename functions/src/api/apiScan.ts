@@ -76,8 +76,10 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
   }
 
   const reportId = generateReportId();
+  const analysisId = reportId; // Maintain backwards compatibility while supporting new terminology
   const initialReportData: ReportData = {
     id: reportId,
+    analysisId,
     url: urlToScan,
     status: "pending",
     createdAt: Date.now(),
@@ -123,10 +125,16 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
     const [taskResponse] = await tasksClient.createTask({parent: queuePath, task});
     logger.info("Task enqueued successfully.", {taskId: taskResponse.name});
 
-  response.status(202).json({
+    response.status(202).json({
       message: "Scan initiation request received, task enqueued.",
-    receivedUrl: urlToScan,
-      reportId: reportId,
+      receivedUrl: urlToScan,
+      reportId,
+      analysisId,
+      id: analysisId,
+      status: "queued",
+      url: urlToScan,
+      queuedAt: new Date().toISOString(),
+      estimatedCompletionTime: null,
     });
   } catch (error) {
     logger.error("Error in apiScan function:", error);

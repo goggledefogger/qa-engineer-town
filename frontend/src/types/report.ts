@@ -97,6 +97,8 @@ export interface AiUxDesignSuggestionItem {
 
 // Define an interface for the report data structure
 export interface ReportData {
+  id?: string;
+  analysisId?: string;
   url: string;
   status: 'pending' | 'processing' | 'complete' | 'error';
   createdAt: number; // Timestamp

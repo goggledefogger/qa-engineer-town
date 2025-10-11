@@ -123,6 +123,7 @@ export interface LLMReportSummary {
 
 export interface ReportData {
   id: string;
+  analysisId?: string;
   url: string;
   status: "pending" | "processing" | "completed" | "failed";
   playwrightReport?: PlaywrightReport;

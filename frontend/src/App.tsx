@@ -19,6 +19,13 @@ interface ProtectedRouteProps {
   children?: ReactNode;
 }
 
+type ScanApiResponse = {
+  reportId?: unknown;
+  analysisId?: unknown;
+  id?: unknown;
+  [key: string]: unknown;
+};
+
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ user, loadingAuth, isAdmin, loadingAdminCheck, children }) => {
   const location = useLocation();
 
@@ -153,13 +160,23 @@ function App() {
         throw new Error(errorText);
       }
 
-      const data = await response.json();
+      const data: ScanApiResponse = await response.json();
       console.log('API Response:', data);
 
-      if (data.reportId) {
-        navigate(`/report/${data.reportId}`);
+      const reportIdFromResponse =
+        typeof data.reportId === 'string' && data.reportId.trim().length > 0
+          ? data.reportId.trim()
+          : typeof data.analysisId === 'string' && data.analysisId.trim().length > 0
+            ? data.analysisId.trim()
+            : typeof data.id === 'string' && data.id.trim().length > 0
+              ? data.id.trim()
+              : null;
+
+      if (reportIdFromResponse) {
+        console.log('[FRONTEND_DEBUG] Navigating with report identifier:', reportIdFromResponse);
+        navigate(`/report/${reportIdFromResponse}`);
       } else {
-        console.error("API response successful but missing reportId");
+        console.error("API response successful but missing a recognizable report identifier", { data });
         alert("Failed to get report ID from server. Please try again.");
       }
     } catch (error) {

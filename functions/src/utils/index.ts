@@ -23,7 +23,9 @@ export async function getProjectId(): Promise<string> {
  * @returns A unique string ID.
  */
 export function generateReportId(): string {
-  return `report-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 11);
+  return `analysis_${timestamp}_${randomSuffix}`;
 }
 
 /**

@@ -218,6 +218,7 @@ export interface VisualOrderResult {
 
 export interface ReportData {
   id: string;
+  analysisId?: string;
   url: string;
   status: "pending" | "processing" | "completed" | "failed"; // Status strings from functions
   createdAt: number;
