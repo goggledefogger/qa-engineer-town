@@ -7,6 +7,7 @@ import { AppLayout } from './components/layout';
 import ReportPage from './pages/ReportPage';
 import SignInPage from './pages/SignInPage'; // Import SignInPage
 import HandleSignInPage from './pages/HandleSignInPage'; // Import HandleSignInPage
+import type { AiProvider } from './config/aiProviders';
 
 // const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || 'test@test.com'; // No longer used
 
@@ -63,11 +64,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ user, loadingAuth, isAd
   return children ? <>{children}</> : <Outlet />;
 };
 
-const LandingPage: React.FC<{
-  onUrlSubmit: (url: string) => Promise<void>;
+interface LandingPageProps {
+  onUrlSubmit: (url: string, aiConfig: { provider: AiProvider; model: string }) => Promise<void>;
   isSubmitting: boolean;
   loadingAuth: boolean;
-}> = ({ onUrlSubmit, isSubmitting, loadingAuth }) => {
+}
+
+const LandingPage: React.FC<LandingPageProps> = ({ onUrlSubmit, isSubmitting, loadingAuth }) => {
   return (
     <div className="flex flex-col items-center justify-start pt-8 sm:pt-12 lg:pt-16">
       <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-center text-slate-800">
@@ -104,7 +107,7 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleUrlSubmit = async (url: string) => {
+  const handleUrlSubmit = async (url: string, aiConfig: { provider: AiProvider; model: string }) => {
     if (!user || !isAdmin) { // Check isAdmin flag
       alert("You are not authorized to perform this action. Please sign in with an admin account.");
       if (!user) navigate('/signin');
@@ -143,7 +146,11 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`
         },
-        body: JSON.stringify({ url: url }),
+        body: JSON.stringify({
+          url,
+          aiProvider: aiConfig.provider,
+          aiModel: aiConfig.model,
+        }),
       });
 
       if (!response.ok) {

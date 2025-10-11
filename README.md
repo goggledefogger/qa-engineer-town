@@ -8,7 +8,7 @@ An AI-powered assistant for freelance QA engineers that automates the process of
 *   Restricted access via Firebase Email Link Authentication
 *   Runs Lighthouse audit via PageSpeed Insights API
 *   Uses Playwright to capture screenshots at multiple viewports (desktop, tablet, mobile)
-*   Utilizes Google Gemini AI Vision Models to analyze screenshots for UX, design, layout, and styling suggestions
+*   Utilizes configurable AI vision models (Gemini, OpenAI, or Anthropic Claude) to analyze screenshots for UX, design, layout, and styling suggestions
 *   Generates an LLM-powered summary of the entire report
 *   Displays results in an interactive web report
 *   Uses Firebase for backend (Cloud Functions, Cloud Tasks), database (Realtime Database), storage (Cloud Storage), and hosting
@@ -22,7 +22,7 @@ An AI-powered assistant for freelance QA engineers that automates the process of
 *   **Hosting:** Firebase Hosting
 *   **Authentication:** Firebase Email Link Authentication
 *   **QA Tools:** Playwright (running in Cloud Functions), PageSpeed Insights API
-*   **AI:** Google Gemini API (for Vision Analysis and LLM Summaries)
+*   **AI:** Google Gemini, OpenAI, or Anthropic Claude for vision analysis and LLM summaries
 *   **Package Manager:** npm (workspaces)
 
 ## Project Structure
@@ -124,8 +124,14 @@ VITE_FIREBASE_STORAGE_BUCKET="YOUR_FIREBASE_STORAGE_BUCKET"
 VITE_FIREBASE_MESSAGING_SENDER_ID="YOUR_FIREBASE_MESSAGING_SENDER_ID"
 VITE_FIREBASE_APP_ID="YOUR_FIREBASE_APP_ID"
 VITE_FIREBASE_DATABASE_URL="YOUR_FIREBASE_DATABASE_URL"
+VITE_DEFAULT_AI_PROVIDER="gemini" # Optional: gemini | openai | anthropic
+VITE_DEFAULT_GEMINI_MODEL="gemini-2.5-flash-preview-09-2025" # Optional: preselects the Gemini model in the dropdown
+VITE_DEFAULT_OPENAI_MODEL="gpt-4o-mini" # Optional: preselects an OpenAI model
+VITE_DEFAULT_ANTHROPIC_MODEL="claude-3.5-sonnet" # Optional: preselects a Claude model
 ```
 Then copy to `frontend/.env` and fill in the actual values.
+*   `VITE_DEFAULT_AI_PROVIDER`: Optional. Sets which provider is preselected in the scan form dropdown. Users can still change it per scan.
+*   `VITE_DEFAULT_GEMINI_MODEL`, `VITE_DEFAULT_OPENAI_MODEL`, `VITE_DEFAULT_ANTHROPIC_MODEL`: Optional. Prefill the model dropdown for each provider; admins can still override per scan.
 
 **2. Backend (`functions/.env`):**
 
@@ -139,17 +145,25 @@ Create `functions/.env.example` with:
 # For Gen2 functions, it might look like: https://processscantask-xxxxxx-uc.a.run.app
 PROCESS_SCAN_TASK_URL="YOUR_PROCESS_SCAN_TASK_FUNCTION_URL"
 
+# AI Provider Defaults
+AI_DEFAULT_PROVIDER="gemini" # Optional: gemini | openai | anthropic
+
 # API Keys
 PAGESPEED_API_KEY="YOUR_GOOGLE_PAGESPEED_INSIGHTS_API_KEY" # Get from Google Cloud Console
 GEMINI_API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"               # Get from Google AI Studio or Cloud Console
+OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 
-# Gemini Model Configuration
-GEMINI_MODEL="gemini-2.5-flash-preview-09-2025" # Or other compatible model like gemini-pro-vision
+# Model Configuration (optional fallbacks if the UI doesn't send a selection)
+GEMINI_MODEL="gemini-2.5-flash-preview-09-2025"
+OPENAI_MODEL="gpt-4o-mini"
+ANTHROPIC_MODEL="claude-3.5-sonnet"
 ```
 Then copy to `functions/.env` and fill in the actual values.
 *   `PROCESS_SCAN_TASK_URL`: You'll get this URL after you deploy the `processScanTask` function for the first time.
 *   `PAGESPEED_API_KEY`: Generate from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) by creating an API key and restricting it to the PageSpeed Insights API if desired.
-*   `GEMINI_API_KEY`: Generate from [Google AI Studio](https://aistudio.google.com/app/apikey) or Google Cloud Console (Generative Language API).
+*   `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: Provide whichever providers you plan to use. Only configured providers will execute.
+*   `GEMINI_MODEL`, `OPENAI_MODEL`, `ANTHROPIC_MODEL`: Optional fallback model names. The admin UI now lets you choose a provider and model per scan; these values are only used when nothing is selected.
 
 **Important:** `.env` files contain sensitive information. Ensure they are listed in your root `.gitignore` file (they usually are by default).
 

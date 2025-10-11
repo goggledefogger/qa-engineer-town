@@ -20,11 +20,12 @@ import {
   performVisualOrderCheck, // Import new function
 } from "../services/playwrightService";
 import { performLighthouseScan } from "../services/lighthouseService";
-import { performGeminiAnalysis } from "../services/geminiVisionService";
+import { performAiUxAnalysis } from "../services/aiUxDesignService";
 import {
   generateLighthouseItemExplanations,
   performLLMReportSummary,
-} from "../services/geminiTextService";
+} from "../services/aiTextService";
+import { resolveAiProviderConfig } from "../services/aiProviderService";
 import { performTechStackScan } from "../services/techStackService";
 
 export const processScanTask = onTaskDispatched<ScanTaskPayload>(
@@ -41,8 +42,10 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
   },
   async (request) => {
     const rtdb = admin.database();
-    const { reportId, urlToScan } = request.data;
-    logger.info(`Processing scan task for reportId: ${reportId}, url: ${urlToScan}`);
+    const { reportId, urlToScan, aiProvider, aiModel } = request.data;
+    logger.info(
+      `Processing scan task for reportId: ${reportId}, url: ${urlToScan}, requested AI provider: ${aiProvider || "not provided"}, model: ${aiModel || "not provided"}`
+    );
 
     const reportRef = rtdb.ref(`reports/${reportId}`);
     await reportRef.update({ status: "processing", updatedAt: Date.now() });
@@ -58,8 +61,24 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
 
       logger.info("Starting Playwright scan...", { reportId });
       const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
-      const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-      const GEMINI_MODEL_NAME = process.env.GEMINI_MODEL;
+      const aiResolution = resolveAiProviderConfig(aiProvider, aiModel);
+      const aiContext = aiResolution.config ?? null;
+      if (!aiContext && aiResolution.error) {
+        logger.warn("AI provider configuration incomplete.", {
+          reportId,
+          requestedProvider: aiProvider,
+          requestedModel: aiModel,
+          resolutionError: aiResolution.error,
+        });
+      }
+
+      if (aiResolution.provider || aiContext?.model || aiModel) {
+        await reportRef.child("aiConfig").update({
+          ...(aiResolution.provider ? { provider: aiResolution.provider } : {}),
+          ...(aiContext?.model ? { model: aiContext.model } : {}),
+          ...(!aiContext?.model && aiModel ? { model: aiModel } : {}),
+        });
+      }
 
       const playwrightReport = await performPlaywrightScan(page, urlToScan, reportId);
       logger.info("Playwright scan completed. Success: " + playwrightReport.success, { reportId });
@@ -90,13 +109,25 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       await reportRef.child("visualOrderCheck").set(visualOrderCheck);
       logger.info("Visual order check results saved.", { reportId });
 
-      logger.info("Starting parallel Lighthouse, Gemini AI, and Tech Stack scans...", { reportId });
+      logger.info("Starting parallel Lighthouse, AI, and Tech Stack scans...", {
+        reportId,
+        aiProvider: aiContext?.provider,
+        aiModel: aiContext?.model,
+      });
       const lighthousePromise = performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY);
       // Tech stack scan no longer needs browser or page
       const techStackPromise = performTechStackScan(urlToScan, reportId);
 
-      let geminiPromise: Promise<AiUxDesignSuggestions>;
-      if (playwrightReport && playwrightReport.success && playwrightReport.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) {
+      let aiUxPromise: Promise<AiUxDesignSuggestions>;
+      if (!aiContext) {
+        aiUxPromise = Promise.resolve({
+          status: "skipped",
+          error: "AI provider not configured.",
+          suggestions: [],
+          modelUsed: aiModel,
+          providerUsed: aiResolution.provider,
+        });
+      } else if (playwrightReport && playwrightReport.success && playwrightReport.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) {
         let screenshotUrlForAnalysis: string | undefined = undefined;
         let deviceTypeForAnalysis: ScreenContextType = 'general';
 
@@ -121,37 +152,42 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         }
 
         if (screenshotUrlForAnalysis) {
-          geminiPromise = performGeminiAnalysis(
+          aiUxPromise = performAiUxAnalysis(
             screenshotUrlForAnalysis,
             deviceTypeForAnalysis,
             reportId,
-            GEMINI_API_KEY,
-            GEMINI_MODEL_NAME,
+            aiContext,
             urlToScan
           );
         } else {
-          logger.warn("Skipping Gemini analysis as no valid screenshot URL found despite Playwright success.", { reportId });
-          geminiPromise = Promise.resolve({
+          logger.warn("Skipping AI UX analysis as no valid screenshot URL found despite Playwright success.", { reportId });
+          aiUxPromise = Promise.resolve({
             status: "skipped",
             error: "AI analysis skipped as no screenshot URL was available after Playwright scan.",
             suggestions: [],
-            modelUsed: GEMINI_MODEL_NAME || undefined,
+            modelUsed: aiContext.model,
+            providerUsed: aiContext.provider,
           });
         }
       } else {
-        logger.info("Skipping Gemini analysis due to Playwright failure or no screenshot URLs.", { reportId, playwrightSuccess: playwrightReport?.success, hasScreenshots: !!(playwrightReport?.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0) });
-        geminiPromise = Promise.resolve({
+        logger.info("Skipping AI UX analysis due to Playwright failure or missing screenshots.", {
+          reportId,
+          playwrightSuccess: playwrightReport?.success,
+          hasScreenshots: !!(playwrightReport?.screenshotUrls && Object.keys(playwrightReport.screenshotUrls).length > 0),
+        });
+        aiUxPromise = Promise.resolve({
           status: "skipped",
           error: "AI analysis skipped due to Playwright failure or missing screenshots.",
           suggestions: [],
-          modelUsed: GEMINI_MODEL_NAME || undefined,
+          modelUsed: aiContext?.model,
+          providerUsed: aiContext?.provider,
         });
       }
 
       // Execute all scan promises in parallel and handle partial failures using Promise.allSettled
       const results = await Promise.allSettled([
         lighthousePromise,
-        geminiPromise,
+        aiUxPromise,
         techStackPromise,
         // colorContrastPromise, // Already awaited above for sequential execution
       ]);
@@ -169,13 +205,24 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
           };
       const aiUxDesignSuggestions = results[1].status === "fulfilled" && results[1].value && typeof results[1].value.status === "string"
         ? results[1].value as AiUxDesignSuggestions
-        : { status: "skipped", error: "Gemini analysis failed", suggestions: [], modelUsed: GEMINI_MODEL_NAME || undefined } as AiUxDesignSuggestions;
+        : {
+            status: "skipped",
+            error: "AI UX analysis failed",
+            suggestions: [],
+            modelUsed: aiContext?.model ?? aiModel,
+            providerUsed: aiContext?.provider ?? aiResolution.provider,
+          } as AiUxDesignSuggestions;
       const techStackData = results[2].status === "fulfilled" ? results[2].value : { status: "error", error: "Tech Stack scan failed", detectedTechnologies: [] };
 
       logger.info("Lighthouse scan raw data available.", { reportId, lighthouseSuccess: lighthouseData.success });
       await reportRef.child("lighthouseReport").update(lighthouseData);
 
-      logger.info("Gemini AI UX suggestions available.", { reportId, aiStatus: aiUxDesignSuggestions.status });
+      logger.info("AI UX suggestions available.", {
+        reportId,
+        aiStatus: aiUxDesignSuggestions.status,
+        aiProviderUsed: aiUxDesignSuggestions.providerUsed,
+        aiModelUsed: aiUxDesignSuggestions.modelUsed,
+      });
       await reportRef.child("aiUxDesignSuggestions").update(aiUxDesignSuggestions);
 
       logger.info("Tech stack scan data available.", { reportId, techStackStatus: techStackData.status });
@@ -187,8 +234,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         const explainedLighthouseData = await generateLighthouseItemExplanations(
           lighthouseData,
           reportId,
-          GEMINI_API_KEY,
-          GEMINI_MODEL_NAME
+          aiContext
         );
         logger.info("LLM explanations for Lighthouse items completed processing.", { reportId });
         await reportRef.child("lighthouseReport").update(explainedLighthouseData);
@@ -209,8 +255,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         playwrightReport,
         lighthouseData,
         aiUxDesignSuggestions,
-        GEMINI_API_KEY,
-        GEMINI_MODEL_NAME
+        aiContext
       );
       await reportRef.child("llmReportSummary").set(llmSummary);
       logger.info("LLM report summary saved to RTDB.", { reportId, summaryStatus: llmSummary.status });

@@ -15,6 +15,8 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
   const detailedMetrics = lighthouseReport?.detailedMetrics;
   const rawOpportunities = lighthouseReport?.performanceOpportunities;
   const llmExplainedOpportunities = lighthouseReport?.llmExplainedPerformanceOpportunities;
+  const isAwaitingCompletion = (status?: ReportData['status']) =>
+    status === 'pending' || status === 'processing' || status === 'complete';
   // console.log('[PerformanceSection] Props:', { lighthouseReport, reportStatus });
   // console.log('[PerformanceSection] Raw Opps:', rawOpportunities, 'LLM Opps:', llmExplainedOpportunities);
 
@@ -71,7 +73,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
             id: rawOpp.id,
             title: rawOpp.title,
             llmExplanation: fallbackExplanation, // Use the new fallback
-            status: (reportStatus === 'processing' || reportStatus === 'pending') ? 'pending' : 'completed',
+            status: isAwaitingCompletion(reportStatus) ? 'pending' : 'completed',
             rawDescription: rawOpp.description, // Keep rawDescription as is, even if empty
             overallSavingsMs: rawOpp.overallSavingsMs,
             overallSavingsBytes: rawOpp.overallSavingsBytes,
@@ -179,7 +181,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({ lighthouseRepor
         } else {
           // Determine status based on report status
           const auditStatus: LLMExplainedAuditItem['status'] =
-            (reportStatus === 'processing' || reportStatus === 'pending') ? 'pending' : 'completed';
+            isAwaitingCompletion(reportStatus) ? 'pending' : 'completed';
 
           items.push({
             id: rawAudit.id,

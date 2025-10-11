@@ -112,6 +112,7 @@ export interface AiUxDesignSuggestions {
   suggestions?: AiUxDesignSuggestionItem[];
   error?: string;
   modelUsed?: string;
+  providerUsed?: string;
 }
 
 export interface LLMReportSummary {
@@ -119,6 +120,12 @@ export interface LLMReportSummary {
   summaryText?: string;
   error?: string;
   modelUsed?: string;
+  providerUsed?: string;
+}
+
+export interface AiConfiguration {
+  provider?: string;
+  model?: string;
 }
 
 export interface ReportData {
@@ -136,11 +143,14 @@ export interface ReportData {
   createdAt: number;
   updatedAt: number;
   error?: string;
+  aiConfig?: AiConfiguration;
 }
 
 export interface ScanTaskPayload {
   reportId: string;
   urlToScan: string;
+  aiProvider?: string;
+  aiModel?: string;
 }
 
 export interface DetectedTechnology {

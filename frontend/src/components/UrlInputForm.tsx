@@ -1,9 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Input } from './forms'; // Corrected import path
 import { Button } from './ui'; // Corrected import path
+import {
+  AI_PROVIDER_OPTIONS,
+  AiProvider,
+  getModelOptionsForProvider,
+  getProviderLabel,
+  resolveInitialModel,
+  resolveInitialProvider,
+} from '../config/aiProviders';
+
+interface SelectedAiConfig {
+  provider: AiProvider;
+  model: string;
+}
 
 interface UrlInputFormProps {
-  onSubmitUrl: (url: string) => void; // Callback function to handle submission
+  onSubmitUrl: (url: string, aiConfig: SelectedAiConfig) => void | Promise<void>; // Callback function to handle submission
   isSubmitting?: boolean; // Optional: To disable button during submission
   loadingAuth?: boolean; // Add prop for auth loading state
 }
@@ -11,6 +24,28 @@ interface UrlInputFormProps {
 const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmitUrl, isSubmitting = false, loadingAuth = false }) => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const envDefaultModels: Partial<Record<AiProvider, string | undefined>> = {
+    gemini: import.meta.env.VITE_DEFAULT_GEMINI_MODEL as string | undefined,
+    openai: import.meta.env.VITE_DEFAULT_OPENAI_MODEL as string | undefined,
+    anthropic: import.meta.env.VITE_DEFAULT_ANTHROPIC_MODEL as string | undefined,
+  };
+  const initialProvider = resolveInitialProvider(import.meta.env.VITE_DEFAULT_AI_PROVIDER as string | undefined);
+  const [selectedProvider, setSelectedProvider] = useState<AiProvider>(initialProvider);
+  const [selectedModel, setSelectedModel] = useState<string>(() =>
+    resolveInitialModel(initialProvider, envDefaultModels[initialProvider])
+  );
+
+  const providerModelOptions = useMemo(() => {
+    const baseOptions = getModelOptionsForProvider(selectedProvider);
+    if (!selectedModel) {
+      return baseOptions;
+    }
+    if (baseOptions.some(option => option.value === selectedModel)) {
+      return baseOptions;
+    }
+    const providerLabel = getProviderLabel(selectedProvider) ?? selectedProvider;
+    return [...baseOptions, { value: selectedModel, label: `${selectedModel} (custom)`, provider: selectedProvider, note: `Custom for ${providerLabel}` }];
+  }, [selectedProvider, selectedModel]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,7 +85,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmitUrl, isSubmitting =
     }
 
     // If all checks pass, submit
-    onSubmitUrl(submittedUrl);
+    onSubmitUrl(submittedUrl, { provider: selectedProvider, model: selectedModel });
   };
 
   return (
@@ -76,6 +111,52 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmitUrl, isSubmitting =
               {error}
             </p>
           )}
+        </div>
+        <div className="grid gap-2 sm:gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+          <label htmlFor="aiProvider" className="block text-sm font-medium text-slate-700 sm:self-center">
+            AI Provider
+          </label>
+          <select
+            id="aiProvider"
+            value={selectedProvider}
+            onChange={(event) => {
+              const nextProvider = event.target.value as AiProvider;
+              setSelectedProvider(nextProvider);
+              setSelectedModel(resolveInitialModel(nextProvider, envDefaultModels[nextProvider]));
+            }}
+            disabled={isSubmitting || loadingAuth}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+          >
+            {AI_PROVIDER_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500 sm:col-span-2">
+            Choose which AI provider powers the accessibility and design analysis.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+          <label htmlFor="aiModel" className="block text-sm font-medium text-slate-700 sm:self-center">
+            Model
+          </label>
+          <select
+            id="aiModel"
+            value={selectedModel}
+            onChange={(event) => setSelectedModel(event.target.value)}
+            disabled={isSubmitting || loadingAuth}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+          >
+            {providerModelOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.note ? `${option.label} (${option.note})` : option.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500 sm:col-span-2">
+            Pick a model optimized for your provider. Recent releases may yield deeper insights at higher cost.
+          </p>
         </div>
         <Button
           type="submit"

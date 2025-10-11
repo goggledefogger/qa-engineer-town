@@ -68,6 +68,7 @@ export interface LLMReportSummary {
   summaryText?: string;
   error?: string;
   modelUsed?: string;
+  providerUsed?: string;
 }
 
 // Define an interface for Screenshot URLs (matching backend)
@@ -96,18 +97,31 @@ export interface AiUxDesignSuggestionItem {
 }
 
 // Define an interface for the report data structure
+export type ReportStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  // Legacy values kept for backward compatibility with older data
+  | 'complete'
+  | 'error';
+
 export interface ReportData {
   id?: string;
   analysisId?: string;
   url: string;
-  status: 'pending' | 'processing' | 'complete' | 'error';
+  status: ReportStatus;
   createdAt: number; // Timestamp
+  aiConfig?: {
+    geminiModel?: string;
+  };
   playwrightReport?: PlaywrightReport;
   lighthouseReport?: LighthouseReportData;
   aiUxDesignSuggestions?: {
     status: "completed" | "error" | "pending" | "skipped";
     suggestions?: AiUxDesignSuggestionItem[];
     modelUsed?: string;
+    providerUsed?: string;
     error?: string;
   };
   llmReportSummary?: LLMReportSummary;

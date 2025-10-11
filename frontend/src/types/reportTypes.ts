@@ -108,6 +108,7 @@ export interface AiUxDesignSuggestions {
   suggestions?: AiUxDesignSuggestionItem[];
   error?: string;
   modelUsed?: string;
+  providerUsed?: string;
 }
 
 export interface LLMReportSummary {
@@ -115,6 +116,7 @@ export interface LLMReportSummary {
   summaryText?: string;
   error?: string;
   modelUsed?: string;
+  providerUsed?: string;
 }
 
 export interface DetectedTechnology {
@@ -216,11 +218,19 @@ export interface VisualOrderResult {
   error?: string;
 }
 
+export type ReportStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "complete" // Legacy values for backwards compatibility
+  | "error";
+
 export interface ReportData {
   id: string;
   analysisId?: string;
   url: string;
-  status: "pending" | "processing" | "completed" | "failed"; // Status strings from functions
+  status: ReportStatus; // Status strings from functions (plus legacy)
   createdAt: number;
   updatedAt?: number;
   playwrightReport?: PlaywrightReport;

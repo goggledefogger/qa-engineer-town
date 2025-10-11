@@ -4,6 +4,7 @@ import { getProjectId, generateReportId, isValidUrl } from "../utils";
 import { ReportData, ScanTaskPayload } from "../types";
 import * as admin from "firebase-admin";
 import { CloudTasksClient, protos } from "@google-cloud/tasks";
+import { getSupportedProviders } from "../services/aiProviderService";
 
 // Assuming rtdb, tasksClient, LOCATION_ID, and QUEUE_ID are initialized
 // and exported from a central place (e.g., index.ts or a config.ts) or passed appropriately.
@@ -16,6 +17,7 @@ import { CloudTasksClient, protos } from "@google-cloud/tasks";
 const tasksClient = new CloudTasksClient(); // This is fine, not Firebase Admin related
 const LOCATION_ID = "us-central1";
 const QUEUE_ID = "scanProcessingQueue";
+const SUPPORTED_AI_PROVIDERS = new Set(getSupportedProviders());
 
 /**
  * HTTP Function to trigger a website scan and store reports.
@@ -57,6 +59,17 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
   logger.info("apiScan function triggered by authenticated admin.", {structuredData: true});
 
   const urlToScan = request.body.url as string;
+  const rawProvider = typeof request.body.aiProvider === "string" ? request.body.aiProvider.trim().toLowerCase() : undefined;
+  const rawModel = typeof request.body.aiModel === "string" ? request.body.aiModel.trim() : undefined;
+
+  if (rawProvider && !SUPPORTED_AI_PROVIDERS.has(rawProvider)) {
+    logger.warn("Unsupported AI provider requested.", { rawProvider });
+    response.status(400).send(`Unsupported AI provider: ${rawProvider}`);
+    return;
+  }
+
+  const requestedAiProvider = rawProvider;
+  const requestedAiModel = rawModel && rawModel.length > 0 ? rawModel : undefined;
 
   if (request.method !== 'POST') {
     response.status(405).send('Method Not Allowed');
@@ -84,6 +97,7 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
     status: "pending",
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    ...(requestedAiProvider || requestedAiModel ? { aiConfig: { provider: requestedAiProvider, model: requestedAiModel } } : {}),
   };
 
   try {
@@ -105,7 +119,7 @@ export const apiScan = onRequest({cors: true}, async (request, response) => {
     }
     logger.info(`Using processScanTask URL: ${processScanTaskUrl}`);
 
-    const actualPayload: ScanTaskPayload = {reportId, urlToScan};
+    const actualPayload: ScanTaskPayload = {reportId, urlToScan, aiProvider: requestedAiProvider, aiModel: requestedAiModel};
     const wrappedPayload = { data: actualPayload };
 
     const task: protos.google.cloud.tasks.v2.ITask = {
