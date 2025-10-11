@@ -1,19 +1,17 @@
 # AI QA Engineer Assistant
 
-## Elevator Pitch
-
-An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be deeply familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding their nuances, common issues, and limitations. Users provide a URL, and the tool scans the site (initially a single page), runs standard QA checks using tools like Lighthouse and Playwright, leverages AI for analysis (like accessibility), leverages AI vision models for UX, design, and layout analysis, and generates a concise, interactive web report highlighting critical performance metrics, accessibility issues, and actionable design feedback, streamlining the initial QA assessment for clients.
+An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding common issues and limitations. Users provide a URL, the tool scans the site (for now a single page), runs standard QA checks using tools like Lighthouse and Playwright, uses AI for analysis like accessibility, leverages AI vision models for UX, design, and layout analysis, and generates a concise, interactive web report highlighting critical performance metrics, accessibility issues, and actionable design feedback, providing initial QA assessment for clients.
 
 ## Core Features (Initial Prototype)
 
-*   Accepts a single website URL.
-*   Restricted access via Firebase Email Link Authentication.
-*   Runs Lighthouse audit via PageSpeed Insights API.
-*   Uses Playwright to capture screenshots at multiple viewports (desktop, tablet, mobile).
-*   Utilizes Google Gemini AI Vision Models to analyze screenshots for UX, design, layout, and styling suggestions.
-*   Generates an LLM-powered summary of the entire report.
-*   Displays results in an interactive web report.
-*   Uses Firebase for backend (Cloud Functions, Cloud Tasks), database (Realtime Database), storage (Cloud Storage), and hosting.
+*   Accepts a single website URL
+*   Restricted access via Firebase Email Link Authentication
+*   Runs Lighthouse audit via PageSpeed Insights API
+*   Uses Playwright to capture screenshots at multiple viewports (desktop, tablet, mobile)
+*   Utilizes Google Gemini AI Vision Models to analyze screenshots for UX, design, layout, and styling suggestions
+*   Generates an LLM-powered summary of the entire report
+*   Displays results in an interactive web report
+*   Uses Firebase for backend (Cloud Functions, Cloud Tasks), database (Realtime Database), storage (Cloud Storage), and hosting
 
 ## Tech Stack
 
@@ -112,7 +110,7 @@ An AI-powered assistant for freelance QA engineers that automates the process of
 
 ### Environment Variables
 
-You'll need to create `.env` files for both the `frontend` and `functions` workspaces. Copy the corresponding `.env.example` files (you'll create these first if they don't exist) and fill in the values.
+Create `.env` files for both the `frontend` and `functions` workspaces. Copy the corresponding `.env.example` files (create these first if they don't exist) and fill in the values.
 
 **1. Frontend (`frontend/.env`):**
 
