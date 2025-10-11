@@ -144,7 +144,7 @@ PAGESPEED_API_KEY="YOUR_GOOGLE_PAGESPEED_INSIGHTS_API_KEY" # Get from Google Clo
 GEMINI_API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"               # Get from Google AI Studio or Cloud Console
 
 # Gemini Model Configuration
-GEMINI_MODEL="gemini-1.5-flash" # Or other compatible model like gemini-pro-vision
+GEMINI_MODEL="gemini-2.5-flash-preview-09-2025" # Or other compatible model like gemini-pro-vision
 ```
 Then copy to `functions/.env` and fill in the actual values.
 *   `PROCESS_SCAN_TASK_URL`: You'll get this URL after you deploy the `processScanTask` function for the first time.
