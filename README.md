@@ -1,6 +1,11 @@
 # AI QA Engineer Assistant
 
-An AI-powered assistant for freelance QA engineers that automates the process of testing small-to-medium websites. This assistant is envisioned to be familiar with popular site development platforms (e.g., Squarespace, Shopify, WordPress, Wix), understanding common issues and limitations. Users provide a URL, the tool scans the site (for now a single page), runs standard QA checks using tools like Lighthouse and Playwright, uses AI for analysis like accessibility, leverages AI vision models for UX, design, and layout analysis, and generates a concise, interactive web report highlighting critical performance metrics, accessibility issues, and actionable design feedback, providing initial QA assessment for clients.
+An AI-powered assistant for QA engineers to generate a test report for small-to-medium websites. Users provide a URL, the tool scans the site (for now a single page), runs standard QA checks using tools like Lighthouse and Playwright, uses AI for analysis of design, UX, and accessibility, and generates an interactive web report highlighting critical performance metrics, accessibility issues, and actionable design feedback, providing initial QA assessment for clients.
+
+## Demo: https://roytown.net
+
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/f7b4268c-6cd8-41bb-aee8-bdf1b9689865" />
+
 
 ## Core Features (Initial Prototype)
 
