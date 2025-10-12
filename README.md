@@ -125,9 +125,9 @@ VITE_FIREBASE_MESSAGING_SENDER_ID="YOUR_FIREBASE_MESSAGING_SENDER_ID"
 VITE_FIREBASE_APP_ID="YOUR_FIREBASE_APP_ID"
 VITE_FIREBASE_DATABASE_URL="YOUR_FIREBASE_DATABASE_URL"
 VITE_DEFAULT_AI_PROVIDER="gemini" # Optional: gemini | openai | anthropic
-VITE_DEFAULT_GEMINI_MODEL="gemini-2.5-flash-preview-09-2025" # Optional: preselects the Gemini model in the dropdown
-VITE_DEFAULT_OPENAI_MODEL="gpt-4o-mini" # Optional: preselects an OpenAI model
-VITE_DEFAULT_ANTHROPIC_MODEL="claude-3.5-sonnet" # Optional: preselects a Claude model
+VITE_DEFAULT_GEMINI_MODEL="gemini-2.5-flash" # Optional: preselects the Gemini model in the dropdown
+VITE_DEFAULT_OPENAI_MODEL="gpt-4o" # Optional: preselects an OpenAI model
+VITE_DEFAULT_ANTHROPIC_MODEL="claude-sonnet-4-5" # Optional: preselects a Claude model
 ```
 Then copy to `frontend/.env` and fill in the actual values.
 *   `VITE_DEFAULT_AI_PROVIDER`: Optional. Sets which provider is preselected in the scan form dropdown. Users can still change it per scan.
@@ -155,9 +155,9 @@ OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
 ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 
 # Model Configuration (optional fallbacks if the UI doesn't send a selection)
-GEMINI_MODEL="gemini-2.5-flash-preview-09-2025"
-OPENAI_MODEL="gpt-4o-mini"
-ANTHROPIC_MODEL="claude-3.5-sonnet"
+GEMINI_MODEL="gemini-2.5-flash"
+OPENAI_MODEL="gpt-4o"
+ANTHROPIC_MODEL="claude-sonnet-4-5"
 ```
 Then copy to `functions/.env` and fill in the actual values.
 *   `PROCESS_SCAN_TASK_URL`: You'll get this URL after you deploy the `processScanTask` function for the first time.

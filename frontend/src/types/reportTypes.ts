@@ -233,6 +233,10 @@ export interface ReportData {
   status: ReportStatus; // Status strings from functions (plus legacy)
   createdAt: number;
   updatedAt?: number;
+  aiConfig?: {
+    provider?: string;
+    model?: string;
+  };
   playwrightReport?: PlaywrightReport;
   lighthouseReport?: LighthouseReportData;
   aiUxDesignSuggestions?: AiUxDesignSuggestions;

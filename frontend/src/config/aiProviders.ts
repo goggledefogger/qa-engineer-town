@@ -96,3 +96,19 @@ export const resolveInitialModel = (provider: AiProvider, overrideModel?: string
 export const getModelOptionsForProvider = (provider: AiProvider): AiModelOption[] => {
   return AI_MODEL_OPTIONS[provider] ?? [];
 };
+
+export const getModelLabel = (
+  provider: string | undefined,
+  model: string | undefined
+): string | undefined => {
+  if (!model) return undefined;
+  const normalizedProvider = provider?.toLowerCase() as AiProvider | undefined;
+  if (normalizedProvider && AI_MODEL_OPTIONS[normalizedProvider]) {
+    const match = AI_MODEL_OPTIONS[normalizedProvider].find(option => option.value === model);
+    if (match) {
+      return match.note ? `${match.label} (${match.note})` : match.label;
+    }
+  }
+  // Fall back to returning the raw model string when we don't have metadata
+  return model;
+};

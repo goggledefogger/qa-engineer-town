@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { Card } from '../ui';
 import type { ReportData } from '../../types/report'; // Only need ReportData for llmReportSummary
 import { unwrapMarkdown } from '../../utils/textUtils';
-import { getProviderLabel } from '../../config/aiProviders';
+import { getProviderLabel, getModelLabel } from '../../config/aiProviders';
 
 interface LlmSummarySectionProps {
   llmReportSummary: ReportData['llmReportSummary'];
@@ -15,10 +15,15 @@ const LlmSummarySection: React.FC<LlmSummarySectionProps> = ({ llmReportSummary 
   const providerLabel = llmReportSummary?.providerUsed
     ? getProviderLabel(llmReportSummary.providerUsed) ?? llmReportSummary.providerUsed
     : undefined;
-  const modelLabel = llmReportSummary?.modelUsed;
-  const attribution = providerLabel && modelLabel
-    ? `${providerLabel} – ${modelLabel}`
-    : providerLabel ?? modelLabel;
+  const modelLabelRaw = llmReportSummary?.modelUsed;
+  const modelLabel = getModelLabel(llmReportSummary?.providerUsed, modelLabelRaw);
+  const modelDisplay =
+    modelLabelRaw && modelLabel && modelLabel !== modelLabelRaw
+      ? `${modelLabel} (${modelLabelRaw})`
+      : modelLabelRaw || modelLabel || undefined;
+  const attribution = providerLabel && modelDisplay
+    ? `${providerLabel} – ${modelDisplay}`
+    : providerLabel ?? modelDisplay;
 
   return (
     <Card title="AI-Generated Overview" className="font-sans">

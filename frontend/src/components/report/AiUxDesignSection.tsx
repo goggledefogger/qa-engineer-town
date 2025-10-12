@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { Card } from '../ui';
 import type { ReportData } from '../../types/reportTypes'; // Only need ReportData for aiUxDesignSuggestions
 import { unwrapMarkdown } from '../../utils/textUtils';
-import { getProviderLabel } from '../../config/aiProviders';
+import { getProviderLabel, getModelLabel } from '../../config/aiProviders';
 
 interface AiUxDesignSectionProps {
   aiUxDesignSuggestions?: ReportData['aiUxDesignSuggestions'];
@@ -47,10 +47,15 @@ const AiUxDesignSection: React.FC<AiUxDesignSectionProps> = ({ aiUxDesignSuggest
   const providerLabel = aiUxDesignSuggestions.providerUsed
     ? getProviderLabel(aiUxDesignSuggestions.providerUsed) ?? aiUxDesignSuggestions.providerUsed
     : undefined;
-  const modelLabel = aiUxDesignSuggestions.modelUsed;
-  const attribution = providerLabel && modelLabel
-    ? `${providerLabel} – ${modelLabel}`
-    : providerLabel ?? modelLabel;
+  const modelLabelRaw = aiUxDesignSuggestions.modelUsed;
+  const modelLabel = getModelLabel(aiUxDesignSuggestions.providerUsed, modelLabelRaw);
+  const modelDisplay =
+    modelLabelRaw && modelLabel && modelLabel !== modelLabelRaw
+      ? `${modelLabel} (${modelLabelRaw})`
+      : modelLabelRaw || modelLabel || undefined;
+  const attribution = providerLabel && modelDisplay
+    ? `${providerLabel} – ${modelDisplay}`
+    : providerLabel ?? modelDisplay;
 
   // If we reach here, aiUxDesignSuggestions.status must be 'completed'
   // and aiUxDesignSuggestions.suggestions is guaranteed to exist and not be empty.

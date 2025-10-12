@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, DetailItem } from '../ui';
 import type { ReportData } from '../../types/reportTypes';
+import { getProviderLabel, getModelLabel } from '../../config/aiProviders';
 
 interface SummarySectionProps {
   reportData: ReportData | null;
@@ -16,6 +17,20 @@ const SummarySection: React.FC<SummarySectionProps> = ({ reportData }) => {
       </Card>
     );
   }
+
+  const providerUsed =
+    reportData.aiUxDesignSuggestions?.providerUsed ??
+    reportData.llmReportSummary?.providerUsed ??
+    reportData.aiConfig?.provider;
+  const modelUsed =
+    reportData.aiUxDesignSuggestions?.modelUsed ??
+    reportData.llmReportSummary?.modelUsed ??
+    reportData.aiConfig?.model;
+
+  const providerDisplay = providerUsed ? getProviderLabel(providerUsed) ?? providerUsed : undefined;
+  const modelLabel = getModelLabel(providerUsed, modelUsed);
+  const modelDisplay =
+    modelUsed && modelLabel && modelLabel !== modelUsed ? `${modelLabel} (${modelUsed})` : modelUsed || modelLabel;
 
   return (
     <Card title="Scan Summary" className="font-sans">
@@ -59,6 +74,16 @@ const SummarySection: React.FC<SummarySectionProps> = ({ reportData }) => {
             <span className="text-sm sm:text-base">
               {new Date(reportData.completedAt).toLocaleString()}
             </span>
+          </DetailItem>
+        )}
+        {providerDisplay && (
+          <DetailItem label="AI Provider">
+            <span className="text-sm sm:text-base">{providerDisplay}</span>
+          </DetailItem>
+        )}
+        {modelDisplay && (
+          <DetailItem label="AI Model">
+            <span className="text-sm sm:text-base">{modelDisplay}</span>
           </DetailItem>
         )}
         {reportData.errorMessage && (

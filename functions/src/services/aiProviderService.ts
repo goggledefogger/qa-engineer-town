@@ -22,9 +22,9 @@ const PROVIDER_LABELS: Record<SupportedAiProvider, string> = {
 };
 
 const DEFAULT_MODEL_FALLBACK: Record<SupportedAiProvider, string> = {
-  gemini: "gemini-2.5-flash-preview-09-2025",
-  openai: "gpt-4o-mini",
-  anthropic: "claude-3.5-sonnet",
+  gemini: "gemini-2.5-flash",
+  openai: "gpt-4o",
+  anthropic: "claude-sonnet-4-5",
 };
 
 const getEnvDefaultModel = (provider: SupportedAiProvider): string | undefined => {
