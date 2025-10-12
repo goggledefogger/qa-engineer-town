@@ -137,13 +137,18 @@ export async function performLLMReportSummary(
   playwrightReport: PlaywrightReport | undefined,
   lighthouseReport: LighthouseReportData | undefined,
   aiUxDesignSuggestions: AiUxDesignSuggestions | undefined,
-  aiContext: AiProviderConfig | null | undefined
+  aiContext: AiProviderConfig | null | undefined,
+  fallbackReason?: string
 ): Promise<LLMReportSummary> {
   if (!aiContext) {
-    logger.info("Skipping LLM Report Summary: AI provider context not available.", { reportId });
+    const reason = fallbackReason || "AI provider not configured.";
+    logger.info("Skipping LLM Report Summary: AI provider context not available.", {
+      reportId,
+      fallbackReason,
+    });
     return {
       status: "skipped",
-      error: "AI provider not configured.",
+      error: reason,
     };
   }
   logger.info(`Starting LLM Report Summary with provider ${aiContext.provider} and model ${aiContext.model}...`, { reportId });

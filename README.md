@@ -148,9 +148,9 @@ PROCESS_SCAN_TASK_URL="YOUR_PROCESS_SCAN_TASK_FUNCTION_URL"
 # AI Provider Defaults
 AI_DEFAULT_PROVIDER="gemini" # Optional: gemini | openai | anthropic
 
-# API Keys
-PAGESPEED_API_KEY="YOUR_GOOGLE_PAGESPEED_INSIGHTS_API_KEY" # Get from Google Cloud Console
-GEMINI_API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"               # Get from Google AI Studio or Cloud Console
+# API Keys (local emulators only; production uses Firebase Secrets)
+PAGESPEED_API_KEY="YOUR_GOOGLE_PAGESPEED_INSIGHTS_API_KEY"
+GEMINI_API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"
 OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
 ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 
@@ -162,10 +162,20 @@ ANTHROPIC_MODEL="claude-sonnet-4-5"
 Then copy to `functions/.env` and fill in the actual values.
 *   `PROCESS_SCAN_TASK_URL`: You'll get this URL after you deploy the `processScanTask` function for the first time.
 *   `PAGESPEED_API_KEY`: Generate from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) by creating an API key and restricting it to the PageSpeed Insights API if desired.
-*   `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: Provide whichever providers you plan to use. Only configured providers will execute.
+*   `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: Provide whichever providers you plan to use. Only configured providers will execute. When running locally with the emulator these values can live in `.env`, but **in production you must store them as Firebase Secrets** (see below).
 *   `GEMINI_MODEL`, `OPENAI_MODEL`, `ANTHROPIC_MODEL`: Optional fallback model names. The admin UI now lets you choose a provider and model per scan; these values are only used when nothing is selected.
 
-**Important:** `.env` files contain sensitive information. Ensure they are listed in your root `.gitignore` file (they usually are by default).
+**Production Secrets:** Deploying Cloud Functions requires the API keys to be managed via Firebase Secrets. Set each key once using the Firebase CLI:
+
+```bash
+firebase functions:secrets:set PAGESPEED_API_KEY
+firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set OPENAI_API_KEY
+firebase functions:secrets:set ANTHROPIC_API_KEY
+firebase functions:secrets:set WHATCMS_API_KEY
+```
+
+The deploy step will attach these secrets to `processScanTask`, and the function automatically falls back to the `.env` values only when running locally with the Emulator Suite.
 
 ### Designating Admin Users
 

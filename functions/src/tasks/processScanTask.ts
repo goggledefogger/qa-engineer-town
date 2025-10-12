@@ -26,6 +26,7 @@ import {
   performLLMReportSummary,
 } from "../services/aiTextService";
 import { resolveAiProviderConfig } from "../services/aiProviderService";
+import { loadRuntimeConfig, RUNTIME_SECRETS } from "../config/runtimeConfig";
 import { performTechStackScan } from "../services/techStackService";
 
 export const processScanTask = onTaskDispatched<ScanTaskPayload>(
@@ -39,6 +40,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
     },
     memory: "2GiB",
     timeoutSeconds: 540,
+    secrets: [...RUNTIME_SECRETS],
   },
   async (request) => {
     const rtdb = admin.database();
@@ -60,15 +62,30 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       logger.info("Playwright browser launched and page created.", { reportId });
 
       logger.info("Starting Playwright scan...", { reportId });
-      const PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
-      const aiResolution = resolveAiProviderConfig(aiProvider, aiModel);
+      const runtimeConfig = loadRuntimeConfig();
+      const PAGESPEED_API_KEY = runtimeConfig.secrets.pageSpeedApiKey;
+      const aiResolution = resolveAiProviderConfig(aiProvider, aiModel, {
+        apiKeys: {
+          gemini: runtimeConfig.secrets.geminiApiKey,
+          openai: runtimeConfig.secrets.openaiApiKey,
+          anthropic: runtimeConfig.secrets.anthropicApiKey,
+        },
+        defaultProvider: runtimeConfig.aiDefaults.provider,
+        modelFallbacks: runtimeConfig.aiDefaults.models,
+      });
       const aiContext = aiResolution.config ?? null;
-      if (!aiContext && aiResolution.error) {
+      const aiProviderErrorMessage = !aiContext
+        ? aiResolution.error ||
+          (aiProvider
+            ? `AI provider "${aiProvider}" is not fully configured.`
+            : "AI provider not configured.")
+        : undefined;
+      if (aiProviderErrorMessage) {
         logger.warn("AI provider configuration incomplete.", {
           reportId,
           requestedProvider: aiProvider,
           requestedModel: aiModel,
-          resolutionError: aiResolution.error,
+          resolutionError: aiProviderErrorMessage,
         });
       }
 
@@ -116,13 +133,17 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
       });
       const lighthousePromise = performLighthouseScan(urlToScan, reportId, PAGESPEED_API_KEY);
       // Tech stack scan no longer needs browser or page
-      const techStackPromise = performTechStackScan(urlToScan, reportId);
+      const techStackPromise = performTechStackScan(
+        urlToScan,
+        reportId,
+        runtimeConfig.secrets.whatCmsApiKey
+      );
 
       let aiUxPromise: Promise<AiUxDesignSuggestions>;
       if (!aiContext) {
         aiUxPromise = Promise.resolve({
           status: "skipped",
-          error: "AI provider not configured.",
+          error: aiProviderErrorMessage || "AI provider not configured.",
           suggestions: [],
           modelUsed: aiModel,
           providerUsed: aiResolution.provider,
@@ -207,7 +228,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         ? results[1].value as AiUxDesignSuggestions
         : {
             status: "skipped",
-            error: "AI UX analysis failed",
+            error: aiProviderErrorMessage || "AI UX analysis failed",
             suggestions: [],
             modelUsed: aiContext?.model ?? aiModel,
             providerUsed: aiContext?.provider ?? aiResolution.provider,
@@ -255,7 +276,8 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         playwrightReport,
         lighthouseData,
         aiUxDesignSuggestions,
-        aiContext
+        aiContext,
+        aiProviderErrorMessage
       );
       await reportRef.child("llmReportSummary").set(llmSummary);
       logger.info("LLM report summary saved to RTDB.", { reportId, summaryStatus: llmSummary.status });

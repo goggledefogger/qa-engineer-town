@@ -35,10 +35,13 @@ function sanitizeTechnology(tech: any): DetectedTechnology {
  * @param reportId The ID of the report for logging purposes.
  * @returns A Promise resolving to TechStackData.
  */
-export async function performTechStackScan(urlToScan: string, reportId: string): Promise<TechStackData> {
+export async function performTechStackScan(
+  urlToScan: string,
+  reportId: string,
+  apiKey?: string | null
+): Promise<TechStackData> {
   logger.info("[TechStackService] Starting Tech Stack scan using WhatCMS.org API...", { reportId, urlToScan });
 
-  const apiKey = process.env.WHATCMS_API_KEY;
   if (!apiKey) {
     logger.error("[TechStackService] WHATCMS_API_KEY is not set.", { reportId });
     return { status: "error", error: "Tech Stack scan failed: WHATCMS_API_KEY is not configured." };

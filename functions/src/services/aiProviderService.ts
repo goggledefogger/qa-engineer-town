@@ -27,32 +27,6 @@ const DEFAULT_MODEL_FALLBACK: Record<SupportedAiProvider, string> = {
   anthropic: "claude-sonnet-4-5",
 };
 
-const getEnvDefaultModel = (provider: SupportedAiProvider): string | undefined => {
-  switch (provider) {
-    case "gemini":
-      return process.env.GEMINI_MODEL?.trim();
-    case "openai":
-      return process.env.OPENAI_MODEL?.trim();
-    case "anthropic":
-      return process.env.ANTHROPIC_MODEL?.trim();
-    default:
-      return undefined;
-  }
-};
-
-const getApiKeyForProvider = (provider: SupportedAiProvider): string | undefined => {
-  switch (provider) {
-    case "gemini":
-      return process.env.GEMINI_API_KEY?.trim();
-    case "openai":
-      return process.env.OPENAI_API_KEY?.trim();
-    case "anthropic":
-      return process.env.ANTHROPIC_API_KEY?.trim();
-    default:
-      return undefined;
-  }
-};
-
 const normalizeProvider = (value?: string | null): SupportedAiProvider | undefined => {
   if (!value) return undefined;
   const normalized = value.trim().toLowerCase() as SupportedAiProvider;
@@ -66,19 +40,22 @@ export const getProviderLabel = (provider: SupportedAiProvider | string | undefi
   return normalized ? PROVIDER_LABELS[normalized] : undefined;
 };
 
-const resolveDefaultProvider = (): SupportedAiProvider => {
-  const envDefault = normalizeProvider(process.env.AI_DEFAULT_PROVIDER);
-  return envDefault || "gemini";
-};
+interface ResolveOptions {
+  apiKeys: Partial<Record<SupportedAiProvider, string | undefined>>;
+  defaultProvider?: string | null;
+  modelFallbacks?: Partial<Record<SupportedAiProvider, string | undefined>>;
+}
 
 export const resolveAiProviderConfig = (
-  requestedProvider?: string | null,
-  requestedModel?: string | null
+  requestedProvider: string | null | undefined,
+  requestedModel: string | null | undefined,
+  options: ResolveOptions
 ): AiProviderResolution => {
   const normalizedRequestedProvider = normalizeProvider(requestedProvider);
-  const provider = normalizedRequestedProvider || resolveDefaultProvider();
+  const normalizedDefaultProvider = normalizeProvider(options.defaultProvider);
+  const provider = normalizedRequestedProvider || normalizedDefaultProvider || "gemini";
 
-  const apiKey = getApiKeyForProvider(provider);
+  const apiKey = options.apiKeys[provider]?.trim();
   if (!apiKey) {
     return {
       error: `Missing API key for provider ${provider}`,
@@ -88,10 +65,11 @@ export const resolveAiProviderConfig = (
   }
 
   const trimmedModel = requestedModel?.trim();
+  const fallbackModel = options.modelFallbacks?.[provider];
   const model =
     trimmedModel && trimmedModel.length > 0
       ? trimmedModel
-      : getEnvDefaultModel(provider) || DEFAULT_MODEL_FALLBACK[provider];
+      : fallbackModel || DEFAULT_MODEL_FALLBACK[provider];
 
   return {
     config: {
