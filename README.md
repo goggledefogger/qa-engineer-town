@@ -279,3 +279,7 @@ To remove admin privileges, you can either set `isAdmin: false` for the user und
 *   **NPM Workspaces:** Remember to run `npm install <package> --workspace=<frontend|functions>` from the project root when adding dependencies to specific workspaces.
 *   **Firebase Emulators:** For extensive local backend testing (excluding full email link auth flow), consider setting up and using the Firebase Emulator Suite.
 *   **Cloud Function Logs:** Check logs for your Firebase Functions in the Google Cloud Console under "Logs Explorer" or via Firebase CLI (`firebase functions:log`).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
