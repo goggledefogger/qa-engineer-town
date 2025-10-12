@@ -5,6 +5,7 @@ import {
   AI_PROVIDER_OPTIONS,
   AiProvider,
   getModelOptionsForProvider,
+  getProviderCapabilities,
   getProviderLabel,
   resolveInitialModel,
   resolveInitialProvider,
@@ -129,7 +130,7 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmitUrl, isSubmitting =
           >
             {AI_PROVIDER_OPTIONS.map(option => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {option.capabilities ? `${option.capabilities} ${option.label}` : option.label}
               </option>
             ))}
           </select>
@@ -148,11 +149,15 @@ const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmitUrl, isSubmitting =
             disabled={isSubmitting || loadingAuth}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
-            {providerModelOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.note ? `${option.label} (${option.note})` : option.label}
-              </option>
-            ))}
+            {providerModelOptions.map(option => {
+              const capabilityBadge = option.capabilities || getProviderCapabilities(option.provider);
+              const baseLabel = option.note ? `${option.label} (${option.note})` : option.label;
+              return (
+                <option key={option.value} value={option.value}>
+                  {capabilityBadge ? `${capabilityBadge} ${baseLabel}` : baseLabel}
+                </option>
+              );
+            })}
           </select>
           <p className="text-xs text-slate-500 sm:col-span-2">
             Pick a model optimized for your provider. Recent releases may yield deeper insights at higher cost.

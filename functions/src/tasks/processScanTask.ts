@@ -97,7 +97,7 @@ export const processScanTask = onTaskDispatched<ScanTaskPayload>(
         });
       }
 
-      const playwrightReport = await performPlaywrightScan(page, urlToScan, reportId);
+      const playwrightReport = await performPlaywrightScan(page, urlToScan, reportId, runtimeConfig);
       logger.info("Playwright scan completed. Success: " + playwrightReport.success, { reportId });
       await reportRef.child("playwrightReport").update(playwrightReport);
       logger.info("Report updated with Playwright results.", { reportId });

@@ -4,13 +4,33 @@ import * as logger from "firebase-functions/logger";
 // import * as playwright from "playwright-aws-lambda"; // No longer launching browser here
 import { Page } from "playwright-core"; // Added import
 import { ScreenshotUrls, PlaywrightReport, AccessibilityKeyboardCheckResult, ColorContrastResult, ContrastIssue, VisualOrderResult, VisualOrderIssue } from "../types";
+import type { RuntimeConfig } from "../config/runtimeConfig";
+
+const isPageAlive = (page: Page): boolean => {
+  if (page.isClosed()) return false;
+  try {
+    const ctx = page.context();
+    // @ts-ignore: playwright-core type does not expose isClosed on Context for aws build
+    if (typeof ctx.isClosed === "function" && ctx.isClosed()) return false;
+  } catch (err) {
+    return false;
+  }
+  return true;
+};
 
 // Helper function for Playwright scan
-export async function performPlaywrightScan(page: Page, urlToScan: string, reportId: string): Promise<PlaywrightReport> {
+export async function performPlaywrightScan(
+  page: Page,
+  urlToScan: string,
+  reportId: string,
+  runtimeConfig?: Pick<RuntimeConfig, "playwright">
+): Promise<PlaywrightReport> {
   logger.info("Starting Playwright screenshot capture using provided page...", { reportId, urlToScan });
   const screenshotUrls: ScreenshotUrls = {};
   let pageTitle: string | undefined;
   let overallSuccess = false; // Track if at least one screenshot succeeds
+  const navigationTimeout = runtimeConfig?.playwright.navigationTimeoutMs ?? 120000;
+  const fallbackNavigationTimeout = runtimeConfig?.playwright.fallbackTimeoutMs ?? Math.min(45000, navigationTimeout);
 
   const viewports: Array<{ name: keyof ScreenshotUrls; width: number; height: number }> = [
     { name: "desktop", width: 1280, height: 720 },
@@ -26,19 +46,64 @@ export async function performPlaywrightScan(page: Page, urlToScan: string, repor
     logger.info(`Navigating to ${urlToScan} for screenshots (or using current page)...`, { reportId });
     // Ensure the page is at the correct URL. If it's already there, this is fine.
     // If the page was used for something else, this navigates.
-    await page.goto(urlToScan, { waitUntil: "load", timeout: 120000 });
-    pageTitle = await page.title();
+    const startTime = Date.now();
+    let navigationSucceeded = false;
+
+    const attemptNavigation = async (waitUntil: "domcontentloaded" | "load", timeout: number, label: string) => {
+      try {
+        await page.goto(urlToScan, { waitUntil, timeout });
+        navigationSucceeded = true;
+        logger.info(`Navigation succeeded during ${label}.`, { reportId, elapsedMs: Date.now() - startTime });
+      } catch (error: any) {
+        logger.warn(`Navigation attempt "${label}" failed.`, {
+          reportId,
+          urlToScan,
+          waitUntil,
+          timeoutMs: timeout,
+          error: error?.message,
+          elapsedMs: Date.now() - startTime,
+        });
+      }
+    };
+
+    await attemptNavigation("domcontentloaded", navigationTimeout, "primary domcontentloaded");
+
+    if (!navigationSucceeded) {
+      await attemptNavigation("load", fallbackNavigationTimeout, "fallback load");
+    }
+    if (navigationSucceeded && isPageAlive(page)) {
+      try {
+        pageTitle = await page.title();
+      } catch (titleError: any) {
+        logger.warn("Unable to retrieve page title after navigation.", { reportId, error: titleError?.message });
+      }
+
+      // Allow the page a short buffer before screenshots when navigation was slow
+      try {
+        await page.waitForTimeout(2000);
+      } catch (waitError: any) {
+        logger.warn("Post-navigation wait interrupted; page may have closed.", { reportId, error: waitError?.message });
+      }
+    }
+
+    if (!isPageAlive(page)) {
+      throw new Error("Browser closed before screenshots could be captured.");
+    }
 
     const bucket = admin.storage().bucket();
     const capturedScreenshotData: Array<{ name: keyof ScreenshotUrls; buffer: Buffer }> = [];
 
     // Step 1: Sequentially capture all screenshot buffers
     for (const viewport of viewports) {
+      if (!isPageAlive(page)) {
+        logger.warn("Skipping remaining viewports because the browser context is closed.", { reportId, viewport: String(viewport.name) });
+        break;
+      }
       try {
         logger.info(`Setting viewport to ${String(viewport.name)} (${viewport.width}x${viewport.height}) and capturing screenshot...`, { reportId, viewport: String(viewport.name) });
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.waitForTimeout(1000); // Wait for reflow
-        const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80 });
+        const screenshotBuffer = await page.screenshot({ type: "jpeg", quality: 80, timeout: 15000 });
         capturedScreenshotData.push({ name: viewport.name, buffer: screenshotBuffer });
         logger.info(`Screenshot captured for ${String(viewport.name)}.`, { reportId, viewport: String(viewport.name) });
       } catch (captureError: any) {
@@ -82,23 +147,35 @@ export async function performPlaywrightScan(page: Page, urlToScan: string, repor
 
     if (!overallSuccess && Object.keys(screenshotUrls).length === 0) {
       const initialCaptureAttempts = viewports.length;
-      const errorMsg = capturedScreenshotData.length === 0 && initialCaptureAttempts > 0 ? "All screenshot captures failed." : "All screenshot uploads failed or no screenshots were captured.";
+      const errorMsg = capturedScreenshotData.length === 0 && initialCaptureAttempts > 0
+        ? "All screenshot captures failed."
+        : "All screenshot uploads failed or no screenshots were captured.";
       throw new Error(errorMsg);
     }
 
-    return {
+    const report: PlaywrightReport = {
       success: overallSuccess,
-      pageTitle: pageTitle,
       screenshotUrls: screenshotUrls,
     };
+
+    if (pageTitle !== undefined && pageTitle !== null) {
+      report.pageTitle = pageTitle;
+    }
+
+    return report;
   } catch (playwrightError: any) {
     logger.error("Error during Playwright screenshot capture or upload:", { reportId, errorMessage: playwrightError.message, stack: playwrightError.stack, detail: playwrightError });
-    return {
+    const errorReport: PlaywrightReport = {
       success: false,
-      pageTitle: pageTitle,
       screenshotUrls: screenshotUrls,
       error: `Playwright operation failed: ${playwrightError.message}`,
     };
+
+    if (pageTitle !== undefined && pageTitle !== null) {
+      errorReport.pageTitle = pageTitle;
+    }
+
+    return errorReport;
   } finally {
     // Browser is no longer closed here; it's managed by the caller (processScanTask)
     // if (browser) {

@@ -22,6 +22,12 @@ An AI-powered assistant for freelance QA engineers that automates the process of
 *   **Hosting:** Firebase Hosting
 *   **Authentication:** Firebase Email Link Authentication
 *   **QA Tools:** Playwright (running in Cloud Functions), PageSpeed Insights API
+*   **AI Providers:**
+    * 🧠📸 Google Gemini (2.5 series multimodal models)
+    * 🧠📸 OpenAI (GPT-4o/5 and o-series reasoning models)
+    * 🧠📸 Anthropic Claude (Opus/Sonnet/Haiku with image + text)
+
+> Legend: 🧠 = language & reasoning, 📸 = vision/multimodal analysis
 *   **AI:** Google Gemini, OpenAI, or Anthropic Claude for vision analysis and LLM summaries
 *   **Package Manager:** npm (workspaces)
 
@@ -158,6 +164,10 @@ ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 GEMINI_MODEL="gemini-2.5-flash"
 OPENAI_MODEL="gpt-4o"
 ANTHROPIC_MODEL="claude-sonnet-4-5"
+
+# Playwright Navigation (optional overrides for emulators)
+PLAYWRIGHT_NAV_TIMEOUT_MS="120000"
+PLAYWRIGHT_NAV_TIMEOUT_FALLBACK_MS="45000"
 ```
 Then copy to `functions/.env` and fill in the actual values.
 *   `PROCESS_SCAN_TASK_URL`: You'll get this URL after you deploy the `processScanTask` function for the first time.

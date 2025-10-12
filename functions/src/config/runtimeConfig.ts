@@ -32,10 +32,20 @@ export interface RuntimeAiDefaults {
 export interface RuntimeConfig {
   secrets: RuntimeSecrets;
   aiDefaults: RuntimeAiDefaults;
+  playwright: {
+    navigationTimeoutMs: number;
+    fallbackTimeoutMs: number;
+  };
 }
 
 const secretValueOrEnv = (secret: ReturnType<typeof defineSecret>, envVar: string): string | undefined =>
   secret.value() || process.env[envVar]?.trim();
+
+const parseNumber = (value: string | undefined, fallback: number): number => {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
 
 export const loadRuntimeConfig = (): RuntimeConfig => ({
   secrets: {
@@ -52,5 +62,9 @@ export const loadRuntimeConfig = (): RuntimeConfig => ({
       openai: process.env.OPENAI_MODEL,
       anthropic: process.env.ANTHROPIC_MODEL,
     },
+  },
+  playwright: {
+    navigationTimeoutMs: parseNumber(process.env.PLAYWRIGHT_NAV_TIMEOUT_MS, 120_000),
+    fallbackTimeoutMs: parseNumber(process.env.PLAYWRIGHT_NAV_TIMEOUT_FALLBACK_MS, 45_000),
   },
 });
